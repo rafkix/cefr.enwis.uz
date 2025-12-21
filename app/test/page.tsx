@@ -33,7 +33,7 @@ export default function PracticeHomePage() {
       icon: Headphones,
       buttonText: "Listening",
       route: "/test/listening",
-      badge: "FAST",
+      badge: "Demo Version",
       color: "purple",
     },
     {
