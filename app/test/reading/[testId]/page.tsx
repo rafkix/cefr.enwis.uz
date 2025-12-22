@@ -81,11 +81,7 @@ export default function ExamPage() {
 
   return (
     <div className="flex h-screen flex-col bg-white">
-<<<<<<< HEAD
       <ExamHeader/>
-=======
-      <ExamHeader timeLeft={formatTime(timeLeft)} />
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
 
       <div className="flex flex-1 overflow-hidden">
         <ExamContent

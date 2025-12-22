@@ -1,106 +1,165 @@
 "use client"
 
-import { Check } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import React from "react"
+import { motion } from "framer-motion"
+import { Check, Sparkles, Zap, Crown, ArrowRight, ShieldCheck, Globe } from "lucide-react"
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
 
 export default function PricingPage() {
   const plans = [
     {
-      name: "Free",
-      price: "$0",
-      period: "/month",
-      features: [
-        "Access to 2 Reading tests",
-        "Basic practice materials",
-        "Limited test attempts",
-        "Community forum access",
-      ],
+      name: "Basic",
+      price: "0",
+      icon: Zap,
+      desc: "Perfect for exploring the platform.",
+      features: ["2 Adaptive Reading Tests", "Essential Practice Material", "Limited AI Analytics"],
       highlighted: false,
+      btnText: "Get Started",
     },
     {
       name: "Standard",
-      price: "$19",
-      period: "/month",
-      features: [
-        "All Free features",
-        "Access to all Reading tests",
-        "Access to all Listening tests",
-        "Unlimited test attempts",
-        "Progress tracking",
-        "Email support",
-      ],
+      price: "19",
+      icon: Crown,
+      desc: "Most popular for serious learners.",
+      features: ["Full Reading & Listening", "Unlimited Attempts", "Real-time Score Prediction", "Detailed Insights"],
       highlighted: true,
+      btnText: "Unlock Access",
     },
     {
-      name: "Premium",
-      price: "$39",
-      period: "/month",
-      features: [
-        "All Standard features",
-        "Access to Writing tests",
-        "Access to Speaking practice",
-        "Detailed performance analytics",
-        "Priority support",
-        "Downloadable certificates",
-        "Ad-free experience",
-      ],
+      name: "Pro AI",
+      price: "39",
+      icon: Sparkles,
+      desc: "Advanced coaching for results.",
+      features: ["AI Writing Evaluation", "Simulated Speaking", "Neural Phonetic Feedback", "Personalized Roadmap"],
       highlighted: false,
+      btnText: "Go Premium",
     },
   ]
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#FDFDFF] selection:bg-red-100 overflow-x-hidden">
       <Navbar />
 
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-          <h1 className="mb-6 text-center text-5xl font-bold text-gray-900">Choose Your Plan</h1>
-          <p className="mx-auto mb-16 max-w-3xl text-center text-xl text-gray-600">
-            Select the plan that best fits your learning goals and budget.
-          </p>
+      <main className="pt-24 md:pt-32 pb-16 relative overflow-hidden">
+        {/* Dekorativ orqa fon */}
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute top-0 right-0 w-[300px] md:w-[600px] h-[300px] md:h-[600px] bg-red-500/5 blur-[80px] md:blur-[120px] rounded-full" />
+        </div>
 
-          <div className="mx-auto grid max-w-5xl gap-8 lg:grid-cols-3">
-            {plans.map((plan) => (
-              <div
+        <div className="max-w-7xl mx-auto px-6">
+          {/* Sarlavha */}
+          <div className="text-center max-w-3xl mx-auto mb-12 md:mb-20">
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-red-50 border border-red-100 mb-5"
+            >
+              <Sparkles className="w-3 h-3 text-red-600 fill-red-600" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-red-700">Flexible Plans</span>
+            </motion.div>
+            
+            <motion.h1 
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-4xl sm:text-5xl md:text-7xl font-black text-slate-900 tracking-tighter mb-6 leading-none"
+            >
+              Invest in your <br />
+              <span className="text-red-600 italic">global future.</span>
+            </motion.h1>
+            <p className="text-sm md:text-lg text-slate-500 font-medium max-w-xl mx-auto">
+              Transparent pricing tailored to your pace. Join over 500,000 students mastering English with AI.
+            </p>
+          </div>
+
+          {/* Narxlar Gridi */}
+          <div className="grid lg:grid-cols-3 gap-6 md:gap-8 items-stretch">
+            {plans.map((plan, i) => (
+              <motion.div
                 key={plan.name}
-                className={`overflow-hidden rounded-2xl border p-8 shadow-sm transition-all hover:shadow-lg ${
-                  plan.highlighted ? "scale-105 border-red-600 bg-red-50 shadow-md" : "border-gray-200 bg-white"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className={`relative flex flex-col p-8 md:p-10 rounded-[35px] md:rounded-[48px] border transition-all duration-300 ${
+                  plan.highlighted 
+                  ? "bg-slate-950 border-slate-950 shadow-2xl lg:scale-105 z-10" 
+                  : "bg-white border-slate-100 hover:border-red-100 shadow-sm"
                 }`}
               >
                 {plan.highlighted && (
-                  <div className="mb-4 text-center">
-                    <span className="inline-block rounded-full bg-red-600 px-4 py-1 text-sm font-semibold text-white">
-                      Most Popular
-                    </span>
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-red-600 text-white px-5 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest">
+                    Recommended
                   </div>
                 )}
-                <h3 className="mb-2 text-center text-2xl font-bold text-gray-900">{plan.name}</h3>
-                <div className="mb-6 text-center">
-                  <span className="text-5xl font-bold text-gray-900">{plan.price}</span>
-                  <span className="text-gray-600">{plan.period}</span>
+
+                <div className="mb-8">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-6 ${
+                    plan.highlighted ? "bg-red-600 text-white" : "bg-red-50 text-red-600"
+                  }`}>
+                    <plan.icon size={24} />
+                  </div>
+                  <h3 className={`text-2xl font-black tracking-tight mb-2 ${plan.highlighted ? "text-white" : "text-slate-900"}`}>
+                    {plan.name}
+                  </h3>
+                  <p className={`text-xs md:text-sm font-medium leading-relaxed ${plan.highlighted ? "text-slate-400" : "text-slate-500"}`}>
+                    {plan.desc}
+                  </p>
                 </div>
-                <ul className="mb-8 space-y-3">
+
+                <div className="mb-8 flex items-baseline gap-1">
+                  <span className={`text-5xl md:text-6xl font-black tracking-tighter ${plan.highlighted ? "text-white" : "text-slate-900"}`}>
+                    ${plan.price}
+                  </span>
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${plan.highlighted ? "text-slate-500" : "text-slate-400"}`}>
+                    /month
+                  </span>
+                </div>
+
+                <ul className="mb-10 space-y-4 flex-grow">
                   {plan.features.map((feature, idx) => (
                     <li key={idx} className="flex items-start gap-3">
-                      <Check className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-600" />
-                      <span className="text-gray-700">{feature}</span>
+                      <div className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center mt-0.5 ${
+                        plan.highlighted ? "bg-white/10 text-red-500" : "bg-red-50 text-red-600"
+                      }`}>
+                        <Check size={12} strokeWidth={4} />
+                      </div>
+                      <span className={`text-sm font-bold tracking-tight ${plan.highlighted ? "text-slate-300" : "text-slate-600"}`}>
+                        {feature}
+                      </span>
                     </li>
                   ))}
                 </ul>
-                <Button
-                  className={`w-full rounded-lg py-3 text-white transition-colors ${
-                    plan.highlighted ? "bg-red-600 hover:bg-red-700" : "bg-gray-900 hover:bg-gray-800"
-                  }`}
-                >
-                  Get Started
-                </Button>
-              </div>
+
+                <button className={`w-full h-14 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 group ${
+                  plan.highlighted 
+                  ? "bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-900/20" 
+                  : "bg-slate-900 text-white hover:bg-red-600"
+                }`}>
+                  {plan.btnText}
+                  <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              </motion.div>
             ))}
           </div>
+
+          {/* To'lov Tizimlari va Ishonch */}
+          <div className="mt-20 grid sm:grid-cols-2 lg:grid-cols-3 gap-8 border-t border-slate-100 pt-12 items-center text-center sm:text-left">
+            <div className="flex items-center justify-center sm:justify-start gap-3">
+              <ShieldCheck size={20} className="text-slate-400" />
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Secure 256-bit <br/> SSL Encryption</p>
+            </div>
+            <div className="flex items-center justify-center sm:justify-start gap-3">
+              <Globe size={20} className="text-slate-400" />
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">International <br/> Certifications</p>
+            </div>
+            <div className="flex justify-center lg:justify-end gap-6 opacity-30">
+               <span className="font-black italic text-lg tracking-tighter">CLICK</span>
+               <span className="font-black italic text-lg tracking-tighter">PAYME</span>
+               <span className="font-black italic text-lg tracking-tighter">VISA</span>
+            </div>
+          </div>
         </div>
-      </section>
+      </main>
 
       <Footer />
     </div>

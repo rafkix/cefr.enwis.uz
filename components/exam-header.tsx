@@ -1,6 +1,5 @@
 "use client"
 
-<<<<<<< HEAD
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { ArrowLeft, Clock, Eye } from "lucide-react"
@@ -90,83 +89,3 @@ export default function ExamHeader({
     </header>
   )
 }
-=======
-export default function ExamHeader({
-  timeLeft,
-  title = "Cefr",
-  partLabel = "Reading",
-}: {
-  timeLeft: string
-  title?: string
-  partLabel?: string
-}) {
-  return (
-    <header className="sticky top-0 z-30 bg-white border-b border-gray-300">
-      {/* ================= DESKTOP ================= */}
-      <div className="hidden lg:flex items-center justify-between px-6 py-3">
-        {/* LEFT */}
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-bold text-red-600">{title}</span>
-          <span className="text-sm text-gray-700">Test taker ID</span>
-        </div>
-
-        {/* CENTER */}
-        <div className="flex-1 text-center">
-          <span className="text-sm font-semibold text-gray-700">
-            {partLabel}
-          </span>
-        </div>
-
-        {/* ICONS */}
-        <div className="flex items-center gap-4">
-          <HeaderIcon />
-          <HeaderIcon />
-          <HeaderIcon />
-        </div>
-
-        {/* TIMER */}
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-gray-600">
-            Time Remaining:
-          </span>
-          <div className="font-mono text-sm font-bold text-red-600 bg-red-50 px-3 py-1 rounded border border-red-200">
-            {timeLeft}
-          </div>
-        </div>
-      </div>
-
-      {/* ================= MOBILE ================= */}
-      <div className="lg:hidden flex flex-col px-4 py-2 gap-1">
-        {/* TOP ROW */}
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-bold text-red-600">{title}</span>
-
-          <div className="font-mono text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded border border-red-200">
-            {timeLeft}
-          </div>
-        </div>
-
-        {/* BOTTOM ROW */}
-        <div className="text-center">
-          <span className="text-xs font-semibold text-gray-700">
-            {partLabel}
-          </span>
-        </div>
-      </div>
-    </header>
-  )
-}
-
-/* ================= ICON COMPONENT ================= */
-function HeaderIcon() {
-  return (
-    <svg
-      className="w-4 h-4 text-gray-600"
-      fill="currentColor"
-      viewBox="0 0 20 20"
-    >
-      <path d="M2.5 5A1.5 1.5 0 016 3.5h8A1.5 1.5 0 0115.5 5v10a1.5 1.5 0 01-1.5 1.5H6A1.5 1.5 0 012.5 5z" />
-    </svg>
-  )
-}
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee

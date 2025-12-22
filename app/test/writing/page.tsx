@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { motion } from "framer-motion"
 import {
   Pencil,
   ArrowLeft,
@@ -9,20 +10,21 @@ import {
   FileText,
   Lock,
   Search,
+  Sparkles,
+  ChevronRight,
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-<<<<<<< HEAD
 import { UnlockModal } from "@/components/unlock-modal"
 
+// writingSets ma'lumotlari lib papkasidan olinadi
 import { writingSets } from "@/lib/exams/writing/data"
 
 export default function WritingPage() {
   const router = useRouter()
-
   const [search, setSearch] = useState("")
   const [showUnlock, setShowUnlock] = useState(false)
   const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
@@ -35,258 +37,159 @@ export default function WritingPage() {
     if (isFree) {
       router.push(`/test/writing/${id}`)
     } else {
-=======
-import { writingSets } from "@/lib/writing-data"
-import { UnlockModal } from "@/components/unlock-modal"
-
-export default function WritingPage() {
-  const router = useRouter()
-  const [search, setSearch] = useState("")
-  const [showUnlock, setShowUnlock] = useState(false)
-  const [selectedTestId, setSelectedTestId] = useState("")
-
-  const filtered = writingSets.filter((t) =>
-    t.title.toLowerCase().includes(search.toLowerCase())
-  )
-
-  const openTest = (id: string, isFree: boolean) => {
-    if (isFree) router.push(`/test/writing/${id}`)
-    else {
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
       setSelectedTestId(id)
       setShowUnlock(true)
     }
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-zinc-50 to-zinc-100">
+    <div className="min-h-screen bg-[#FDFDFF] text-slate-900 font-sans pb-10 md:pb-20 overflow-x-hidden">
       {/* ================= HEADER ================= */}
-      <header className="border-b bg-white">
-<<<<<<< HEAD
-        <div className="container mx-auto px-4 py-5 sm:py-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => router.push("/test")}
-            className="
-              mb-4
-              text-orange-600
-              hover:text-orange-800
-              hover:bg-orange-100
-              transition-colors
-            "
-=======
-        <div className="container mx-auto px-6 py-6">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="mb-4 text-zinc-600 hover:text-zinc-900"
-            onClick={() => router.push("/test")}
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-          >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
+      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+        <div className="container mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-6">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => router.push("/test")}
+              className="text-slate-500 font-black uppercase tracking-widest text-[9px] md:text-[10px] hover:text-orange-600 px-2"
+            >
+              <ArrowLeft className="mr-1 md:mr-2 h-3.5 w-3.5 md:h-4 md:w-4" />
+              Back
+            </Button>
+            
+            <div className="h-6 md:h-8 w-px bg-slate-100 hidden xs:block" />
+            
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-orange-600 flex items-center justify-center text-white shadow-lg">
+                <Pencil size={16} className="md:w-5 md:h-5" />
+              </div>
+              <div className="hidden xxs:block">
+                <h1 className="text-sm md:text-lg font-black tracking-tighter uppercase leading-none">
+                  Writing <span className="text-orange-600 italic">Lab</span>
+                </h1>
+                <p className="text-[8px] md:text-[10px] font-bold text-slate-400 uppercase tracking-widest">AI Ready</p>
+              </div>
+            </div>
+          </div>
 
-          <div className="flex items-center gap-3">
-<<<<<<< HEAD
-            <div className="flex h-11 w-11 items-center justify-center rounded-lg bg-orange-100 sm:h-12 sm:w-12">
-              <Pencil className="h-6 w-6 text-orange-600" />
-            </div>
+          {/* Desktop Search */}
+          <div className="relative hidden md:block w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter tests..."
+              className="pl-9 h-10 bg-slate-50/50 border-slate-100 rounded-xl text-xs font-medium"
+            />
+          </div>
+        </div>
 
-            <div>
-              <h1 className="text-xl font-bold text-zinc-900 sm:text-2xl">
-                Writing
-              </h1>
-              <p className="text-sm text-zinc-600">
-                CEFR-based Writing Practice
-=======
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-orange-100">
-              <Pencil className="h-6 w-6 text-orange-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-900">
-                Writing Result
-              </h1>
-              <p className="text-sm text-zinc-600">
-                CEFR Writing Assessment
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-              </p>
-            </div>
+        {/* Mobile Search Bar - Only visible on small screens */}
+        <div className="px-4 pb-3 md:hidden">
+           <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search writing modules..."
+              className="pl-9 h-10 bg-slate-50/50 border-slate-100 rounded-xl text-xs font-medium"
+            />
           </div>
         </div>
       </header>
-<<<<<<< HEAD
 
-      <section className="container mx-auto px-4 pt-6">
-=======
-      {/* ================= SEARCH ================= */}
-      <section className="mx-auto max-w-6xl px-4 pt-6 sm:px-6">
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-        <div className="relative max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-zinc-400" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search writing tests"
-            className="pl-9"
-          />
-        </div>
-      </section>
-
-<<<<<<< HEAD
       {/* ================= CONTENT ================= */}
-      <main className="container mx-auto px-4 py-6 sm:py-8">
-        <h2 className="mb-5 text-lg font-semibold text-zinc-900">
-          Available Tests
-        </h2>
+      <main className="container mx-auto px-4 md:px-6 py-8 md:py-12 max-w-5xl">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 md:mb-12 gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1.5 text-orange-600">
+              <Sparkles size={14} fill="currentColor" />
+              <span className="text-[9px] md:text-[10px] font-black uppercase tracking-[0.3em]">Curated Modules</span>
+            </div>
+            <h2 className="text-2xl md:text-4xl font-black tracking-tighter uppercase leading-tight">
+              Practice <br className="hidden md:block" /> Sessions.
+            </h2>
+          </div>
+          <div className="flex items-center gap-3 text-slate-400 text-[9px] md:text-[10px] font-black uppercase tracking-widest">
+            <span>{filteredTests.length} Units</span>
+            <div className="w-1 h-1 rounded-full bg-slate-300" />
+            <span className="text-orange-600 italic">CEFR Standard</span>
+          </div>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
-          {filteredTests.map((test) => {
+        <div className="grid grid-cols-1 gap-4 md:gap-6">
+          {filteredTests.map((test, index) => {
             const isLocked = !test.isFree
-=======
-      {/* ================= LIST ================= */}
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-widest text-zinc-400">
-          Available Tests
-        </h2>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          {filtered.map((test) => {
-            const locked = !test.isFree
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
 
             return (
-              <Card
+              <motion.div
                 key={test.id}
-<<<<<<< HEAD
-                onClick={() => handleOpenTest(test.id, test.isFree)}
-                className="
-                  cursor-pointer
-                  border-l-4 border-l-transparent
-                  p-5 sm:p-6
-                  transition-all
-                  hover:border-l-orange-500
-                  hover:shadow-md
-                "
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: index * 0.05 }}
               >
-                {/* LOCK OVERLAY */}
-                {isLocked && (
-                  <div
-                    className="
-                      pointer-events-none
-                      absolute inset-0 z-10
-                      rounded-xl
-                      bg-white/60
-                      backdrop-blur-[2px]
-                      opacity-0
-                      transition
-                      group-hover:opacity-100
-                    "
-                  />
-                )}
+                <Card
+                  onClick={() => handleOpenTest(test.id, test.isFree)}
+                  className={`
+                    group relative overflow-hidden border-slate-100 p-5 md:p-8 rounded-[24px] md:rounded-[32px] cursor-pointer
+                    transition-all duration-300 hover:shadow-xl hover:border-orange-200
+                    ${isLocked ? 'bg-slate-50/50' : 'bg-white'}
+                  `}
+                >
+                  <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight uppercase">
+                          {test.title}
+                        </h3>
+                        {test.isFree ? (
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[8px] font-black uppercase">Free</Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-orange-50 text-orange-600 border-orange-100 text-[8px] font-black uppercase tracking-tighter">Premium</Badge>
+                        )}
+                      </div>
 
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  {/* TOP */}
-                  <div>
-                    <div className="mb-2 flex items-center gap-2">
-                      <h3 className="text-base font-semibold text-zinc-900">
-=======
-                onClick={() => openTest(test.id, test.isFree)}
-                className={`
-                  group relative cursor-pointer overflow-hidden
-                  border transition-all
-                  hover:-translate-y-1 hover:shadow-lg
-                `}
-              >
-                {/* LOCK OVERLAY */}
-                {locked && (
-                  <div className="absolute inset-0 z-10 bg-white/60 backdrop-blur-[2px] opacity-0 transition group-hover:opacity-100" />
-                )}
+                      <div className="flex flex-wrap items-center gap-4 md:gap-6">
+                        <div className="flex items-center gap-2">
+                          <Clock size={14} className="text-slate-400" />
+                          <span className="text-[11px] font-bold text-slate-500 uppercase">{test.durationMinutes} Min</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <FileText size={14} className="text-slate-400" />
+                          <span className="text-[11px] font-bold text-slate-500 uppercase">{test.tasks.length} Tasks</span>
+                        </div>
+                        <Badge className="bg-slate-900 text-white h-5 text-[9px] font-black">{test.cefrLevel}</Badge>
+                      </div>
+                    </div>
 
-                <div className="relative z-20 flex h-full flex-col justify-between p-5">
-                  {/* TOP */}
-                  <div>
-                    <div className="mb-2 flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-zinc-900">
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-                        {test.title}
-                      </h3>
-
-                      {test.isFree ? (
-                        <Badge className="bg-emerald-100 text-emerald-700">
-                          Free
-                        </Badge>
+                    <div className="shrink-0 pt-2 lg:pt-0">
+                      {isLocked ? (
+                        <Button variant="outline" className="w-full lg:w-auto h-12 md:h-14 px-6 md:px-8 rounded-xl md:rounded-2xl border-slate-200 text-slate-400 font-black uppercase tracking-widest text-[9px] md:text-[10px] gap-2">
+                          <Lock size={14} /> Unlock Access
+                        </Button>
                       ) : (
-<<<<<<< HEAD
-                        <Badge variant="destructive">Premium</Badge>
-=======
-                        <Badge className="bg-red-100 text-red-700">
-                          Premium
-                        </Badge>
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
+                        <Button className="w-full lg:w-auto h-12 md:h-14 px-6 md:px-8 rounded-xl md:rounded-2xl bg-orange-600 hover:bg-orange-700 text-white font-black uppercase tracking-widest text-[9px] md:text-[10px] group-hover:translate-x-1 transition-all">
+                          Start Session <ChevronRight size={16} className="ml-2" />
+                        </Button>
                       )}
                     </div>
-
-                    <p className="mb-3 text-sm text-zinc-500">
-                      Tasks: {test.tasks.length} • CEFR {test.cefrLevel}
-                    </p>
-
-<<<<<<< HEAD
-                    <div className="flex gap-4 text-sm text-zinc-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {test.durationMinutes} min
-=======
-                    <div className="flex gap-4 text-xs text-zinc-500">
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-4 w-4" />
-                        {test.duration} min
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <FileText className="h-4 w-4" />
-                        Writing tasks
-                      </span>
-                    </div>
                   </div>
-
-                  {/* ACTION */}
-                  <div className="mt-5">
-                    {test.isFree ? (
-                      <Button className="w-full bg-orange-600 hover:bg-orange-700">
-                        Start Test
-                      </Button>
-                    ) : (
-<<<<<<< HEAD
-                      <Button variant="destructive" className="w-full">
-=======
-                      <Button className="w-full bg-red-600 text-white hover:bg-red-700">
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-                        <Lock className="mr-2 h-4 w-4" />
-                        Unlock Test
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </motion.div>
             )
           })}
         </div>
 
-<<<<<<< HEAD
         {filteredTests.length === 0 && (
-=======
-        {filtered.length === 0 && (
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
-          <div className="mt-12 rounded-xl bg-white p-10 text-center text-sm text-zinc-500">
-            No writing tests found
+          <div className="mt-10 md:mt-20 flex flex-col items-center gap-4 py-16 md:py-20 rounded-[32px] md:rounded-[40px] border-2 border-dashed border-slate-100 text-center">
+            <Search size={32} className="text-slate-200" />
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">No matching results</p>
           </div>
         )}
       </main>
 
-<<<<<<< HEAD
-      {/* ================= UNLOCK MODAL ================= */}
+      {/* Unlock Modal remains same */}
       {selectedTestId && (
         <UnlockModal
           isOpen={showUnlock}
@@ -295,14 +198,6 @@ export default function WritingPage() {
           testType="writing"
         />
       )}
-=======
-      <UnlockModal
-        isOpen={showUnlock}
-        onClose={() => setShowUnlock(false)}
-        testId={selectedTestId}
-        testType="writing"
-      />
->>>>>>> 0e86cac7de66695f80c36de0b908f71188c446ee
     </div>
   )
 }
