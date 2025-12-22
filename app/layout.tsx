@@ -21,7 +21,10 @@ export default function RootLayout({
   return (
     <html lang="en">
         <link rel="icon" href="https://image2url.com/images/1764944410839-0e0e3e25-d678-4801-9f49-011a4d8f6de0.png" />
-      <body className={`font-sans antialiased`}>{children}<Analytics /></body>
+      <body className={`font-sans antialiased`}>
+        {children}
+        <Analytics />
+      </body>
     </html>
   )
 }
