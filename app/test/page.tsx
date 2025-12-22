@@ -87,11 +87,7 @@ export default function PracticeHomePage() {
       parts: ["Part 1", "Part 2", "Part 3", "Part 4", "Part 5", "Part 6"],
       icon: Headphones,
       route: "/test/listening",
-<<<<<<< HEAD
       badge: "AI Evaluated",
-=======
-      badge: "Demo Version",
->>>>>>> 02ab21cebe52aedc5bc5d368ebbcc0f78d915dbe
       color: "purple",
     },
     {
