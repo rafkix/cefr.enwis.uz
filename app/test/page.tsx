@@ -15,13 +15,13 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
-// SkillCard component optimized for mobile touch and desktop hover
+// SkillCard komponenti
 const EnhancedSkillCard = ({ skill, onClick }: { skill: any, onClick: () => void }) => {
   const colors = {
     purple: "hover:border-purple-500/50 bg-purple-50/30 text-purple-600",
     green: "hover:border-green-500/50 bg-green-50/30 text-green-600",
     orange: "hover:border-orange-500/50 bg-orange-50/30 text-orange-600",
-    red: "hover:border-red-500/50 bg-red-50/30 text-red-600",
+    red: "hover:border-red-500/50 bg-red-600/5 text-red-600",
   }
 
   const iconColors = {
@@ -34,9 +34,10 @@ const EnhancedSkillCard = ({ skill, onClick }: { skill: any, onClick: () => void
   return (
     <motion.div
       whileHover={{ y: -5 }}
-      whileTap={{ scale: 0.98 }} // Mobile touch feedback
+      whileTap={{ scale: 0.98 }}
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
       onClick={onClick}
       className={`group relative overflow-hidden rounded-[24px] md:rounded-[32px] border border-slate-100 bg-white p-6 md:p-8 transition-all duration-300 cursor-pointer shadow-sm hover:shadow-2xl hover:shadow-slate-200/50 ${colors[skill.color as keyof typeof colors]}`}
     >
@@ -87,9 +88,7 @@ export default function PracticeHomePage() {
       parts: ["Part 1", "Part 2", "Part 3", "Part 4", "Part 5", "Part 6"],
       icon: Headphones,
       route: "/test/listening",
-
       badge: "AI Evaluated",
-
       color: "purple",
     },
     {
@@ -121,13 +120,15 @@ export default function PracticeHomePage() {
   ]
 
   return (
-    <div className="min-h-screen bg-[#FDFDFF] text-slate-900 font-sans pb-10 md:pb-20 overflow-x-hidden">
-      {/* ================= HEADER ================= */}
-      <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100">
+    // ASOSIY KONTEYNER: overflow-x-hidden olib tashlandi
+    <div className="min-h-screen bg-[#FDFDFF] text-slate-900 font-sans pb-10 md:pb-20 relative">
+      
+      {/* ================= HEADER: Sticky top ishlaydi ================= */}
+      <header className="sticky top-0 z-[100] w-full bg-white/80 backdrop-blur-xl border-b border-slate-100">
         <div className="mx-auto max-w-7xl px-4 md:px-6 h-14 md:h-16 flex items-center justify-between">
           <Button
             variant="ghost"
-            className="flex items-center gap-1.5 md:gap-2 text-slate-500 font-bold hover:text-red-600 transition-colors px-2 md:px-4"
+            className="flex items-center gap-1.5 md:gap-2 text-slate-500 font-bold hover:text-slate-100 transition-colors px-2 md:px-4"
             onClick={() => router.push("/")}
           >
             <ArrowLeft size={16} />
@@ -146,8 +147,8 @@ export default function PracticeHomePage() {
       </header>
 
       {/* ================= HERO SECTION ================= */}
-      <section className="relative pt-10 md:pt-16 pb-6 md:pb-10">
-        {/* Background blobs for visual depth - smaller on mobile */}
+      <section className="relative pt-10 md:pt-16 pb-6 md:pb-10 overflow-hidden">
+        {/* Background blobs faqat shu section ichida qoladi */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full -z-10">
           <div className="absolute top-0 left-1/4 w-32 md:w-64 h-32 md:h-64 bg-red-500/5 blur-[60px] md:blur-[100px] rounded-full" />
           <div className="absolute bottom-0 right-1/4 w-32 md:w-64 h-32 md:h-64 bg-blue-500/5 blur-[60px] md:blur-[100px] rounded-full" />
@@ -174,7 +175,6 @@ export default function PracticeHomePage() {
 
       {/* ================= MAIN CONTENT ================= */}
       <main className="mx-auto max-w-6xl px-4 md:px-6 py-6 md:py-10">
-        {/* Grid: 1 column on mobile, 2 columns on tablets+ */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
           {skills.map((skill) => (
             <EnhancedSkillCard
@@ -188,8 +188,9 @@ export default function PracticeHomePage() {
         {/* ================= FOOTER NOTE ================= */}
         <motion.div 
           initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+          viewport={{ once: true }}
           className="mt-12 md:mt-20 flex flex-col items-center gap-4 md:gap-6 p-6 md:p-10 rounded-[32px] md:rounded-[40px] border border-dashed border-slate-200 text-center"
         >
           <LayoutDashboard className="text-slate-200" size={32}/>
@@ -197,11 +198,16 @@ export default function PracticeHomePage() {
             <h4 className="text-xs md:text-sm font-black text-slate-900 uppercase tracking-[0.2em] mb-2">Need a full mock exam?</h4>
             <p className="text-slate-400 text-[10px] md:text-xs font-bold leading-relaxed">
               If you want to simulate a real exam environment with all modules combined, 
-              head over to our <span className="text-red-600 underline cursor-pointer decoration-2 underline-offset-4">Full Mock Simulation</span>.
+              head over to our <span 
+                onClick={() => router.push('/mock-exam')}
+                className="text-red-600 underline cursor-pointer decoration-2 underline-offset-4 hover:text-red-700 transition-colors"
+              >
+                Full Mock Simulation
+              </span>.
             </p>
           </div>
         </motion.div>
       </main>
     </div>
   )
-}   
+}

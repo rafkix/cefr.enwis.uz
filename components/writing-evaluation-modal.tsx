@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { CheckCircle2, AlertCircle, TrendingUp } from "lucide-react"
-import type { EvaluationResult } from "@/lib/writing-data"
+import type { EvaluationResult } from "../lib/exams/writing/data"
 
 interface WritingEvaluationModalProps {
   open: boolean

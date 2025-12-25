@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react"
 import { useParams, useRouter } from "next/navigation"
-import ExamHeader from "@/components/exam-header"
-import ExamContent from "@/components/exam-content"
-import ExamFooter from "@/components/exam-footer"
+import ExamHeader from "@/components/exam/exam-header"
+import ExamContent from "@/components/exam/exam-content"
+import ExamFooter from "@/components/exam/exam-footer"
 import { READING_TESTS } from "@/lib/reading-tests-data"
 import { isTestUnlocked } from "@/lib/test-access"
 

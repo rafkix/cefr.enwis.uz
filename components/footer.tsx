@@ -22,11 +22,11 @@ export function Footer() {
           {/* LEFT: BRAND & SLOGAN */}
           <div className="max-w-sm space-y-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-red-600 rounded-xl flex items-center justify-center text-white font-black italic shadow-lg shadow-red-500/20 transition-transform hover:scale-110">
-                E
-              </div>
+              <div className="w-10 h-10 flex items-center justify-center italic group-hover:rotate-6 transition-transform">
+            <img src="https://image2url.com/images/1764944410839-0e0e3e25-d678-4801-9f49-011a4d8f6de0.png" alt="" />
+          </div>
               <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">
-                ENWIS <span className="text-red-600">AI</span>
+                ENWIS
               </span>
             </div>
             <p className="text-slate-500 font-medium leading-relaxed">

@@ -8,9 +8,9 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "E N W I S - English Now With Intelligent System",
+  title: "E N W I S - CEFR Exam Preparation Platform",
   description: "Improve Listening, Reading, Writing, and Speaking with structured practice on LinguaLab",
-  generator: "enwis.uz",
+  generator: "cefr.enwis.uz",
 }
 
 export default function RootLayout({

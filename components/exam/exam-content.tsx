@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import QuestionRenderer from "@/components/question-renderer"
+import QuestionRenderer from "@/components/exam/question-renderer"
 import HighlightText from "@/components/highlight-text"
 import type { ExamSet } from "@/lib/exam-data"
 
