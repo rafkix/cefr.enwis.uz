@@ -45,16 +45,18 @@ export default function ExamSidebar({
 
             {/* 3. SHRIFT BOSHQARUVI */}
             <div className="bg-white p-2 rounded-xl border border-gray-100">
-                <div className="flex items-center justify-between bg-gray-50 px-2 py-1 rounded-lg border">
-                    <button onClick={onDecreaseFontSize} className="p-1.5 hover:bg-white rounded shadow-sm text-gray-600 transition-all active:scale-75">
-                        <Minus className="w-4 h-4" />
+                <div className="flex items-center justify-between px-2 py-1 rounded-lg">
+                    <button onClick={onDecreaseFontSize} className="p-2 hover:bg-gray-50  rounded shadow-sm text-gray-600 transition-all active:scale-75">
+                        {/* <Minus className="w-4 h-4" /> */}
+                        -A
                     </button>
                     <div className="flex items-center gap-1.5 text-gray-700 font-bold">
                         <Type className="w-3.5 h-3.5 text-blue-500" />
                         <span className="text-xs"></span>
                     </div>
-                    <button onClick={onIncreaseFontSize} className="p-1.5 hover:bg-white rounded shadow-sm text-gray-600 transition-all active:scale-75">
-                        <Plus className="w-4 h-4" />
+                    <button onClick={onIncreaseFontSize} className="p-2 hover:bg-gray-50 rounded shadow-sm text-gray-600 transition-all active:scale-75">
+                        {/* <Plus className="w-4 h-4" /> */}
+                        A+
                     </button>
                 </div>
             </div>
