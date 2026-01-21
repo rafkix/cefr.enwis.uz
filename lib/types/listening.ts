@@ -81,6 +81,7 @@ export interface ListeningSubmission {
 
 // 📤 Hisoblangan natijani qabul qilish uchun (Result Response)
 export interface ListeningResultResponse {
+  summary: any
   id: number;
   exam_id: string;
   total_questions: number;

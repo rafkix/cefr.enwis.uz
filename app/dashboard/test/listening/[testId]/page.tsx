@@ -181,44 +181,56 @@ export default function ListeningExamPage() {
     // Yakunlash
     // handleFinish funksiyasini yangilaymiz
     const handleFinish = useCallback(async () => {
+        // MUHIM: testId mavjudligini tekshirish
+        if (!testId) {
+            console.error("Xatolik: testId topilmadi!");
+            alert("Sessiya topilmadi. Iltimos sahifani yangilang.");
+            return;
+        }
+
         try {
-            setLoading(true); // Yuborish jarayonida loader ko'rsatamiz
+            setLoading(true);
 
             // 1. To'liq ekran rejimidan chiqish
             if (document.fullscreenElement) {
-                document.exitFullscreen().catch(() => { });
+                await document.exitFullscreen().catch(() => { });
             }
 
-            // 2. Payload tayyorlash (Backend kutayotgan formatda)
-            // answersRef.current da { "savol_id": "javob" } saqlangan
+            // 2. Payload tayyorlash
             const payload = {
                 exam_id: testId,
                 user_answers: answersRef.current
             };
 
-            // 3. API orqali natijani yuborish
-            // submitListeningExamAPI biz avvalroq listening.ts da yozgan funksiya
-            const response = await submitListeningExamAPI(payload);
-            const result = response.data;
+            console.log("Yuborilayotgan payload:", payload);
 
-            // 4. Sessiyalarni tozalash (LocalStorage)
+            // 3. API orqali natijani yuborish
+            const response = await submitListeningExamAPI(payload);
+            const resultData = response.data;
+
+            // 4. Sessiyalarni tozalash
             localStorage.removeItem(`listening-session-${testId}`);
-            // Review uchun kerak bo'lishi mumkin bo'lgan javoblarni vaqtinchalik saqlaymiz
-            localStorage.setItem(`last-result-${testId}`, JSON.stringify(result));
+            localStorage.setItem(`last-result-${testId}`, JSON.stringify(resultData));
 
             setStatus("finished");
 
-            // 5. Natija sahifasiga yo'naltirish (Backend qaytargan RESULT ID bilan)
-            // Muhim: result.id bu ExamResult jadvalidagi ID
-            router.push(`/dashboard/result/listening/${result.id}`);
+            // 5. Yo'naltirish (Backend qaytargan tuzilishga qarab)
+            // Agar backend { summary: { id: 1 }, review: [] } qaytarsa:
+            const resultId = resultData.summary?.id || resultData.id;
+
+            if (resultId) {
+                router.push(`/dashboard/result/listening/${resultId}`);
+            } else {
+                throw new Error("Backenddan Result ID kelmadi");
+            }
 
         } catch (err: any) {
             console.error("Natijani yuborishda xato:", err);
-            alert("Natijani saqlashda muammo yuz berdi. Iltimos, qayta urinib ko'ring.");
+            const errorMsg = err.response?.data?.detail || "Natijani saqlashda muammo yuz berdi.";
+            alert(`Xatolik: ${errorMsg}`);
             setLoading(false);
         }
     }, [testId, router]);
-
     // Javob berilmagan savollar
     const unansweredQuestions = useMemo(() => {
         if (!test || !test.parts) return [];

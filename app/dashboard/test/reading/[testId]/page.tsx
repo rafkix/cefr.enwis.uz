@@ -43,12 +43,17 @@ export default function ExamPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
-    const [currentQuestion, setCurrentQuestion] = useState<number>(0)
+    
+    // 🟢 O'ZGARISH: Virtual tartib raqami (Doim 1 dan boshlanadi)
+    const [currentVirtualId, setCurrentVirtualId] = useState<number>(1)
+    
+    // 🟢 O'ZGARISH: Mapping lug'atlari
+    const [idMap, setIdMap] = useState<Record<number, number>>({}) // {virtual: database}
+    const [revMap, setRevMap] = useState<Record<number, number>>({}) // {database: virtual}
 
     const [answers, setAnswers] = useState<Record<number, string>>({})
     const [answered, setAnswered] = useState<Record<number, boolean>>({})
 
-    // 🛡️ hasStarted'ni darhol localStorage'dan tekshiramiz (Reload flicker'ni oldini oladi)
     const [hasStarted, setHasStarted] = useState<boolean>(() => {
         if (typeof window !== "undefined") {
             return localStorage.getItem(`reading-${testId}-started`) === "true"
@@ -62,18 +67,13 @@ export default function ExamPage() {
     const isExamFinished = useRef(false)
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- 1. YAKUNLASH VA APIGA YUBORISH FUNKSIYASI ---
+    // --- 1. YAKUNLASH VA APIGA YUBORISH ---
     const handleFinish = useCallback(async () => {
-        // 1. Tekshiruv: Takroriy yuborishni oldini olish
         if (isExamFinished.current || isSubmitting) return;
-
         setIsSubmitting(true);
         isExamFinished.current = true;
 
-        // 2. Javoblarni yig'ish (answers state va answersRef refni birlashtirish)
         const finalAnswers = { ...answers, ...answersRef.current };
-
-        // 3. Backend formatiga keltirish (Savol ID: Javob matni)
         const submissionData = {
             exam_id: testId,
             user_answers: Object.entries(finalAnswers).reduce((acc, [key, value]) => {
@@ -83,38 +83,23 @@ export default function ExamPage() {
         };
 
         try {
-            // 4. API so'rovi
             const response = await submitReadingExamAPI(submissionData);
-
-            /* MUHIM: Backend submit_exam funksiyasi quyidagicha qaytaradi:
-               return { "summary": new_result, "review": review_items }
-               Shuning uchun ID: response.data.summary.id ichida bo'ladi.
-            */
             const resultId = response.data.summary.id;
 
-            // 5. Muvaffaqiyatli bo'lsa LocalStorage ni tozalash
             localStorage.removeItem(`reading-${testId}-time`);
             localStorage.removeItem(`reading-${testId}-started`);
             localStorage.removeItem(`reading-${testId}-answers`);
 
-            // 6. Natija sahifasiga yo'naltirish (Result ID bilan)
-            // Dashboard yo'nalishingizga qarab:
             router.push(`/dashboard/result/reading/${resultId}`);
-
         } catch (error: any) {
             console.error("Topshirishda xatolik:", error);
-
-            // Foydalanuvchiga tushunarli xabar
-            const errorMsg = error.response?.data?.detail || "Natijani saqlab bo'lmadi.";
-            alert(`Xatolik: ${errorMsg}`);
-
-            // Xatolik bo'lsa foydalanuvchi qayta urinishi uchun holatni tiklaymiz
+            alert("Natijani saqlab bo'lmadi.");
             isExamFinished.current = false;
             setIsSubmitting(false);
         }
     }, [answers, testId, router, isSubmitting]);
 
-    // --- 2. DATA FETCHING & SESSION RESTORE ---
+    // --- 2. DATA FETCHING & VIRTUAL MAPPING ---
     useEffect(() => {
         if (!testId) return;
 
@@ -123,15 +108,28 @@ export default function ExamPage() {
             try {
                 const response = await getReadingExamByIdAPI(testId);
                 const examData = response.data;
-                if (!examData) throw new Error("Ma'lumot topilmadi");
                 setTest(examData);
 
-                const sessionStarted = localStorage.getItem(`reading-${testId}-started`) === "true";
+                // 🟢 O'ZGARISH: Savollarni tartiblab mapping qilish
+                const mapping: Record<number, number> = {};
+                const reverseMapping: Record<number, number> = {};
+                let counter = 1;
 
+                examData.parts.forEach((part: any) => {
+                    part.questions.forEach((q: any) => {
+                        const dbId = Number(q.id);
+                        mapping[counter] = dbId;
+                        reverseMapping[dbId] = counter;
+                        counter++;
+                    });
+                });
+
+                setIdMap(mapping);
+                setRevMap(reverseMapping);
+
+                const sessionStarted = localStorage.getItem(`reading-${testId}-started`) === "true";
                 if (sessionStarted) {
                     setHasStarted(true);
-
-                    // Javoblarni tiklash
                     const savedAnswers = localStorage.getItem(`reading-${testId}-answers`);
                     if (savedAnswers) {
                         const parsed = JSON.parse(savedAnswers);
@@ -141,25 +139,15 @@ export default function ExamPage() {
                         Object.keys(parsed).forEach(id => newAnswered[Number(id)] = !!parsed[id].trim());
                         setAnswered(newAnswered);
                     }
-
-                    // Vaqtni tiklash
                     const savedTime = localStorage.getItem(`reading-${testId}-time`);
-                    if (savedTime) {
-                        setTimeLeft(parseInt(savedTime, 10));
-                    } else {
-                        setTimeLeft(examData.duration_minutes * 60);
-                    }
+                    setTimeLeft(savedTime ? parseInt(savedTime, 10) : examData.duration_minutes * 60);
                 } else {
-                    // Yangi urinish bo'lsa barchasini tozalash
                     setTimeLeft(examData.duration_minutes * 60);
-                    setAnswers({});
-                    setAnswered({});
-                    answersRef.current = {};
                 }
 
-                if (examData.parts.length > 0 && examData.parts[0].questions.length > 0) {
-                    setCurrentQuestion(Number(examData.parts[0].questions[0].id));
-                }
+                // Boshlang'ich savolni 1 deb belgilaymiz
+                setCurrentVirtualId(1);
+
             } catch (err: any) {
                 setError(err.message || "Xatolik yuz berdi");
             } finally {
@@ -172,7 +160,6 @@ export default function ExamPage() {
     // --- 3. TIMER LOGIC ---
     useEffect(() => {
         if (timeLeft === null || !test || !hasStarted || isExamFinished.current) return;
-
         const interval = setInterval(() => {
             setTimeLeft((prev) => {
                 if (prev === null || prev <= 1) {
@@ -185,23 +172,19 @@ export default function ExamPage() {
                 return nextTime;
             });
         }, 1000);
-
         return () => clearInterval(interval);
     }, [test, timeLeft, hasStarted, testId, handleFinish]);
 
     // --- 4. BROWSER CONTROLS ---
     useEffect(() => {
+        if (!hasStarted) return;
         const preventDefault = (e: BeforeUnloadEvent) => {
-            if (hasStarted && !isExamFinished.current) {
-                e.preventDefault();
-                e.returnValue = "";
-            }
+            if (!isExamFinished.current) { e.preventDefault(); e.returnValue = ""; }
         };
         window.history.pushState(null, "", window.location.href);
         const handlePopState = () => {
-            if (hasStarted && !isExamFinished.current) window.history.pushState(null, "", window.location.href);
+            if (!isExamFinished.current) window.history.pushState(null, "", window.location.href);
         };
-
         window.addEventListener("beforeunload", preventDefault);
         window.addEventListener("popstate", handlePopState);
         return () => {
@@ -221,14 +204,24 @@ export default function ExamPage() {
         setAnswered((prev) => ({ ...prev, [questionId]: !!value.trim() }));
     };
 
-    const unansweredQuestions = useMemo(() => {
-        if (!test) return [];
-        const allQuestions: number[] = [];
-        test.parts.forEach(part => {
-            part.questions.forEach(q => allQuestions.push(Number(q.questionNumber || q.id)));
+    // 🟢 O'ZGARISH: Sidebar uchun answered holatini virtualga o'girish
+    const virtualAnswered = useMemo(() => {
+        const result: Record<number, boolean> = {};
+        Object.entries(answered).forEach(([dbId, status]) => {
+            const vId = revMap[Number(dbId)];
+            if (vId) result[vId] = status;
         });
-        return allQuestions.filter(num => !answered[num]);
-    }, [test, answered]);
+        return result;
+    }, [answered, revMap]);
+
+    const unansweredQuestions = useMemo(() => {
+        const total = Object.keys(idMap).length;
+        const remaining: number[] = [];
+        for (let i = 1; i <= total; i++) {
+            if (!virtualAnswered[i]) remaining.push(i);
+        }
+        return remaining;
+    }, [idMap, virtualAnswered]);
 
     const formatTime = (s: number) => {
         const m = Math.floor(s / 60);
@@ -236,12 +229,9 @@ export default function ExamPage() {
         return `${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
     };
 
-    // --- 6. TESTNI BOSHLASH ---
     const startExam = () => {
         const elem = document.documentElement;
         if (elem.requestFullscreen) elem.requestFullscreen().catch(() => { });
-
-        localStorage.removeItem(`reading-${testId}-answers`);
         localStorage.setItem(`reading-${testId}-started`, "true");
         setHasStarted(true);
     };
@@ -249,24 +239,16 @@ export default function ExamPage() {
     if (loading) return <ExamSkeleton />;
     if (error) return <div className="h-screen flex items-center justify-center text-red-500 font-bold">{error}</div>;
 
-    const totalQuestions = test?.parts.reduce((acc, part) => acc + part.questions.length, 0) || 0;
+    const totalQuestionsCount = Object.keys(idMap).length;
 
-    // --- START SCREEN ---
+    // --- RENDER ---
     if (!hasStarted) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
                 <div className="bg-white p-10 rounded-[40px] shadow-2xl text-center max-w-lg border-4 border-white">
-                    <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                    </div>
-                    <h1 className="text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">IELTS Reading</h1>
-                    <p className="text-slate-500 mb-8 font-medium leading-relaxed italic">
-                        Test boshlanishi bilan brauzer To&apos;liq Ekran rejimiga o&apos;tadi va navigatsiya bloklanadi.
-                    </p>
-                    <button onClick={startExam} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all">
+                    <h1 className="text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">Cefr Reading</h1>
+                    <p className="text-slate-500 mb-8 font-medium italic">Test boshlanishi bilan brauzer To'liq Ekran rejimiga o'tadi va navigatsiya bloklanadi.</p>
+                    <button onClick={startExam} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
                         Testni boshlash
                     </button>
                 </div>
@@ -281,20 +263,24 @@ export default function ExamPage() {
                 <main className="flex-1 overflow-hidden relative">
                     <ReadingExamContent
                         examData={test!}
-                        currentQuestion={currentQuestion}
+                        // 🟢 O'ZGARISH: Content bazadagi ID ni bilishi kerak
+                        currentQuestion={idMap[currentVirtualId]}
                         answered={answered}
                         answers={answers}
+                        revMap={revMap}
                         onAnswer={handleAnswer}
-                        onSelectQuestion={setCurrentQuestion}
+                        // 🟢 O'ZGARISH: Content ichidan savol tanlansa, virtualga o'giramiz
+                        onSelectQuestion={(dbId) => setCurrentVirtualId(revMap[dbId])}
                         fontSize={fontSize}
                     />
                 </main>
                 <ReadingExamSidebar
-                    currentQuestion={currentQuestion}
-                    totalQuestions={totalQuestions}
-                    answered={answered}
+                    // 🟢 O'ZGARISH: Sidebar doim virtual ID (1, 2...) bilan ishlaydi
+                    currentQuestion={currentVirtualId}
+                    totalQuestions={totalQuestionsCount}
+                    answered={virtualAnswered}
                     timeLeft={formatTime(timeLeft || 0)}
-                    onSelectQuestion={setCurrentQuestion}
+                    onSelectQuestion={(vId) => setCurrentVirtualId(vId)}
                     onFinish={() => setIsFinishModalOpen(true)}
                     fontSize={fontSize}
                     onIncreaseFontSize={() => setFontSize(s => Math.min(s + 2, 30))}
@@ -304,20 +290,20 @@ export default function ExamPage() {
 
             {/* 🏁 YAKUNLASH MODALI */}
             {isFinishModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
                     <div className="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-8 text-center border-4 border-white">
                         <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase italic tracking-tight">Testni yakunlash</h2>
                         {unansweredQuestions.length > 0 ? (
                             <div className="mb-8 text-left p-6 bg-amber-50 rounded-[24px] border border-amber-100">
                                 <p className="text-amber-700 font-bold mb-4 text-center text-sm uppercase italic">Sizda {unansweredQuestions.length} ta savol qoldi:</p>
-                                <div className="flex flex-wrap justify-center gap-2 max-h-40 overflow-y-auto custom-scrollbar">
+                                <div className="flex flex-wrap justify-center gap-2 max-h-40 overflow-y-auto">
                                     {unansweredQuestions.map(num => (
                                         <span key={num} className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-xs font-black text-slate-400 border border-slate-200 shadow-sm">{num}</span>
                                     ))}
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-slate-500 font-bold mb-8 uppercase tracking-tight">Barcha savollar belgilandi. Yakunlashga tayyormisiz?</p>
+                            <p className="text-slate-500 font-bold mb-8 uppercase tracking-tight">Barcha savollar belgilandi. Yakunlaysizmi?</p>
                         )}
                         <div className="flex gap-4">
                             <button onClick={() => setIsFinishModalOpen(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase hover:bg-slate-200 transition-all">Qaytish</button>

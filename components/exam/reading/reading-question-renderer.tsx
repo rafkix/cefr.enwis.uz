@@ -68,19 +68,21 @@ export function MultipleChoiceRenderer({
                         }`}
                 >
                     {/* Radio Circle */}
-                    <div className={`mt-0.5 h-5 w-5 shrink-0 rounded-full border-2 flex items-center justify-center 
+                    <div className={`mt-0.6 h-6 w-6 shrink-0 rounded-full border-2 flex items-center justify-center 
                         ${answer === option.label ? "border-blue-600" : "border-gray-300"}`}
                     >
                         {answer === option.label && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}
+                    {option.value}
                     </div>
+                    
 
                     {/* Text: A) Variant matni */}
                     <span
                         className={`leading-tight ${answer === option.label ? "text-blue-900 font-bold" : "text-gray-700 font-medium"}`}
                         style={{ fontSize: `${fontSize - 2}px` }}
+                        
                     >
-                        <span className="font-bold mr-2">{option.label})</span>
-                        {option.value}
+                        <span className="font-bold mr-2">{option.label}</span>
                     </span>
                 </button>
             ))}
