@@ -1,97 +1,81 @@
 "use client"
 
+import React from "react"
 import Link from "next/link"
-import { Instagram, Twitter, Linkedin, Mail, ArrowUpRight } from "lucide-react"
+import { 
+    LayoutGrid, ShieldCheck, AlertTriangle, 
+    Facebook, Instagram, Linkedin, Mail, Phone, MapPin 
+} from "lucide-react"
 
 export function Footer() {
-    const currentYear = new Date().getFullYear()
-
-    // Faqatgina mavjud va eng muhim linklar
-    const navigation = [
-        { name: "About Us", href: "/about" },
-        { name: "Pricing", href: "/pricing" },
-        { name: "Contact", href: "/contact" },
-        { name: "Team", href: "/team" },
-    ]
-
     return (
-        <footer className="bg-white border-t border-slate-100 pt-16 pb-8 relative overflow-hidden">
-            <div className="max-w-7xl mx-auto px-6">
-                <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-16">
-
-                    {/* LEFT: BRAND & SLOGAN */}
-                    <div className="max-w-sm space-y-6">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 flex items-center justify-center italic group-hover:rotate-6 transition-transform">
-                                <img src="https://image2url.com/images/1764944410839-0e0e3e25-d678-4801-9f49-011a4d8f6de0.png" alt="" />
-                            </div>
-                            <span className="text-xl font-black tracking-tighter text-slate-900 uppercase">
-                                ENWIS
-                            </span>
-                        </div>
-                        <p className="text-slate-500 font-medium leading-relaxed">
-                            Empowering English learners with AI-driven assessments.
-                            Built for precision, designed for your success.
-                        </p>
-                        <div className="flex gap-4">
-                            {[Instagram, Twitter, Linkedin].map((Icon, i) => (
-                                <Link key={i} href="#" className="w-10 h-10 rounded-xl border border-slate-100 flex items-center justify-center text-slate-400 hover:border-red-600 hover:text-red-600 hover:-translate-y-1 transition-all">
-                                    <Icon size={18} />
-                                </Link>
-                            ))}
-                        </div>
+        <footer className="bg-slate-900 text-slate-400 py-16 border-t border-slate-800">
+            <div className="mx-auto max-w-7xl px-4 grid md:grid-cols-4 gap-12">
+                
+                {/* 1. BRAND INFO */}
+                <div className="col-span-1 md:col-span-2">
+                    <div className="flex items-center gap-3 mb-6">
+                        <img src="logo.png" alt="" className="relative w-12 h-12  items-center justify-center"/>
+                        <span className="text-2xl font-black text-white tracking-tight">ENWIS.UZ</span>
                     </div>
-
-                    {/* RIGHT: COMPACT LINKS & CONTACT */}
-                    <div className="flex flex-col sm:flex-row gap-16 md:gap-24">
-                        {/* Navigation */}
-                        <div>
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">Menu</h4>
-                            <ul className="space-y-4">
-                                {navigation.map((link) => (
-                                    <li key={link.name}>
-                                        <Link href={link.href} className="text-sm font-bold text-slate-900 hover:text-red-600 flex items-center group transition-colors">
-                                            {link.name}
-                                            <ArrowUpRight size={12} className="ml-1 opacity-0 -translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all" />
-                                        </Link>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-
-                        {/* Support */}
-                        <div>
-                            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-6">Support</h4>
-                            <div className="space-y-4">
-                                <a href="mailto:info@enwis.uz" className="flex items-center gap-2 text-sm font-bold text-slate-900 hover:text-red-600 transition-colors">
-                                    <Mail size={16} /> info@enwis.uz
-                                </a>
-                                <p className="text-xs font-bold text-slate-500 max-w-[150px] leading-loose">
-                                    Tashkent, Uzbekistan <br />
-                                    IT Park, District 12
-                                </p>
-                            </div>
-                        </div>
+                    <p className="max-w-md leading-relaxed text-slate-500 mb-8">
+                        Markaziy Osiyodagi eng ilg'or sun'iy intellektga asoslangan bilimni baholash tizimi. 
+                        Ingliz tilini o'rganish va baholashda yangi standart.
+                    </p>
+                    
+                    {/* DISCLAIMER */}
+                    <div className="p-4 bg-slate-800/50 rounded-xl border border-slate-700/50 inline-flex items-start gap-3">
+                        <AlertTriangle className="text-orange-500 shrink-0 mt-0.5" size={16} />
+                        <p className="text-xs text-slate-400 leading-relaxed max-w-xs">
+                            Ushbu loyiha mustaqil ta'lim platformasi bo'lib, Bilim va malakalarni baholash agentligi (UZBMB) bilan rasmiy aloqaga ega emas.
+                        </p>
                     </div>
                 </div>
+                
+                {/* 2. PLATFORMA */}
+                <div>
+                    <h4 className="text-white font-bold mb-6 text-lg">Platforma</h4>
+                    <ul className="space-y-4 text-sm font-medium">
+                        <li><Link href="/test" className="hover:text-[#17776A] transition-colors">Test topshirish</Link></li>
+                        <li><Link href="/pricing" className="hover:text-[#17776A] transition-colors">Tariflar</Link></li>
+                        <li><Link href="/news" className="hover:text-[#17776A] transition-colors">Yangiliklar</Link></li>
+                        <li><Link href="/results" className="hover:text-[#17776A] transition-colors">Natijalarni tekshirish</Link></li>
+                    </ul>
+                </div>
 
-                {/* BOTTOM BAR */}
-                <div className="pt-8 border-t border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6 text-center md:text-left">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                        © {currentYear} ENWIS AI. All rights reserved.
-                    </p>
-
-                    <div className="flex items-center gap-6">
-                        <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" /> AI Engine Live
-                        </span>
-                        <button
-                            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                            className="group text-[10px] font-black text-slate-900 uppercase tracking-widest flex items-center gap-2 hover:text-red-600 transition-colors"
-                        >
-                            Top <span className="group-hover:-translate-y-1 transition-transform">↑</span>
-                        </button>
-                    </div>
+                {/* 3. BOG'LANISH */}
+                <div>
+                    <h4 className="text-white font-bold mb-6 text-lg">Bog'lanish</h4>
+                    <ul className="space-y-4 text-sm font-medium">
+                        <li className="flex items-start gap-3">
+                            <MapPin size={18} className="text-[#17776A] shrink-0" />
+                            <span>Farg'ona sh., Qirguli mavzesi, 108</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <Phone size={18} className="text-[#17776A] shrink-0" />
+                            <span>+998 (88) 542-08-18</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <Mail size={18} className="text-[#17776A] shrink-0" />
+                            <span>enwisuz@gmail.com</span>
+                        </li>
+                        
+                        {/* SOCIALS */}
+                        <li className="flex gap-4 mt-4 pt-4 border-t border-slate-800">
+                            <a href="#" className="hover:text-white transition-colors"><Instagram size={20}/></a>
+                            <a href="#" className="hover:text-white transition-colors"><Facebook size={20}/></a>
+                            <a href="#" className="hover:text-white transition-colors"><Linkedin size={20}/></a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            
+            {/* BOTTOM BAR */}
+            <div className="mx-auto max-w-7xl px-4 pt-8 mt-12 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4 text-sm font-medium text-slate-500">
+                <p>&copy; 2026 ENWIS Inc. Barcha huquqlar himoyalangan.</p>
+                <div className="flex gap-6">
+                    <Link href="/privacy" className="hover:text-white transition-colors">Maxfiylik siyosati</Link>
+                    <Link href="/terms" className="hover:text-white transition-colors">Foydalanish shartlari</Link>
                 </div>
             </div>
         </footer>

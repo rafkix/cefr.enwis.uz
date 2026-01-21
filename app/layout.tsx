@@ -3,14 +3,14 @@ import type { Metadata } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Analytics } from "@vercel/analytics/next"
-// Yangi komponentni import qilamiz
+import LayoutWrapper from "@/components/LayoutWrapper" // Import qiling
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
     title: "E N W I S - CEFR Exam Preparation Platform",
-    description: "Improve Listening, Reading, Writing, and Speaking with structured practice on LinguaLab",
+    description: "Improve Listening, Reading, Writing, and Speaking with structured practice",
     generator: "cefr.enwis.uz",
 }
 
@@ -20,12 +20,15 @@ export default function RootLayout({
     children: React.ReactNode
 }>) {
     return (
-        <html lang="en">
+        <html lang="uz">
             <head>
                 <link rel="icon" href="https://image2url.com/images/1764944410839-0e0e3e25-d678-4801-9f49-011a4d8f6de0.png" />
             </head>
             <body className="font-sans antialiased">
-                {children}
+                {/* LayoutWrapper barcha mantiqni o'z ichiga oladi */}
+                <LayoutWrapper>
+                    {children}
+                </LayoutWrapper>
                 <Analytics />
             </body>
         </html>

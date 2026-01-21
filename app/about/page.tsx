@@ -7,8 +7,8 @@ import {
   CheckCircle2, ShieldCheck, Globe2, Rocket, 
   Cpu, BarChart3, Fingerprint 
 } from "lucide-react"
-import { Navbar } from "@/components/navbar"
-import { Footer } from "@/components/footer"
+import { Navbar } from "@/components/Header"
+import { Footer } from "@/components/Footer"
 
 export default function AboutPage() {
   const values = [
