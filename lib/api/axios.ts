@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_URL = "https://api.eniws.uz/v1/api"; 
+const API_URL = "http://api.eniws.uz/v1/api"; 
 
 const api = axios.create({
     baseURL: API_URL,
