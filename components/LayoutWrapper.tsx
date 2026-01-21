@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation"
 import { Header } from "./Header"
-import { Footer } from "./Footer"
+import { Footer } from "./footer"
 
 
 export default function LayoutWrapper({ children }: { children: React.ReactNode }) {
