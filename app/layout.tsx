@@ -9,8 +9,8 @@ const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-    title: "E N W I S - CEFR Exam Preparation Platform",
-    description: "Improve Listening, Reading, Writing, and Speaking with structured practice",
+    title: "E N W I S - CEFR imtihoniga tayyorgarlik platformasi",
+    description: "Tizimli amaliyot bilan tinglash, o'qish, yozish va gapirishni yaxshilang",
     generator: "cefr.enwis.uz",
 }
 

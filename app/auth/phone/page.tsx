@@ -18,6 +18,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [telegramLink, setTelegramLink] = useState("")
     const [otp, setOtp] = useState<string[]>(new Array(6).fill(""))
+    const [agreed, setAgreed] = useState(false);
 
     const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -113,9 +114,7 @@ export default function LoginPage() {
                 {/* Markaziy Logo */}
                 <div className="flex flex-col items-center mb-10">
                     <Link href="/" className="group flex flex-col items-center gap-4">
-                        <div className="w-14 h-14 bg-[#17776A] rounded-2xl flex items-center justify-center text-white shadow-xl shadow-[#17776A]/20 transition-all group-hover:scale-110 group-hover:rotate-3">
-                            <BrainCircuit size={32} />
-                        </div>
+                        <img src="/logo.png" alt="" className="relative w-20 h-20  items-center justify-center"/>
                         <span className="text-3xl font-black tracking-tighter text-slate-900">ENWIS</span>
                     </Link>
                 </div>
@@ -140,9 +139,23 @@ export default function LoginPage() {
                                 </h1>
                                 <p className="text-slate-500 font-medium text-sm">
                                     {step === 'PHONE'
-                                        ? "Tizimga kirish uchun telefon raqamingizni kiriting"
+                                        ? "Tizimga kirish uchun telegramda foydalandigan telefon raqamingizni kiriting"
                                         : "Telegram orqali yuborilgan 6 xonali kodni kiriting"}
                                 </p>
+                            </div>
+
+                            <div className="flex items-center space-x-2 my-4">
+                                <input
+                                    type="checkbox"
+                                    id="terms"
+                                    checked={agreed}
+                                    onChange={(e) => setAgreed(e.target.checked)}
+                                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                                    required
+                                />
+                                <label htmlFor="terms" className="text-xs text-slate-500">
+                                    Men <a href="/public-offer" target="_blank" className="text-blue-600 underline">Ommaviy oferta</a> shartlariga roziman
+                                </label>
                             </div>
 
                             <form onSubmit={handleSubmit} className="space-y-6">
@@ -215,9 +228,9 @@ export default function LoginPage() {
 
                 {/* Pastki qism */}
                 <div className="mt-8 text-center space-y-4">
-                    <p className="text-sm font-medium text-slate-400">
+                    {/* <p className="text-sm font-medium text-slate-400">
                         Hisobingiz yo'qmi? <Link href="/auth/signup" className="text-[#17776A] font-bold hover:underline">Ro'yxatdan o'ting</Link>
-                    </p>
+                    </p> */}
 
                     <div className="flex items-center justify-center gap-6 pt-4 border-t border-slate-200/60">
                         <div className="flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
