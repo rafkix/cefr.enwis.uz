@@ -116,7 +116,7 @@ export default function TestInfoPage() {
 
                         {/* DAILY CHALLENGE */}
                         <motion.div whileHover={{ y: -5 }} className="bg-slate-900 rounded-[32px] p-8 relative overflow-hidden shadow-2xl border border-slate-700">
-                            <div className="absolute inset-0 opacity-10 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+                            <div className="absolute inset-0 opacity-[3.15] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
                             <div className="relative z-10">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
                                     <div className="flex items-center gap-4">
