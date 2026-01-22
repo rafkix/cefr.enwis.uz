@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { UnlockModal } from "@/components/unlock-modal"
+import { UnlockModal } from "@/components/UnlockModal"
 
 const speakingTests = [
   { id: "sp-1", title: "Daily Life & Routines", level: "B1/B2", duration: "12-15", parts: 3, isFree: true },

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { UnlockModal } from "@/components/unlock-modal"
+import { UnlockModal } from "@/components/UnlockModal"
 
 // writingSets ma'lumotlari lib papkasidan olinadi
 import { writingSets } from "@/lib/exams/writing/data"
