@@ -108,13 +108,13 @@ export default function ExamHeader({
                     </span>
                 </div>
 
-                {/* O'RTA: TIMER */}
+                {/* O'RTA: TIMER
                 <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors ${timeRemaining < 300 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-slate-50 text-slate-700'}`}>
                     <Clock size={18} className={timeRemaining < 300 ? 'text-red-500' : 'text-slate-400'} />
                     <span className="text-lg font-black tabular-nums tracking-tight">
                         {formatTime(timeRemaining)}
                     </span>
-                </div>
+                </div> */}
 
                 {/* O'NG TOMON: FOYDALANUVCHI PROFILI */}
                 <div className="flex items-center gap-4">
