@@ -107,6 +107,8 @@ export function GapFillFillRenderer({
                 placeholder="Type your answer..."
                 value={answer}
                 onChange={(e) => onInputChange(e.target.value)}
+                // 🟢 MUHIM: Tashqaridagi onClick ishlashini to'xtatadi
+                onClick={(e) => e.stopPropagation()} 
                 className="w-full px-4 py-2.5 rounded-lg border-2 border-blue-100 bg-blue-50/30 text-blue-900 font-bold outline-none focus:border-blue-500 focus:bg-white transition-all"
                 style={{ fontSize: `${fontSize}px` }}
             />

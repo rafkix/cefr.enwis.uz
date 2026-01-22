@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useRef, useEffect } from "react"
 import { Eraser, Folder } from "lucide-react"
-import QuestionRenderer from "@/components/exam/reading/reading-question-renderer"
+import QuestionRenderer, { GapFillFillRenderer } from "@/components/exam/reading/reading-question-renderer"
 import HighlightText from "@/components/highlight-text"
 import type { ReadingExam } from "@/lib/types/reading"
 
@@ -97,8 +97,7 @@ export default function ReadingExamContent({
                                     highlights={currentHighlights}
                                     onRemoveHighlight={id => setHighlightsByPart(p => ({
                                         ...p, [activePartIndex]: p[activePartIndex].filter(h => h.id !== id)
-                                    }))}
-                                />
+                                    }))} offset={0} />
                             </span>
 
                             {i < segments.length - 1 && qId && (
@@ -159,7 +158,7 @@ export default function ReadingExamContent({
                                     : "text-slate-400 hover:text-slate-600"}`}
                         >
                             <Folder size={14} className={activePartIndex === idx ? "text-blue-500 fill-blue-50" : "text-slate-300"} />
-                            <span className="tracking-tighter uppercase font-black">PART {idx + 1}</span>
+                            <span className="tracking-tighter uppercase font-black">{idx + 1}</span>
                         </button>
                     ))}
                 </div>
@@ -189,28 +188,41 @@ export default function ReadingExamContent({
                     <div className="max-w-lg mx-auto space-y-4">
                         {currentPart.questions.map((q) => {
                             const qId = Number(q.id);
-                            // 🟢 Virtual raqamni aniqlaymiz
-                            const displayNum = revMap[qId] || q.id;
+                            // JSON ichidagi question_number yoki revMap orqali raqamni olish
+                            const displayNum = revMap[qId] || q.question_number || q.id;
 
+                            // Matn ichidagi gap-fill bo'lsa, sidebar'da ko'rsatmaymiz
                             if (q.type === "GAP_FILL") return null;
 
                             return (
-                                <div key={q.id} onClick={() => onSelectQuestion(qId)}
-                                    className={`p-5 rounded-[24px] border bg-white transition-all cursor-pointer 
-                                     ${Number(currentQuestion) === qId ? "border-blue-400 shadow-xl ring-1 ring-blue-100 scale-[1.01]" : "border-gray-100"}`}>
-
+                                <div key={q.id}
+                                    onClick={() => onSelectQuestion(qId)}
+                                    className={`p-5 rounded-3xl border bg-white transition-all cursor-pointer 
+                                            ${Number(currentQuestion) === qId ? "border-blue-400 shadow-xl ring-1 ring-blue-100 scale-[1.01]" : "border-gray-100"}`}
+                                >
                                     <div className="flex gap-4 text-left">
                                         <div className="shrink-0 w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[11px]">
-                                            {displayNum} 
+                                            {displayNum}
                                         </div>
                                         <div className="flex-1">
                                             <p className="font-bold text-slate-800 mb-4 text-sm leading-relaxed">{q.text}</p>
-                                            <QuestionRenderer
-                                                question={q}
-                                                answer={answers[qId] || ""}
-                                                onAnswer={v => onAnswer(qId, v)}
-                                                fontSize={fontSize}
-                                            />
+
+                                            {/* 🟢 XATOLIKNI TUZATISH: GAP_FILL_FILL uchun maxsus shart */}
+                                            {q.type === "GAP_FILL_FILL" ? (
+                                                <GapFillFillRenderer
+                                                    answer={answers[qId] || ""}
+                                                    onInputChange={(v) => onAnswer(qId, v)}
+                                                    fontSize={fontSize}
+                                                />
+                                            ) : (
+                                                <QuestionRenderer
+                                                    question={q}
+                                                    answer={answers[qId] || ""}
+                                                    onAnswer={v => onAnswer(qId, v)}
+                                                    fontSize={fontSize} onInputChange={function (value: string): void {
+                                                        throw new Error("Function not implemented.")
+                                                    }} />
+                                            )}
                                         </div>
                                     </div>
                                 </div>

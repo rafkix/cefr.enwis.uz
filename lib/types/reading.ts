@@ -32,6 +32,8 @@ export interface ReadingPart {
 }
 
 export interface ReadingExam {
+  isFree: any;
+  isDemo: any;
   id: string;            // Slugs: 'reading-test-1'
   title: string;
   cefr_level: string;

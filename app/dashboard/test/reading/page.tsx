@@ -8,32 +8,36 @@ import {
     Clock,
     FileText,
     ChevronRight,
+    ChevronLeft, // Orqaga tugmasi uchun
     Zap,
     Search,
     Inbox,
     Filter,
-    Activity
+    Activity,
+    Lock
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { getAllReadingExamsAPI } from "@/lib/api/reading"
 import { ReadingExam } from "@/lib/types/reading"
+import { UnlockModal } from "@/components/UnlockModal"
 
 export default function ReadingPage() {
     const router = useRouter()
-    
+
     const [exams, setExams] = useState<ReadingExam[]>([])
     const [loading, setLoading] = useState(true)
     const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium'>('all')
     const [searchTerm, setSearchTerm] = useState("")
+    
+    const [showUnlockModal, setShowUnlockModal] = useState(false)
+    const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
 
-    // 1. DATA FETCHING
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true)
                 const response = await getAllReadingExamsAPI()
-                // Backenddan kelayotgan ma'lumot response.data ichida bo'ladi
                 setExams(Array.isArray(response.data) ? response.data : [])
             } catch (error) {
                 console.error("Imtihonlarni yuklashda xatolik:", error)
@@ -44,40 +48,56 @@ export default function ReadingPage() {
         fetchData()
     }, [])
 
-    // 2. SEARCH & FILTER LOGIC (useMemo bilan optimallashgan)
     const filteredTests = useMemo(() => {
         return exams.filter((test) => {
-            const matchesSearch = 
-                test.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                test.cefr_level.toLowerCase().includes(searchTerm.toLowerCase())
-            
-            // Hozircha backend 'type' yoki 'isFree' qaytarmayotgan bo'lsa, 'all' ko'rsatiladi
-            if (activeTab === 'free') return matchesSearch && true; // Kelajakda test.is_free mantiqi uchun
-            if (activeTab === 'premium') return false; // Hozircha premium testlar yo'q deb hisoblaymiz
-            
-            return matchesSearch
-        })
-    }, [exams, searchTerm, activeTab])
+            const matchesSearch =
+                test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                test.cefr_level.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const handleTestClick = (testId: string) => {
-        // Yo'lakni sizning routeringizga moslashtirdim: /test/reading/[testId]
-        router.push(`/dashboard/test/reading/${testId}`)
+            if (activeTab === 'free') return matchesSearch && test.is_free === true;
+            if (activeTab === 'premium') return matchesSearch && test.is_free === false;
+
+            return matchesSearch;
+        });
+    }, [exams, searchTerm, activeTab]);
+
+    const handleTestAction = (testId: string, isFree: boolean) => {
+        if (isFree) {
+            router.push(`/dashboard/test/reading/${testId}`)
+        } else {
+            setSelectedTestId(testId)
+            setShowUnlockModal(true)
+        }
     }
 
     return (
-        <div className="space-y-8 pb-10">
+        <div className="max-w-7xl mx-auto space-y-6 pb-10 px-2 sm:px-0">
+            
+            {/* --- BACK BUTTON (Minimalist & Non-intrusive) --- */}
+            <motion.button 
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => router.back()}
+                className="group flex items-center gap-3 text-slate-400 hover:text-blue-600 transition-all"
+            >
+                <div className="w-9 h-9 rounded-2xl bg-white border border-slate-100 flex items-center justify-center group-hover:bg-blue-50 group-hover:border-blue-200 shadow-sm transition-all">
+                    <ChevronLeft size={18} className="group-hover:-translate-x-0.5 transition-transform" />
+                </div>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em]">Orqaga qaytish</span>
+            </motion.button>
+
             {/* 1. TOP HERO BANNER */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                     className="md:col-span-2 p-8 rounded-[32px] bg-gradient-to-br from-blue-600 to-indigo-700 text-white relative overflow-hidden shadow-2xl shadow-blue-200"
                 >
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Zap size={18} className="fill-yellow-400 text-yellow-400" />
-                            <span className="text-xs font-black uppercase tracking-widest opacity-80">CEFR Reading</span>
+                        <div className="flex items-center gap-2 mb-4 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-md">
+                            <Zap size={16} className="fill-yellow-400 text-yellow-400" />
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Reading Mastery</span>
                         </div>
-                        <h2 className="text-3xl font-black mb-4 tracking-tight">O'qish ko'nikmalaringizni <br/>professional darajaga olib chiqing.</h2>
+                        <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">O'qish ko'nikmalaringizni <br />professional darajaga olib chiqing.</h2>
                         <p className="text-blue-100 text-sm font-medium max-w-md opacity-90 leading-relaxed italic">
                             Haqiqiy imtihon muhiti, akademik matnlar va batafsil natijalar tahlili sizni kutmoqda.
                         </p>
@@ -93,8 +113,8 @@ export default function ReadingPage() {
                             <Filter size={24} />
                         </div>
                         <div>
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-tighter">Saralash</p>
-                            <p className="text-lg font-black text-slate-900">Kategoriyalar</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">Saralash</p>
+                            <p className="text-lg font-black text-slate-900 tracking-tight">Kategoriyalar</p>
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -102,11 +122,10 @@ export default function ReadingPage() {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
-                                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${
-                                    activeTab === tab 
-                                    ? "bg-blue-600 text-white shadow-lg shadow-blue-100" 
-                                    : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
-                                }`}
+                                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${activeTab === tab
+                                        ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
+                                        : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                                    }`}
                             >
                                 {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Mashqlar' : 'Premium Imtihonlar'}
                             </button>
@@ -115,12 +134,12 @@ export default function ReadingPage() {
                 </div>
             </div>
 
-            {/* 2. SEARCH AREA (Mobile & Tablet) */}
+            {/* 2. SEARCH AREA */}
             <div className="relative group">
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
-                <input 
+                <input
                     type="text"
-                    placeholder="Test nomi yoki darajani qidiring (masalan: B2, Practice Test...)"
+                    placeholder="Test nomi yoki darajani qidiring..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-14 pr-6 py-5 bg-white border border-slate-100 rounded-[24px] text-sm font-bold outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-200 transition-all shadow-sm"
@@ -128,11 +147,11 @@ export default function ReadingPage() {
             </div>
 
             {/* 3. TEST LIST AREA */}
-            <div className="space-y-6">
+            <div className="space-y-5">
                 <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-2">
                         <Activity size={18} className="text-blue-500" />
-                        <h3 className="font-black text-slate-800 text-sm tracking-widest uppercase">Mavjud Imtihonlar</h3>
+                        <h3 className="font-black text-slate-800 text-xs tracking-[0.2em] uppercase">Mavjud Imtihonlar</h3>
                     </div>
                     <Badge variant="secondary" className="bg-blue-50 text-blue-600 rounded-full px-4 py-1 border-none font-black text-[10px]">
                         {filteredTests.length} TA TEST
@@ -141,17 +160,17 @@ export default function ReadingPage() {
 
                 {loading ? (
                     <div className="grid grid-cols-1 gap-4">
-                        {[1, 2, 3, 4].map((i) => (
-                            <div key={i} className="h-28 w-full bg-white rounded-[32px] border border-slate-100 animate-pulse" />
+                        {[1, 2, 3].map((i) => (
+                            <div key={i} className="h-28 w-full bg-white rounded-[32px] border border-slate-50 animate-pulse" />
                         ))}
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 gap-4">
                         <AnimatePresence mode="popLayout">
                             {filteredTests.map((test, index) => {
-                                // Savollar sonini hisoblash
+                                const isLocked = !test.is_free;
                                 const totalQuestions = test.parts?.reduce((acc, part) => acc + part.questions.length, 0) || 0;
-                                
+
                                 return (
                                     <motion.div
                                         key={test.id}
@@ -160,23 +179,32 @@ export default function ReadingPage() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         transition={{ delay: index * 0.05 }}
-                                        onClick={() => handleTestClick(test.id)}
-                                        className="group flex flex-col sm:flex-row items-start sm:items-center justify-between p-6 rounded-[32px] bg-white border border-slate-100 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-500/[0.06] transition-all cursor-pointer relative overflow-hidden"
+                                        onClick={() => handleTestAction(test.id, test.is_free)}
+                                        className="group flex flex-col sm:flex-row items-center justify-between p-6 rounded-[32px] bg-white border border-slate-100 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-500/[0.06] transition-all cursor-pointer relative overflow-hidden"
                                     >
-                                        <div className="flex items-center gap-6 z-10">
-                                            {/* Status Badge for Hover */}
-                                            <div className="w-16 h-16 rounded-[24px] bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all duration-500 shadow-inner">
-                                                <BookOpen size={26} />
+                                        <div className="flex items-center gap-6 z-10 w-full sm:w-auto">
+                                            <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center transition-all duration-500 shadow-inner shrink-0
+                                                ${isLocked 
+                                                    ? 'bg-slate-50 text-slate-300' 
+                                                    : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'}`}>
+                                                {isLocked ? <Lock size={26} /> : <BookOpen size={26} />}
                                             </div>
-                                            
-                                            <div>
-                                                <div className="flex items-center gap-3 mb-2">
+
+                                            <div className="flex-1">
+                                                <div className="flex flex-wrap items-center gap-3 mb-2">
                                                     <h3 className="font-black text-slate-900 text-lg tracking-tight group-hover:text-blue-600 transition-colors uppercase">
                                                         {test.title}
                                                     </h3>
-                                                    <Badge className="bg-blue-50 text-blue-600 border-none text-[9px] font-black uppercase px-2">Reading</Badge>
+                                                    {test.is_demo && (
+                                                        <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase border border-amber-100">Demo</span>
+                                                    )}
+                                                    {test.is_free ? (
+                                                        <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-black">OPEN</Badge>
+                                                    ) : (
+                                                        <Badge className="bg-purple-50 text-purple-600 border-purple-100 text-[10px] font-black tracking-widest">PREMIUM</Badge>
+                                                    )}
                                                 </div>
-                                                
+
                                                 <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                     <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
                                                         <Clock size={12} className="text-blue-500" />
@@ -186,45 +214,40 @@ export default function ReadingPage() {
                                                         <FileText size={12} className="text-orange-500" />
                                                         <span>{totalQuestions} SAVOL</span>
                                                     </div>
-                                                    <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
-                                                        <Badge className="h-4 bg-indigo-500 text-white border-none text-[8px]">{test.cefr_level}</Badge>
-                                                        <span className="text-slate-500">LEVEL</span>
-                                                    </div>
+                                                    <Badge className="h-4 bg-indigo-500 text-white border-none text-[8px] px-2">{test.cefr_level}</Badge>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div className="mt-4 sm:mt-0 shrink-0 w-full sm:w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-300 group-hover:bg-blue-600 group-hover:text-white transition-all duration-300 shadow-sm">
+                                        <div className={`mt-4 sm:mt-0 shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm
+                                            ${isLocked 
+                                                ? 'text-slate-200' 
+                                                : 'bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-lg'}`}>
                                             <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
                                         </div>
-
-                                        {/* Decorative element */}
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full -mr-16 -mt-16 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
                                     </motion.div>
                                 )
                             })}
                         </AnimatePresence>
                     </div>
                 )}
-
+                
                 {!loading && filteredTests.length === 0 && (
-                    <motion.div 
-                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                        className="text-center py-24 bg-white rounded-[40px] border-2 border-dashed border-slate-100"
-                    >
-                        <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <Inbox className="text-slate-200" size={40} />
-                        </div>
+                    <div className="text-center py-24 bg-white rounded-[40px] border-2 border-dashed border-slate-100">
+                        <Inbox className="mx-auto text-slate-200 mb-6" size={40} />
                         <p className="text-slate-500 font-black uppercase tracking-widest text-xs">Hech qanday imtihon topilmadi</p>
-                        <button 
-                            onClick={() => {setSearchTerm(""); setActiveTab('all')}}
-                            className="mt-4 text-blue-600 text-[10px] font-black uppercase hover:underline"
-                        >
-                            Filtrlarni tozalash
-                        </button>
-                    </motion.div>
+                    </div>
                 )}
             </div>
+
+            {selectedTestId && (
+                <UnlockModal 
+                    open={showUnlockModal} 
+                    onClose={() => setShowUnlockModal(false)} 
+                    testId={selectedTestId} 
+                    testType="reading" 
+                />
+            )}
         </div>
     )
 }

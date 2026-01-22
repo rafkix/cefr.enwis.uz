@@ -45,7 +45,7 @@ export function Header() {
                             <div className="relative w-10 h-10 bg-gradient-to-br from-[#17776A] to-teal-600 rounded-xl flex items-center justify-center text-white shadow-inner">
                                 <BrainCircuit size={20} />
                             </div> */}
-                            <img src="logo.png" alt="" className="relative w-12 h-12  items-center justify-center"/>
+                            <img src="/logo.png" alt="" className="relative w-12 h-12  items-center justify-center"/>
                         </div>
                         <div className="flex flex-col leading-none">
                             <span className="font-black text-xl tracking-tight text-slate-900">ENWIS</span>

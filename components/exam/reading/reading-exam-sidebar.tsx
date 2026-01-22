@@ -44,7 +44,7 @@ export default function ReadingExamSidebar({
             {/* 2. SOZLAMALAR */}
             <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-4 shrink-0 mb-4">
                 <div className="flex items-center justify-between">
-                    <button onClick={onDecreaseFontSize} className="w-8 h-8 rounded-full items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 hover:bg-blue-50 transition-all active:scale-90 font-bold">-A</button>
+                    <button onClick={onDecreaseFontSize} className="w-8 h-8 items-center justify-center bg-white rounded-lg shadow-sm border border-slate-100 hover:bg-blue-50 transition-all active:scale-90 font-bold">-A</button>
                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-2">
                         <Type className="w-4 h-4 text-blue-500" /> Matn hajmi
                     </span>
@@ -95,7 +95,7 @@ export default function ReadingExamSidebar({
             </div>
 
             {/* 4. KAMERA VA FINISH - Pastdan 30px yuqorida mahkamlangan */}
-            <div className="bottom-[10px] left-4 right-4 flex flex-col gap-4 bg-[#F8FAFC] pt-2">
+            <div className="bottom-2.5 left-4 right-4 flex flex-col gap-4 bg-[#F8FAFC] pt-2">
 
                 {/* KAMERA */}
                 <div className="bg-slate-900 aspect-video rounded-2xl overflow-hidden relative border-2 border-white shadow-xl group">
