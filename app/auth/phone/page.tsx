@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
-import { ArrowRight, Phone, Loader2, RefreshCw, ShieldCheck, ExternalLink, Sparkles, MessageCircle } from "lucide-react"
+import { ArrowRight, Phone, Loader2, RefreshCw, ShieldCheck, Sparkles, MessageCircle } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 
@@ -17,98 +17,127 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false)
     const [telegramLink, setTelegramLink] = useState("")
     const [otp, setOtp] = useState<string[]>(new Array(6).fill(""))
-    const [agreed, setAgreed] = useState(true); // Default true qilib qo'ydik UX uchun
+    const [agreed, setAgreed] = useState(true)
 
-    const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+    const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-    // OTP Avtomatik yuborish mantiqi
+    // ================= OTP LOGIC =================
+
+    // OTP Avtomatik yuborish mantiqi (6 ta raqam to'lganda)
     useEffect(() => {
-        if (otp.join("").length === 6 && step === "CODE") {
-            handleVerify(otp.join(""));
+        const fullOtp = otp.join("")
+        if (fullOtp.length === 6 && step === "CODE") {
+            handleVerify(fullOtp)
         }
-    }, [otp]);
+    }, [otp, step])
+
+    // Copy-Paste funksiyasi (Botdan olingan kodni tashlash uchun)
+    const handlePaste = (e: React.ClipboardEvent) => {
+        e.preventDefault()
+        const pasteData = e.clipboardData.getData("text").replace(/\D/g, "") // Faqat raqamlar
+        
+        if (pasteData.length > 0) {
+            const newOtp = [...otp]
+            // Faqat birinchi 6 ta raqamni olamiz
+            pasteData.split("").slice(0, 6).forEach((char, index) => {
+                newOtp[index] = char
+            })
+            setOtp(newOtp)
+
+            // Oxirgi kiritilgan raqamdan keyingi katakka yoki oxirgisiga focus qilish
+            const targetIndex = Math.min(pasteData.length, 5)
+            inputRefs.current[targetIndex]?.focus()
+        }
+    }
 
     const handleChange = (element: HTMLInputElement, index: number) => {
-        const value = element.value.replace(/\D/g, ""); // Faqat raqam
-        if (!value) return;
+        const value = element.value.replace(/\D/g, "")
+        if (!value) return
 
-        const newOtp = [...otp];
-        newOtp[index] = value.substring(value.length - 1);
-        setOtp(newOtp);
+        const newOtp = [...otp]
+        newOtp[index] = value.substring(value.length - 1)
+        setOtp(newOtp)
 
-        if (index < 5) inputRefs.current[index + 1]?.focus();
-    };
+        // Keyingi katakka o'tish
+        if (index < 5) {
+            inputRefs.current[index + 1]?.focus()
+        }
+    }
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
         if (e.key === "Backspace") {
             if (!otp[index] && index > 0) {
-                inputRefs.current[index - 1]?.focus();
+                // Katak bo'sh bo'lsa, orqadagisiga qaytish
+                inputRefs.current[index - 1]?.focus()
             } else {
-                const newOtp = [...otp];
-                newOtp[index] = "";
-                setOtp(newOtp);
+                // Katakni o'chirish
+                const newOtp = [...otp]
+                newOtp[index] = ""
+                setOtp(newOtp)
             }
         }
-    };
+    }
+
+    // ================= API ACTIONS =================
 
     const handleRequestCode = async (e?: React.FormEvent) => {
-        if (e) e.preventDefault();
-        if (!agreed) return alert("Ommaviy oferta shartlariga rozi bo'ling");
+        if (e) e.preventDefault()
+        if (!agreed) return alert("Ommaviy oferta shartlariga rozi bo'ling")
         
-        setLoading(true);
-        const cleanPhone = phone.replace(/\D/g, "");
+        setLoading(true)
+        const cleanPhone = phone.replace(/\D/g, "")
 
         try {
-            const response = await requestPhoneCodeAPI(cleanPhone);
-            const url = response.data?.telegram_url;
+            const response = await requestPhoneCodeAPI(cleanPhone)
+            const url = response.data?.telegram_url
             if (url) {
-                setTelegramLink(url);
-                setStep("CODE");
-                // Mobil qurilmada window.open ba'zan bloklanadi, shuning uchun havola ham ko'rsatiladi
-                window.open(url, "_blank");
+                setTelegramLink(url)
+                setStep("CODE")
+                window.open(url, "_blank")
             }
         } catch (error: any) {
-            alert(error.response?.data?.detail || "Raqam noto'g'ri");
+            alert(error.response?.data?.detail || "Raqam noto'g'ri")
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
 
     const handleVerify = async (finalCode: string) => {
-        setLoading(true);
-        const cleanPhone = phone.replace(/\D/g, "");
+        setLoading(true)
+        const cleanPhone = phone.replace(/\D/g, "")
 
         try {
-            const response = await verifyPhoneCodeAPI(cleanPhone, finalCode);
-            const { access_token, user } = response.data;
+            const response = await verifyPhoneCodeAPI(cleanPhone, finalCode)
+            const { access_token, user } = response.data
 
             if (access_token) {
-                // 2 kun saqlash uchun vaqtni belgilaymiz
-                localStorage.setItem("token", access_token);
-                localStorage.setItem("login_at", new Date().getTime().toString());
+                localStorage.setItem("token", access_token)
+                localStorage.setItem("login_at", new Date().getTime().toString())
                 
                 if (user) {
-                    localStorage.setItem("user_full_name", user.full_name);
-                    localStorage.setItem("user_phone", user.phone);
+                    localStorage.setItem("user_full_name", user.full_name)
+                    localStorage.setItem("user_phone", user.phone)
                 }
-                router.push("/dashboard/test");
+                router.push("/dashboard/test")
             }
         } catch (error: any) {
-            setOtp(new Array(6).fill(""));
-            inputRefs.current[0]?.focus();
-            alert("Kod noto'g'ri kiritildi");
+            setOtp(new Array(6).fill("")) // Xato bo'lsa kodni tozalash
+            inputRefs.current[0]?.focus()
+            alert("Kod noto'g'ri kiritildi yoki muddati o'tgan")
         } finally {
-            setLoading(false);
+            setLoading(false)
         }
-    };
+    }
+
+    // ================= RENDER =================
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden selection:bg-[#17776A] selection:text-white">
+        <div className="min-h-screen bg-[#F8FAFC] flex flex-col items-center justify-center p-4 relative overflow-hidden">
             
             {/* Background Decorations */}
             <div className="absolute inset-0 pointer-events-none overflow-hidden">
-                <div className="absolute -top-[10%] -right-[10%] w-72 h-72 sm:w-[500px] sm:h-[500px] bg-[#17776A]/5 rounded-full blur-[80px] sm:blur-[120px]" />
-                <div className="absolute -bottom-[10%] -left-[10%] w-72 h-72 sm:w-[500px] sm:h-[500px] bg-blue-500/5 rounded-full blur-[80px] sm:blur-[120px]" />
+                <div className="absolute -top-[10%] -right-[10%] w-72 h-72 sm:w-[500px] sm:h-[500px] bg-[#17776A]/5 rounded-full blur-[100px]" />
+                <div className="absolute -bottom-[10%] -left-[10%] w-72 h-72 sm:w-[500px] sm:h-[500px] bg-blue-500/5 rounded-full blur-[100px]" />
             </div>
 
             <motion.div
@@ -116,6 +145,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="w-full max-w-[400px] relative z-10"
             >
+                {/* Logo Section */}
                 <div className="flex flex-col items-center mb-8">
                     <div className="w-16 h-16 bg-white rounded-2xl shadow-xl flex items-center justify-center mb-4 p-2">
                         <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
@@ -123,6 +153,7 @@ export default function LoginPage() {
                     <span className="text-2xl font-black tracking-tighter text-slate-900">ENWIS</span>
                 </div>
 
+                {/* Login Card */}
                 <div className="bg-white rounded-[32px] shadow-2xl shadow-slate-200/50 border border-slate-100 p-6 sm:p-10 relative overflow-hidden">
                     <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#17776A] to-teal-400" />
 
@@ -136,12 +167,12 @@ export default function LoginPage() {
                         >
                             <div className="text-center">
                                 <h1 className="text-2xl font-black text-slate-900 mb-2">
-                                    {step === 'PHONE' ? "Xush kelibsiz!" : "Kodni kiriting"}
+                                    {step === 'PHONE' ? "Xush kelibsiz!" : "Tasdiqlash kodi"}
                                 </h1>
                                 <p className="text-slate-500 text-sm leading-relaxed">
                                     {step === 'PHONE'
                                         ? "Tizimga kirish uchun telefon raqamingizni kiriting"
-                                        : "Telegram botimiz orqali yuborilgan 6 xonali kodni kiriting"}
+                                        : "Telegram bot orqali yuborilgan 6 xonali kodni kiriting"}
                                 </p>
                             </div>
 
@@ -157,7 +188,7 @@ export default function LoginPage() {
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
                                             placeholder="+998 (__) ___-__-__"
-                                            className="w-full h-14 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-[#17776A] focus:bg-white focus:ring-4 focus:ring-[#17776A]/5 outline-none transition-all font-bold text-slate-900"
+                                            className="w-full h-14 h-14 pl-12 pr-4 rounded-2xl bg-slate-50 border border-slate-200 focus:border-[#17776A] focus:bg-white focus:ring-4 focus:ring-[#17776A]/5 outline-none transition-all font-bold text-slate-900"
                                             required
                                         />
                                     </div>
@@ -171,7 +202,7 @@ export default function LoginPage() {
                                             className="mt-1 w-4 h-4 text-[#17776A] rounded border-gray-300 focus:ring-[#17776A]"
                                         />
                                         <label htmlFor="terms" className="text-[11px] leading-tight text-slate-500">
-                                            Men <Link href="/terms" className="text-blue-600 underline">Ommaviy oferta</Link> shartlariga roziman va ma'lumotlarim qayta ishlanishiga ruxsat beraman.
+                                            Men <Link href="/terms" className="text-blue-600 underline">Ommaviy oferta</Link> shartlariga roziman.
                                         </label>
                                     </div>
 
@@ -192,19 +223,19 @@ export default function LoginPage() {
                                         </button>
                                     </div>
 
-                                    <div className="flex justify-between gap-1.5 sm:gap-2">
+                                    <div className="flex justify-between gap-2">
                                         {otp.map((data, index) => (
                                             <input
                                                 key={index}
                                                 type="text"
                                                 inputMode="numeric"
-                                                pattern="[0-9]*"
                                                 maxLength={1}
                                                 ref={(el) => { inputRefs.current[index] = el }}
                                                 value={data}
+                                                onPaste={handlePaste}
                                                 onChange={(e) => handleChange(e.target, index)}
                                                 onKeyDown={(e) => handleKeyDown(e, index)}
-                                                className="w-full h-14 text-center text-xl font-black rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-[#17776A] focus:bg-white focus:ring-4 focus:ring-[#17776A]/5 outline-none transition-all"
+                                                className="w-full h-12 sm:h-14 text-center text-xl font-black rounded-xl border-2 border-slate-100 bg-slate-50 focus:border-[#17776A] focus:bg-white outline-none transition-all"
                                             />
                                         ))}
                                     </div>
@@ -215,7 +246,7 @@ export default function LoginPage() {
                                             target="_blank" 
                                             className="flex items-center justify-center gap-2 p-4 rounded-2xl bg-blue-50 text-blue-600 text-xs font-black uppercase tracking-wider hover:bg-blue-100 transition-colors"
                                         >
-                                            <MessageCircle size={18} /> Botga o'tish va kodni olish
+                                            <MessageCircle size={18} /> Telegramdan kodni olish
                                         </a>
                                     )}
 
@@ -224,7 +255,7 @@ export default function LoginPage() {
                                         disabled={loading || otp.join("").length !== 6}
                                         className="w-full h-14 bg-slate-900 text-white rounded-2xl font-bold flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-30"
                                     >
-                                        {loading ? <Loader2 className="animate-spin" /> : "Tasdiqlash"}
+                                        {loading ? <Loader2 className="animate-spin" /> : "Kirishni tasdiqlash"}
                                     </button>
                                 </div>
                             )}
@@ -234,7 +265,7 @@ export default function LoginPage() {
 
                 <div className="mt-8 flex items-center justify-center gap-6">
                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
-                        <ShieldCheck size={14} className="text-teal-600" /> Secure
+                        <ShieldCheck size={14} className="text-teal-600" /> Xavfsiz
                     </div>
                     <div className="w-1 h-1 bg-slate-300 rounded-full" />
                     <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
