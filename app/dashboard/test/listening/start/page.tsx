@@ -1,7 +1,7 @@
 "use client"
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useEffect, useState, useRef, useCallback, useMemo, Suspense } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import ExamHeader from "@/components/exam/exam-header"
 import ListeningExamContent from "@/components/exam/listening/listening-exam-content"
 import ListeningExamSidebar from "@/components/exam/listening/listening-exam-sidebar"
@@ -11,9 +11,10 @@ import { Loader2, AlertCircle } from "lucide-react"
 import { getListeningExamByIdAPI, submitListeningExamAPI } from "@/lib/api/listening"
 import type { ListeningExam } from "@/lib/types/listening"
 
-export default function ListeningExamPage() {
-    const params = useParams()
-    const testId = params?.testId as string
+// --- ASOSIY MANTIQ KOMPONENTI ---
+function ExamLogic() {
+    const searchParams = useSearchParams()
+    const testId = searchParams.get("id") // URL dan ?id=... ni oladi
     const router = useRouter()
 
     // --- STATE ---
@@ -25,14 +26,13 @@ export default function ListeningExamPage() {
     const [currentQuestion, setCurrentQuestion] = useState<number>(1)
     const [activePartIndex, setActivePartIndex] = useState(0)
 
-    // MUHIM: Javoblarni ID (String) bo'yicha saqlaymiz.
-    // Chunki Backend UUID qaytarishi mumkin.
+    // Javoblarni saqlash
     const [answers, setAnswers] = useState<Record<string, string>>({})
     const [answered, setAnswered] = useState<Record<string, boolean>>({})
     const answersRef = useRef<Record<string, string>>({})
 
     const [status, setStatus] = useState<"reading" | "playing" | "ending" | "finished">("reading")
-    const [countdown, setCountdown] = useState(10) // 10 soniya tayyorgarlik
+    const [countdown, setCountdown] = useState(10)
     const [fontSize, setFontSize] = useState(18)
     const [volume, setVolume] = useState(80)
     const [audioProgress, setAudioProgress] = useState(0)
@@ -40,20 +40,21 @@ export default function ListeningExamPage() {
     const [isFinishModalOpen, setIsFinishModalOpen] = useState(false)
 
     // ----------------------------------------------------
-    // 1. DATA FETCHING & MAPPING (ENG MUHIM QISM)
+    // 1. DATA FETCHING
     // ----------------------------------------------------
     useEffect(() => {
-        if (!testId) return;
+        if (!testId) {
+            setLoading(false);
+            return;
+        }
 
         const fetchExam = async () => {
             try {
                 setLoading(true);
                 setError(null);
 
-                // 1. API dan javob olish
                 const response: any = await getListeningExamByIdAPI(testId);
 
-                // 2. Axios tekshiruvi (ba'zan data ichida data keladi)
                 let rawData = response;
                 if (response && response.data) {
                     rawData = response.data;
@@ -61,8 +62,7 @@ export default function ListeningExamPage() {
 
                 if (!rawData) throw new Error("Ma'lumot topilmadi");
 
-                // 3. MAPPING (Backend snake_case -> Frontend camelCase)
-                // Bu yerda har bir maydonni ehtiyotkorlik bilan o'giramiz
+                // Backend ma'lumotlarini Frontend formatiga o'tkazish
                 const formattedData: ListeningExam = {
                     id: String(rawData.id || rawData._id),
                     title: rawData.title || "Listening Test",
@@ -75,21 +75,21 @@ export default function ListeningExamPage() {
 
                     parts: Array.isArray(rawData.parts) ? rawData.parts.map((p: any) => ({
                         id: String(p.id),
-                        partNumber: p.part_number, // backend: part_number
+                        partNumber: p.part_number,
                         title: p.title,
                         instruction: p.instruction,
-                        taskType: p.task_type,     // backend: task_type
-                        audioLabel: p.audio_label, // backend: audio_label
+                        taskType: p.task_type,
+                        audioLabel: p.audio_label,
                         context: p.context,
                         passage: p.passage,
-                        mapImage: p.map_image,     // backend: map_image
+                        mapImage: p.map_image,
                         options: p.options || [],
                         questions: Array.isArray(p.questions) ? p.questions.map((q: any) => ({
                             id: String(q.id),
-                            questionNumber: q.question_number, // backend: question_number
+                            questionNumber: q.question_number,
                             type: q.type,
                             question: q.question,
-                            correctAnswer: q.correct_answer,   // backend: correct_answer
+                            correctAnswer: q.correct_answer,
                             options: q.options || []
                         })) : []
                     })) : []
@@ -97,7 +97,7 @@ export default function ListeningExamPage() {
 
                 setTest(formattedData);
 
-                // 4. Sessiyani tiklash (Agar sahifa yangilansa)
+                // Sessiyani tiklash
                 const savedSession = localStorage.getItem(`listening-session-${testId}`);
                 if (savedSession) {
                     try {
@@ -107,17 +107,16 @@ export default function ListeningExamPage() {
                         answersRef.current = parsed.answers || {};
                         setActivePartIndex(parsed.activePartIndex || 0);
 
-                        // Statusni tiklash
                         setStatus(parsed.status || "reading");
                         setCountdown(parsed.countdown ?? 10);
                         setAudioCurrentTime(parsed.audioCurrentTime || 0);
-                        setHasStarted(true); // Test davom etyapti
+                        setHasStarted(true);
                     } catch (e) { console.error("Session parse error", e); }
                 }
 
             } catch (err: any) {
                 console.error("Xatolik:", err);
-                setError("Testni yuklab bo'lmadi. Internetni tekshiring.");
+                setError("Testni yuklab bo'lmadi. Internet aloqasini tekshiring.");
             } finally {
                 setLoading(false);
             }
@@ -127,15 +126,14 @@ export default function ListeningExamPage() {
     }, [testId]);
 
     // ----------------------------------------------------
-    // 2. LOGIC: TIMER, START, FINISH
+    // 2. LOGIC
     // ----------------------------------------------------
 
-    // Timer (Faqat reading statusida ishlaydi)
     useEffect(() => {
         if (!hasStarted || status !== "reading") return;
 
         if (countdown <= 0) {
-            setStatus("playing"); // Vaqt tugadi, audio boshlanadi
+            setStatus("playing");
             return;
         }
 
@@ -146,7 +144,6 @@ export default function ListeningExamPage() {
         return () => clearInterval(timer);
     }, [hasStarted, status, countdown]);
 
-    // Doimiy saqlash (Auto Save)
     useEffect(() => {
         if (!testId || loading || !hasStarted || status === "finished") return;
         localStorage.setItem(`listening-session-${testId}`, JSON.stringify({
@@ -154,74 +151,64 @@ export default function ListeningExamPage() {
         }));
     }, [answers, answered, activePartIndex, status, audioCurrentTime, countdown, hasStarted, loading, testId]);
 
-    // Testni Boshlash
     const startExam = () => {
+        if (!testId) return;
         const elem = document.documentElement;
         if (elem.requestFullscreen) elem.requestFullscreen().catch(() => { });
 
-        // Eskisini tozalash
         localStorage.removeItem(`listening-session-${testId}`);
         localStorage.removeItem(`listening-${testId}-answers`);
 
-        // Boshlash
         setHasStarted(true);
         setStatus("reading");
         setCountdown(10);
         setAudioCurrentTime(0);
     };
 
-    // Javob berish (String ID bilan)
     const handleAnswer = useCallback((questionId: string | number, value: string) => {
-        const idStr = String(questionId); // ID har doim string bo'lsin
+        const idStr = String(questionId);
         setAnswers(prev => ({ ...prev, [idStr]: value }));
         setAnswered(prev => ({ ...prev, [idStr]: !!value.trim() }));
         answersRef.current[idStr] = value;
     }, []);
 
-    // Yakunlash
-    // handleFinish funksiyasini yangilaymiz
     const handleFinish = useCallback(async () => {
-        // MUHIM: testId mavjudligini tekshirish
         if (!testId) {
-            console.error("Xatolik: testId topilmadi!");
-            alert("Sessiya topilmadi. Iltimos sahifani yangilang.");
+            alert("Xatolik: Test ID topilmadi. Sahifani yangilang.");
             return;
         }
 
         try {
             setLoading(true);
 
-            // 1. To'liq ekran rejimidan chiqish
+            // Fullscreen dan chiqish (Xatolik bermasligi uchun try-catch ichida)
             if (document.fullscreenElement) {
                 await document.exitFullscreen().catch(() => { });
             }
 
-            // 2. Payload tayyorlash
             const payload = {
                 exam_id: testId,
                 user_answers: answersRef.current
             };
 
-            console.log("Yuborilayotgan payload:", payload);
-
-            // 3. API orqali natijani yuborish
             const response = await submitListeningExamAPI(payload);
             const resultData = response.data;
 
-            // 4. Sessiyalarni tozalash
+            // Keshni tozalash
             localStorage.removeItem(`listening-session-${testId}`);
             localStorage.setItem(`last-result-${testId}`, JSON.stringify(resultData));
 
             setStatus("finished");
 
-            // 5. Yo'naltirish (Backend qaytargan tuzilishga qarab)
-            // Agar backend { summary: { id: 1 }, review: [] } qaytarsa:
+            // Natija ID sini olish
             const resultId = resultData.summary?.id || resultData.id;
 
             if (resultId) {
-                router.push(`/dashboard/result/listening/${resultId}`);
+                // ✅ TO'G'RI URL: view?id=...
+                router.push(`/dashboard/result/listening/view?id=${resultId}`);
             } else {
-                throw new Error("Backenddan Result ID kelmadi");
+                alert("Natija saqlandi, lekin ID qaytmadi. Ro'yxatga qaytarilmoqda.");
+                router.push("/dashboard/test/listening");
             }
 
         } catch (err: any) {
@@ -231,11 +218,11 @@ export default function ListeningExamPage() {
             setLoading(false);
         }
     }, [testId, router]);
-    // Javob berilmagan savollar
+
     const unansweredQuestions = useMemo(() => {
         if (!test || !test.parts) return [];
         return test.parts.flatMap(p => p.questions)
-            .filter(q => !answered[String(q.id)]) // ID string bo'yicha tekshirish
+            .filter(q => !answered[String(q.id)])
             .map(q => q.questionNumber);
     }, [test, answered]);
 
@@ -249,6 +236,17 @@ export default function ListeningExamPage() {
     // 3. RENDER
     // ----------------------------------------------------
 
+    // ID yo'q bo'lsa
+    if (!testId) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-slate-800 mb-2">Xatolik: ID topilmadi</h2>
+                <button onClick={() => router.back()} className="px-6 py-3 bg-slate-800 text-white rounded-xl">Orqaga</button>
+            </div>
+        )
+    }
+
     if (loading) return (
         <div className="h-screen flex items-center justify-center text-slate-500 font-bold bg-slate-50">
             <Loader2 className="w-8 h-8 animate-spin mr-2 text-blue-600" /> Yuklanmoqda...
@@ -260,13 +258,12 @@ export default function ListeningExamPage() {
             <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
             <h2 className="text-xl font-bold text-slate-800 mb-2">Xatolik yuz berdi</h2>
             <p className="text-slate-600 mb-6">{error || "Test topilmadi"}</p>
-            <button onClick={() => router.push("/test/listening")} className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition">
+            <button onClick={() => router.push("/dashboard/test/listening")} className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition">
                 Orqaga qaytish
             </button>
         </div>
     )
 
-    // Start Ekrani
     if (!hasStarted) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
@@ -361,5 +358,18 @@ export default function ListeningExamPage() {
                 </div>
             )}
         </div>
+    )
+}
+
+// --- ASOSIY EXPORT (SUSPENSE BILAN O'RALGAN) ---
+export default function ListeningExamPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-screen flex items-center justify-center text-slate-500 font-bold bg-slate-50">
+                <Loader2 className="w-8 h-8 animate-spin mr-2 text-blue-600" /> Yuklanmoqda...
+            </div>
+        }>
+            <ExamLogic />
+        </Suspense>
     )
 }

@@ -65,7 +65,11 @@ export default function ListeningPage() {
 
     const handleTestAction = (testId: string, isFree: boolean) => {
         if (isFree) {
-            router.push(`/dashboard/test/listening/${testId}`)
+            // ❌ ESKI (XATO): Bu papka endi yo'q!
+            // router.push(`/dashboard/test/listening/${testId}`)
+
+            // ✅ YANGI (TO'G'RI): "start" sahifasiga ID ni yuboramiz
+            router.push(`/dashboard/test/listening/start?id=${testId}`)
         } else {
             setSelectedTestId(testId)
             setShowUnlockModal(true)

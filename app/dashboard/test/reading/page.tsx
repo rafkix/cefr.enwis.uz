@@ -62,8 +62,16 @@ export default function ReadingPage() {
     }, [exams, searchTerm, activeTab]);
 
     const handleTestAction = (testId: string, isFree: boolean) => {
+        if (!testId) {
+            alert("Xatolik: Test ID topilmadi");
+            return;
+        }
+
         if (isFree) {
-            router.push(`/dashboard/test/reading/${testId}`)
+            // 🟢 O'ZGARISH: Dynamic Route dan Query Param ga o'tish
+            // Eski: router.push(`/dashboard/test/reading/${testId}`)
+            // Yangi:
+            router.push(`/dashboard/test/reading/start?id=${testId}`)
         } else {
             setSelectedTestId(testId)
             setShowUnlockModal(true)

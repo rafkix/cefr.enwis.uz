@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter } from "next/navigation" // 👈 O'ZGARDII: params o'rniga searchParams
 import ExamHeader from "@/components/exam/exam-header"
 import ReadingExamContent from "@/components/exam/reading/reading-exam-content"
 import ReadingExamSidebar from "@/components/exam/reading/reading-exam-sidebar"
 import { getReadingExamByIdAPI, submitReadingExamAPI } from "@/lib/api/reading"
 import type { ReadingExam } from "@/lib/types/reading"
+import { Loader2, AlertCircle } from "lucide-react"
 
 // --- SKELETON LOADING ---
 const ExamSkeleton = () => (
@@ -34,8 +35,9 @@ const ExamSkeleton = () => (
 )
 
 export default function ExamPage() {
-    const params = useParams()
-    const testId = params?.testId as string
+    // 🟢 O'ZGARISH: useParams o'rniga useSearchParams ishlatamiz
+    const searchParams = useSearchParams()
+    const testId = searchParams.get("id") // URL dan ?id=... ni oladi
     const router = useRouter()
 
     // --- STATE ---
@@ -44,10 +46,10 @@ export default function ExamPage() {
     const [error, setError] = useState<string | null>(null)
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
     
-    // 🟢 O'ZGARISH: Virtual tartib raqami (Doim 1 dan boshlanadi)
+    // Virtual tartib raqami (Doim 1 dan boshlanadi)
     const [currentVirtualId, setCurrentVirtualId] = useState<number>(1)
     
-    // 🟢 O'ZGARISH: Mapping lug'atlari
+    // Mapping lug'atlari
     const [idMap, setIdMap] = useState<Record<number, number>>({}) // {virtual: database}
     const [revMap, setRevMap] = useState<Record<number, number>>({}) // {database: virtual}
 
@@ -55,7 +57,8 @@ export default function ExamPage() {
     const [answered, setAnswered] = useState<Record<number, boolean>>({})
 
     const [hasStarted, setHasStarted] = useState<boolean>(() => {
-        if (typeof window !== "undefined") {
+        // Agar testId yo'q bo'lsa, false qaytaradi
+        if (typeof window !== "undefined" && testId) {
             return localStorage.getItem(`reading-${testId}-started`) === "true"
         }
         return false
@@ -69,7 +72,7 @@ export default function ExamPage() {
 
     // --- 1. YAKUNLASH VA APIGA YUBORISH ---
     const handleFinish = useCallback(async () => {
-        if (isExamFinished.current || isSubmitting) return;
+        if (!testId || isExamFinished.current || isSubmitting) return; // testId tekshiruvi
         setIsSubmitting(true);
         isExamFinished.current = true;
 
@@ -84,16 +87,24 @@ export default function ExamPage() {
 
         try {
             const response = await submitReadingExamAPI(submissionData);
-            const resultId = response.data.summary.id;
+            // Natija ID sini olish (Backend tuzilishiga qarab moslang)
+            const resultId = response.data?.summary?.id || response.data?.id;
 
             localStorage.removeItem(`reading-${testId}-time`);
             localStorage.removeItem(`reading-${testId}-started`);
             localStorage.removeItem(`reading-${testId}-answers`);
 
-            router.push(`/dashboard/result/reading/${resultId}`);
+            // 🟢 O'ZGARISH: Natija sahifasiga ham query param bilan o'tamiz
+            if (resultId) {
+                router.push(`/dashboard/result/reading/view?id=${resultId}`);
+            } else {
+                alert("Natija saqlandi, lekin ID qaytmadi.");
+                router.push("/dashboard/test/reading");
+            }
+
         } catch (error: any) {
             console.error("Topshirishda xatolik:", error);
-            alert("Natijani saqlab bo'lmadi.");
+            alert("Natijani saqlab bo'lmadi. Internetni tekshiring.");
             isExamFinished.current = false;
             setIsSubmitting(false);
         }
@@ -110,7 +121,7 @@ export default function ExamPage() {
                 const examData = response.data;
                 setTest(examData);
 
-                // 🟢 O'ZGARISH: Savollarni tartiblab mapping qilish
+                // Savollarni tartiblab mapping qilish
                 const mapping: Record<number, number> = {};
                 const reverseMapping: Record<number, number> = {};
                 let counter = 1;
@@ -149,6 +160,7 @@ export default function ExamPage() {
                 setCurrentVirtualId(1);
 
             } catch (err: any) {
+                console.error(err);
                 setError(err.message || "Xatolik yuz berdi");
             } finally {
                 setLoading(false);
@@ -159,7 +171,7 @@ export default function ExamPage() {
 
     // --- 3. TIMER LOGIC ---
     useEffect(() => {
-        if (timeLeft === null || !test || !hasStarted || isExamFinished.current) return;
+        if (!testId || timeLeft === null || !test || !hasStarted || isExamFinished.current) return;
         const interval = setInterval(() => {
             setTimeLeft((prev) => {
                 if (prev === null || prev <= 1) {
@@ -195,6 +207,7 @@ export default function ExamPage() {
 
     // --- 5. HELPERS ---
     const handleAnswer = (questionId: number, value: string) => {
+        if (!testId) return;
         setAnswers((prev) => {
             const newAnswers = { ...prev, [questionId]: value };
             answersRef.current = newAnswers;
@@ -204,7 +217,7 @@ export default function ExamPage() {
         setAnswered((prev) => ({ ...prev, [questionId]: !!value.trim() }));
     };
 
-    // 🟢 O'ZGARISH: Sidebar uchun answered holatini virtualga o'girish
+    // Sidebar uchun answered holatini virtualga o'girish
     const virtualAnswered = useMemo(() => {
         const result: Record<number, boolean> = {};
         Object.entries(answered).forEach(([dbId, status]) => {
@@ -230,14 +243,42 @@ export default function ExamPage() {
     };
 
     const startExam = () => {
+        if (!testId) return;
         const elem = document.documentElement;
         if (elem.requestFullscreen) elem.requestFullscreen().catch(() => { });
         localStorage.setItem(`reading-${testId}-started`, "true");
         setHasStarted(true);
     };
 
-    if (loading) return <ExamSkeleton />;
-    if (error) return <div className="h-screen flex items-center justify-center text-red-500 font-bold">{error}</div>;
+    // --- ERROR: ID YO'Q BO'LSA ---
+    // ID yo'q bo'lsa
+    if (!testId) {
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+                <h2 className="text-xl font-bold text-slate-800 mb-2">Xatolik: ID topilmadi</h2>
+                <button onClick={() => router.back()} className="px-6 py-3 bg-slate-800 text-white rounded-xl">Orqaga</button>
+            </div>
+        )
+    }
+
+    if (loading) return (
+        <div className="h-screen flex items-center justify-center text-slate-500 font-bold bg-slate-50">
+            <Loader2 className="w-8 h-8 animate-spin mr-2 text-blue-600" /> Yuklanmoqda...
+        </div>
+    )
+
+    
+    if (error || !test) return (
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+            <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+            <h2 className="text-xl font-bold text-slate-800 mb-2">Xatolik yuz berdi</h2>
+            <p className="text-slate-600 mb-6">{error || "Test topilmadi"}</p>
+            <button onClick={() => router.push("/dashboard/test/listening")} className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition">
+                Orqaga qaytish
+            </button>
+        </div>
+    )
 
     const totalQuestionsCount = Object.keys(idMap).length;
 
@@ -245,17 +286,22 @@ export default function ExamPage() {
     if (!hasStarted) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
-                <div className="bg-white p-10 rounded-[40px] shadow-2xl text-center max-w-lg border-4 border-white">
-                    <h1 className="text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">Cefr Reading</h1>
-                    <p className="text-slate-500 mb-8 font-medium italic">Test boshlanishi bilan brauzer To'liq Ekran rejimiga o'tadi va navigatsiya bloklanadi.</p>
-                    <button onClick={startExam} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
-                        Testni boshlash
+                <div className="bg-white p-10 rounded-[40px] shadow-2xl text-center max-w-lg border-4 border-white animate-in zoom-in duration-300">
+                    <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    </div>
+                    <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">{test.title}</h1>
+                    <p className="text-slate-500 mb-8 font-medium italic">Test boshlanishi bilan brauzer To&apos;liq Ekran rejimiga o&apos;tadi va navigatsiya bloklanadi.</p>
+                    <button
+                        onClick={startExam}
+                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
+                    >
+                        Testni Boshlash
                     </button>
                 </div>
             </div>
         );
     }
-
     return (
         <div className="flex h-screen flex-col bg-white overflow-hidden relative select-none">
             <ExamHeader currentSection="reading" />
