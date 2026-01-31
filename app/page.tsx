@@ -4,15 +4,9 @@ import React, { useState } from "react"
 import { useRouter } from "next/navigation"
 import { motion, useScroll, useMotionValueEvent } from "framer-motion"
 import {
-    LayoutGrid, ArrowRight, Zap, Search,
-    Calendar, Mic, PenTool, BrainCircuit,
-    Headphones, BookOpen, ShieldCheck, Users,
-    CheckCircle2, AlertTriangle, Sparkles,
-    BarChart3, Clock, Info, ExternalLink,
-    ChevronRight
+    ArrowRight, Zap,Mic, PenTool, Headphones, BookOpen, ShieldCheck,
+    CheckCircle2, AlertTriangle, Sparkles, Heart, HandHeart, GraduationCap // ❤️ Kerakli iconlar
 } from "lucide-react"
-import { Header } from "@/components/Header"
-import { Footer } from "@/components/footer"
 
 // --- ANIMATIONS ---
 const fadeInUp = {
@@ -30,7 +24,6 @@ export default function UltimateAIHome() {
     // --- STATE MANAGEMENT ---
     const { scrollY } = useScroll()
     const [isScrolled, setIsScrolled] = useState(false)
-    const [hoveredCard, setHoveredCard] = useState<number | null>(null)
 
     // Navbar scroll logikasi
     useMotionValueEvent(scrollY, "change", (latest) => {
@@ -41,13 +34,11 @@ export default function UltimateAIHome() {
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 selection:bg-[#17776A] selection:text-white overflow-x-hidden">
 
             {/* ================= 2. HERO SECTION (AI FOCUSED) ================= */}
-            {/* px-4 dan px-6 md:px-12 lg:px-20 ga o'zgartirildi */}
             <section className="relative pt-40 pb-24 px-6 md:px-12 lg:px-20 overflow-hidden">
                 {/* Background Tech Mesh */}
                 <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#17776A 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
                 <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#17776A]/10 rounded-full blur-3xl -z-10 animate-pulse-slow"></div>
 
-                {/* max-w-7xl dan max-w-[1536px] ga kengaytirildi */}
                 <div className="mx-auto max-w-[1536px] grid lg:grid-cols-2 gap-16 items-center">
 
                     {/* Content */}
@@ -88,7 +79,7 @@ export default function UltimateAIHome() {
                         </p>
                     </motion.div>
 
-                    {/* Interactive AI Visuals (Scale va Position to'g'rilandi) */}
+                    {/* Interactive AI Visuals */}
                     <motion.div
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -161,7 +152,7 @@ export default function UltimateAIHome() {
                                 </div>
                             </div>
 
-                            {/* Audio Wave Simulation (ASL HOLATDA) */}
+                            {/* Audio Wave Simulation */}
                             <div className="flex items-center justify-center gap-1 h-12 mb-6">
                                 {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
                                     <motion.div
@@ -182,81 +173,99 @@ export default function UltimateAIHome() {
                 </div>
             </section>
 
-            {/* ================= 3. SERVICE SECTION ================= */}
-            <section className="py-20 px-6 md:px-12 lg:px-20">
-                <div className="mx-auto max-w-[1536px]">
-                    <motion.div
-                        variants={stagger}
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true }}
-                        className="grid grid-cols-1 md:grid-cols-3 gap-8"
-                    >
-                        {/* Katta Karta */}
-                        <motion.div
-                            variants={fadeInUp}
-                            className="md:col-span-2 bg-[#17776A] rounded-[32px] p-10 text-white relative overflow-hidden group shadow-xl shadow-[#17776A]/20 cursor-pointer"
-                        >
-                            <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 transition-all duration-700 group-hover:scale-150"></div>
-                            <div className="relative z-10 flex flex-col h-full justify-between">
-                                <div>
-                                    <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
-                                        <Zap size={32} className="text-white" />
+            {/* ================= ❤️ 3. CHARITY SECTION (YANGI QO'SHILDI) ================= */}
+            <section className="py-24 px-6 md:px-12 lg:px-20 bg-white relative overflow-hidden">
+                {/* Dekorativ fon */}
+                <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-rose-50/50 via-white to-white pointer-events-none"></div>
+                
+                <div className="mx-auto max-w-[1536px] relative z-10">
+                    <div className="bg-[#FFF0F5]/40 border border-rose-100 rounded-[3rem] p-8 md:p-16 lg:p-20 relative overflow-hidden">
+                        {/* Orqa fon effektlari */}
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-100/40 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
+                        
+                        <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24 relative z-10">
+                            
+                            {/* Chap tomon: Matn */}
+                            <div className="flex-1 space-y-8 text-center lg:text-left">
+                                <motion.div 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    viewport={{ once: true }}
+                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-rose-600 rounded-full text-xs font-black uppercase tracking-widest shadow-sm border border-rose-100"
+                                >
+                                    <HandHeart size={14} /> Ijtimoiy Mas'uliyat
+                                </motion.div>
+                                
+                                <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                                    Har bir test — <br />
+                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-red-600">yangi imkoniyat.</span>
+                                </h2>
+                                
+                                <p className="text-slate-600 text-lg md:text-xl font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
+                                    Biz foydamizning <span className="font-bold text-slate-900 border-b-2 border-rose-200">5% qismini</span> imkoniyati cheklangan va ota-ona qaramog'idan mahrum bo'lgan iqtidorli bolalarning ta'lim olishiga (grantlar) yo'naltiramiz. 
+                                </p>
+                                
+                                {/* Stats Cards */}
+                                <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start pt-2">
+                                    <motion.div 
+                                        whileHover={{ y: -5 }}
+                                        className="flex items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-rose-100 shadow-lg shadow-rose-100/30"
+                                    >
+                                        <div className="p-3 bg-rose-50 text-rose-500 rounded-xl">
+                                            <GraduationCap size={28} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-2xl font-[900] text-slate-900 leading-none">120+</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">Ta'lim Grantlari</p>
+                                        </div>
+                                    </motion.div>
+                                    
+                                    <motion.div 
+                                        whileHover={{ y: -5 }}
+                                        className="flex items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-rose-100 shadow-lg shadow-rose-100/30"
+                                    >
+                                        <div className="p-3 bg-rose-50 text-rose-500 rounded-xl">
+                                            <Heart size={28} />
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="text-2xl font-[900] text-slate-900 leading-none">50m</p>
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">Xayriya Summasi</p>
+                                        </div>
+                                    </motion.div>
+                                </div>
+                            </div>
+                            
+                            {/* O'ng tomon: Visual */}
+                            <div className="flex-1 flex justify-center w-full">
+                                <div className="relative w-full max-w-md aspect-square bg-white rounded-full flex items-center justify-center shadow-2xl shadow-rose-200/50 border border-rose-50">
+                                    <div className="absolute inset-0 bg-rose-100 rounded-full animate-ping opacity-20" />
+                                    <div className="relative z-10 flex flex-col items-center text-center p-10">
+                                        <Heart size={140} className="text-rose-500 fill-rose-500 drop-shadow-2xl animate-pulse mb-6" />
+                                        <span className="text-sm font-black text-rose-400 uppercase tracking-[0.3em] mb-2">Enwis Charity</span>
+                                        <span className="text-3xl font-bold text-slate-900">Yaxshilik ulashing</span>
                                     </div>
-                                    <h3 className="text-3xl font-black mb-3">AI Diagnostik Test</h3>
-                                    <p className="text-emerald-100 text-lg max-w-md leading-relaxed">
-                                        Sun'iy intellekt yordamida speaking va writing ko'nikmalaringizni chuqur tahlil qiling.
-                                    </p>
-                                </div>
-                                <div className="mt-10 flex items-center gap-2 font-bold text-emerald-200 group-hover:text-white transition-colors">
-                                    Sinab ko'rish <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        {/* Kichik Karta 1 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group">
-                            <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6 group-hover:scale-110 transition-transform">
-                                <AlertTriangle size={28} />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 mb-2">Disclaimer</h3>
-                            <p className="text-slate-500 font-medium leading-relaxed">
-                                Ushbu test natijalari rasmiy hujjat hisoblanmaydi. Faqat o'z-o'zini tekshirish uchun.
-                            </p>
-                        </motion.div>
-
-                        {/* Kichik Karta 2 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group">
-                            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
-                                <BarChart3 size={28} />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 mb-2">Statistika</h3>
-                            <p className="text-slate-500 font-medium leading-relaxed">
-                                Har bir bo'lim bo'yicha batafsil grafiklar va o'sish dinamikasi.
-                            </p>
-                        </motion.div>
-
-                        {/* O'rta Karta (Horizontal) */}
-                        <motion.div variants={fadeInUp} className="md:col-span-2 bg-slate-900 rounded-[32px] p-10 text-white relative overflow-hidden shadow-xl">
-                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                            <div className="relative z-15 flex flex-col md:flex-row items-center gap-10">
-                                <div className="flex-1">
-                                    <div className="inline-block px-3 py-1 bg-white/10 rounded-lg text-xs font-bold mb-4">NEW</div>
-                                    <h3 className="text-2xl font-black mb-2">Speaking Simulator</h3>
-                                    <p className="text-slate-400">Haqiqiy imtihondagi kabi examiner bilan jonli suhbat simulyatsiyasi.</p>
-                                </div>
-                                <div className="w-full md:w-auto bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                                        <div className="w-4 h-4 bg-white rounded-sm"></div>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-mono">REC</p>
-                                        <p className="text-lg font-mono font-bold">00:04:12</p>
-                                    </div>
+                                    
+                                    {/* Orbiting Badges */}
+                                    <motion.div 
+                                        animate={{ y: [0, -15, 0] }} 
+                                        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                                        className="absolute top-12 right-0 bg-white px-6 py-3 rounded-2xl shadow-xl border border-rose-100 flex items-center gap-3"
+                                    >
+                                        <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mehr</span>
+                                    </motion.div>
+                                    <motion.div 
+                                        animate={{ y: [0, 15, 0] }} 
+                                        transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
+                                        className="absolute bottom-16 left-0 bg-white px-6 py-3 rounded-2xl shadow-xl border border-rose-100 flex items-center gap-3"
+                                    >
+                                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
+                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Umid</span>
+                                    </motion.div>
                                 </div>
                             </div>
-                        </motion.div>
-                    </motion.div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
