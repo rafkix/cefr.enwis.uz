@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import { 
@@ -9,24 +9,38 @@ import {
     FileText, 
     Lock, 
     ChevronRight, 
-    ChevronLeft, // Orqaga tugmasi uchun
+    ChevronLeft, 
     Loader2, 
     Zap, 
     Inbox, 
     Filter,
-    Activity 
+    Activity,
+    Award // Mock uchun yangi ikonka
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
 import { UnlockModal } from "@/components/UnlockModal"
 import { getListeningExamsAPI } from "@/lib/api/listening"
-import type { ListeningExam } from "@/lib/types/listening"
+
+// 1. Interface Yangilandi
+export interface ListeningExam {
+    id: string
+    title: string
+    isDemo: boolean
+    isFree: boolean
+    isMock: boolean      // Yangi
+    isActive: boolean    // Yangi
+    level: string
+    duration: number
+    totalQuestions: number
+    parts: any[]
+}
 
 export default function ListeningPage() {
     const router = useRouter()
     const [exams, setExams] = useState<ListeningExam[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium'>('all')
+    const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium' | 'mock'>('all') // Mock tab qo'shildi
     const [showUnlockModal, setShowUnlockModal] = useState(false)
     const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
 
@@ -37,15 +51,18 @@ export default function ListeningPage() {
                 const response: any = await getListeningExamsAPI()
                 const dataArray = Array.isArray(response) ? response : (response?.items || response?.data || [])
                 
+                // 2. Mapping Logic (API dan kelayotgan ma'lumotlarni to'g'irlash)
                 const formattedData: ListeningExam[] = dataArray.map((item: any) => ({
                     id: String(item.id),
                     title: item.title || "Nomsiz Test",
                     isDemo: item.is_demo ?? false,
                     isFree: item.is_free ?? false,
-                    level: item.level || "B2",
-                    duration: item.duration || 35,
+                    isMock: item.is_mock ?? false,           // API: is_mock
+                    isActive: item.is_active ?? true,        // API: is_active
+                    level: item.cefr_level || "B2",          // API: cefr_level
+                    duration: item.duration_minutes || 35,   // API: duration_minutes
                     totalQuestions: item.total_questions || 30,
-                    parts: []
+                    parts: item.parts || []
                 }))
                 setExams(formattedData)
             } catch (err) {
@@ -57,18 +74,22 @@ export default function ListeningPage() {
         fetchExams()
     }, [])
 
-    const filteredTests = exams.filter((test) => {
-        if (activeTab === 'free') return test.isFree;
-        if (activeTab === 'premium') return !test.isFree;
-        return true;
-    })
+    const filteredTests = useMemo(() => {
+        return exams.filter((test) => {
+            if (activeTab === 'free') return test.isFree;
+            if (activeTab === 'premium') return !test.isFree;
+            if (activeTab === 'mock') return test.isMock; // Mock filter
+            return true;
+        })
+    }, [exams, activeTab])
 
-    const handleTestAction = (testId: string, isFree: boolean) => {
+    const handleTestAction = (testId: string, isFree: boolean, isActive: boolean) => {
+        if (!testId) return;
+        
+        // Agar xohlasangiz, nofaol testlarni bosishni taqiqlashingiz mumkin
+        // if (!isActive) return;
+
         if (isFree) {
-            // ❌ ESKI (XATO): Bu papka endi yo'q!
-            // router.push(`/dashboard/test/listening/${testId}`)
-
-            // ✅ YANGI (TO'G'RI): "start" sahifasiga ID ni yuboramiz
             router.push(`/dashboard/test/listening/start?id=${testId}`)
         } else {
             setSelectedTestId(testId)
@@ -79,7 +100,7 @@ export default function ListeningPage() {
     return (
         <div className="max-w-7xl mx-auto space-y-6 pb-10 px-2 sm:px-0">
             
-            {/* --- BACK BUTTON (Minimalist & Purple style) --- */}
+            {/* --- BACK BUTTON --- */}
             <motion.button 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -123,7 +144,7 @@ export default function ListeningPage() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {['all', 'free', 'premium'].map((tab) => (
+                        {['all', 'free', 'premium', 'mock'].map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
@@ -133,7 +154,7 @@ export default function ListeningPage() {
                                     : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
                                 }`}
                             >
-                                {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Modullar' : 'Premium Testlar'}
+                                {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Modullar' : tab === 'mock' ? 'Mock Testlar' : 'Premium Testlar'}
                             </button>
                         ))}
                     </div>
@@ -171,20 +192,31 @@ export default function ListeningPage() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         transition={{ delay: index * 0.05 }}
-                                        onClick={() => handleTestAction(test.id, test.isFree)}
-                                        className="group flex flex-col sm:flex-row items-center justify-between p-6 rounded-[32px] bg-white border border-slate-100 hover:border-purple-300 hover:shadow-2xl hover:shadow-purple-500/[0.06] transition-all cursor-pointer relative overflow-hidden"
+                                        // isActive ni ham jo'natamiz
+                                        onClick={() => handleTestAction(test.id, test.isFree, test.isActive)}
+                                        className={`group flex flex-col sm:flex-row items-center justify-between p-6 rounded-[32px] bg-white border border-slate-100 hover:border-purple-300 hover:shadow-2xl hover:shadow-purple-500/[0.06] transition-all cursor-pointer relative overflow-hidden
+                                            ${!test.isActive ? 'opacity-75 grayscale-[0.5]' : ''}`} // Nofaol bo'lsa xira
                                     >
                                         <div className="flex items-center gap-6 z-10 w-full sm:w-auto">
                                             <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center transition-all duration-500 shadow-inner shrink-0 ${isLocked ? 'bg-slate-50 text-slate-300' : 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'}`}>
-                                                {isLocked ? <Lock size={26} /> : <Headphones size={28} />}
+                                                {/* Icon Logikasi: Qulflangan -> Lock, Mock -> Award, Standart -> Headphones */}
+                                                {isLocked ? <Lock size={26} /> : test.isMock ? <Award size={28}/> : <Headphones size={28} />}
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex flex-wrap items-center gap-3 mb-2">
                                                     <h3 className="font-black text-slate-900 text-lg tracking-tight group-hover:text-purple-600 transition-colors uppercase">
                                                         {test.title}
                                                     </h3>
+                                                    
+                                                    {/* BADGES: COMING SOON, DEMO, MOCK, FREE/PREMIUM */}
+                                                    {!test.isActive && (
+                                                        <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-black uppercase border border-slate-200">YAQINDA</span>
+                                                    )}
                                                     {test.isDemo && (
                                                         <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase border border-amber-100">Demo</span>
+                                                    )}
+                                                    {test.isMock && (
+                                                        <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black uppercase border border-rose-100">Mock Exam</span>
                                                     )}
                                                     {test.isFree ? (
                                                         <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-black">OPEN</Badge>

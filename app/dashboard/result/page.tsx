@@ -1,19 +1,34 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { getMyListeningResultsAPI } from "@/lib/api/listening"
-import { getMyReadingResultsAPI } from "@/lib/api/reading"
-import { 
-    Calendar, CheckCircle2, Loader2, FileText, 
-    ChevronRight, Headphones, BookOpen, 
-    ArrowRight, Activity, Award
-} from "lucide-react"
 import Link from "next/link"
 import { motion, AnimatePresence } from "framer-motion"
+import {
+    Calendar, CheckCircle2, Loader2, FileText,
+    ChevronRight, Headphones, BookOpen,
+    Activity, Trophy, Target, ArrowUpRight
+} from "lucide-react"
+
+import { getMyListeningResultsAPI } from "@/lib/api/listening"
+import { getMyReadingResultsAPI } from "@/lib/api/reading"
+
+// --- TYPES ---
+interface ResultItem {
+    id: string
+    exam_id: string
+    section: 'LISTENING' | 'READING'
+    created_at: string
+    raw_score: number
+    correct_answers?: number
+    total_questions: number
+    cefr_level: string
+    standard_score: number
+}
 
 export default function ResultPage() {
-    const [results, setResults] = useState<any[]>([])
+    const [results, setResults] = useState<ResultItem[]>([])
     const [loading, setLoading] = useState(true)
+    const [activeTab, setActiveTab] = useState<'all' | 'listening' | 'reading'>('all')
 
     useEffect(() => {
         const fetchAllResults = async () => {
@@ -24,18 +39,19 @@ export default function ResultPage() {
                     getMyReadingResultsAPI().catch(() => ({ data: [] }))
                 ])
 
+                // @ts-ignore
                 const combined = [
-                    ...(Array.isArray(listeningRes.data) 
-                        ? listeningRes.data.map(item => ({ ...item, section: 'LISTENING' })) 
+                    ...(Array.isArray(listeningRes.data)
+                        ? listeningRes.data.map((item: any) => ({ ...item, section: 'LISTENING' }))
                         : []),
-                    ...(Array.isArray(readingRes.data) 
-                        ? readingRes.data.map(item => ({ ...item, section: 'READING' })) 
+                    ...(Array.isArray(readingRes.data)
+                        ? readingRes.data.map((item: any) => ({ ...item, section: 'READING' }))
                         : [])
                 ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
 
                 setResults(combined)
             } catch (error) {
-                console.error("Natijalarni yuklashda xato:", error)
+                console.error("Error loading results:", error)
             } finally {
                 setLoading(false)
             }
@@ -43,165 +59,256 @@ export default function ResultPage() {
         fetchAllResults()
     }, [])
 
+    // --- LOGIC ---
+    const filteredResults = results.filter(item =>
+        activeTab === 'all' ? true : item.section.toLowerCase() === activeTab
+    )
+
+    const totalAttempts = results.length
+    const avgScore = results.length > 0
+        ? Math.round(results.reduce((acc, curr) => acc + (curr.standard_score || 0), 0) / results.length)
+        : 0
+
+    // --- HELPERS ---
     const formatDate = (dateString: string) => {
         if (!dateString) return "—"
         return new Date(dateString).toLocaleDateString('uz-UZ', {
-            day: 'numeric', month: 'short', year: 'numeric'
+            day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
         })
     }
 
-    const getLevelBadge = (level: string) => {
+    // Dynamic Colors Helper
+    const getTheme = (section: string) => {
+        const isReading = section === 'READING'
+        return {
+            bg: isReading ? 'bg-blue-50' : 'bg-purple-50',
+            text: isReading ? 'text-blue-600' : 'text-purple-600',
+            border: isReading ? 'border-blue-200' : 'border-purple-200',
+            icon: isReading ? BookOpen : Headphones
+        }
+    }
+
+    const getLevelStyle = (level: string) => {
         const l = level?.toUpperCase() || ""
-        switch(l) {
-            case 'C1': return 'bg-purple-100 text-purple-700 border-purple-200';
-            case 'B2': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-            case 'B1': return 'bg-blue-100 text-blue-700 border-blue-200';
-            default: return 'bg-slate-100 text-slate-700 border-slate-200';
+        switch (l) {
+            case 'C1': return { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' }
+            case 'B2': return { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' }
+            case 'B1': return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200' }
+            default: return { bg: 'bg-slate-50', text: 'text-slate-600', border: 'border-slate-200' }
         }
     }
 
     return (
-        <div className="space-y-6 md:space-y-8 pb-10 px-2 sm:px-0">
-            {/* HEADER */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                    <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight uppercase italic">Natijalar</h1>
-                    <p className="text-slate-500 font-bold text-[10px] uppercase tracking-widest mt-1">O'quv jarayoningiz statistikasi</p>
-                </div>
-                <div className="bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm flex items-center gap-3 w-fit">
-                    <Activity className="text-blue-500" size={18} />
-                    <div>
-                        <p className="text-[9px] font-black text-slate-400 uppercase leading-none tracking-tighter">Jami Urinishlar</p>
-                        <p className="text-base font-black text-slate-800 leading-none mt-1">{results.length}</p>
+        <div className="min-h-screen pb-10 font-sans text-slate-800 pt-6">
+
+            <div className="w-full max-w-[1920px] mx-auto px-4 md:px-6 lg:px-8">
+
+                <div className="grid grid-cols-1 xl:grid-cols-4 gap-8">
+
+                    {/* --- LEFT COLUMN: RESULTS LIST (3/4 qism) --- */}
+                    <div className="xl:col-span-3 space-y-6">
+
+                        {/* Header & Tabs */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Natijalar</h2>
+                                <p className="text-sm text-slate-500 font-medium">Barcha urinishlaringiz tarixi</p>
+                            </div>
+                            <div className="flex bg-white p-1 rounded-xl shadow-sm border border-slate-200">
+                                {["all", "listening", "reading"].map((tab) => (
+                                    <button
+                                        key={tab}
+                                        onClick={() => setActiveTab(tab as any)}
+                                        className={`px-5 py-2 rounded-lg text-xs font-bold capitalize transition-all
+                                            ${activeTab === tab
+                                                ? "bg-slate-900 text-white shadow-md"
+                                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"}`}
+                                    >
+                                        {tab === "all" ? "Barchasi" : tab}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* List Container */}
+                        <div className="space-y-3">
+                            {loading ? (
+                                <div className="py-20 flex flex-col items-center justify-center">
+                                    <Loader2 className="animate-spin text-slate-400 w-8 h-8 mb-2" />
+                                    <span className="text-xs font-medium text-slate-400">Yuklanmoqda...</span>
+                                </div>
+                            ) : (
+                                <AnimatePresence mode="popLayout">
+                                    {filteredResults.map((item, index) => {
+                                        const theme = getTheme(item.section)
+                                        const levelStyle = getLevelStyle(item.cefr_level)
+
+                                        return (
+                                            <motion.div
+                                                layout
+                                                key={`${item.section}-${item.id}`}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                exit={{ opacity: 0, scale: 0.98 }}
+                                                transition={{ delay: index * 0.03 }}
+                                                className="group bg-white rounded-[20px] p-5 border border-slate-100 hover:border-slate-300 shadow-sm hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
+                                            >
+                                                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10">
+
+                                                    {/* --- LEFT SECTION: Icon & Main Info --- */}
+                                                    <div className="flex items-center gap-5 flex-1 min-w-0 w-full">
+
+                                                        {/* Icon Box */}
+                                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 transition-colors ${theme.bg} ${theme.text}`}>
+                                                            <theme.icon size={24} />
+                                                        </div>
+
+                                                        {/* Text Info */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-2 mb-1">
+                                                                <span className="bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider whitespace-nowrap">
+                                                                    #{item.exam_id}
+                                                                </span>
+                                                                <span className="text-xs font-medium text-slate-400 flex items-center gap-1 whitespace-nowrap">
+                                                                    <Calendar size={12} /> {formatDate(item.created_at)}
+                                                                </span>
+                                                            </div>
+
+                                                            <h3 className="text-base font-bold text-slate-900 uppercase tracking-wide truncate">
+                                                                {item.section} TEST
+                                                            </h3>
+
+                                                            {/* Mobile Only: Correct Answers */}
+                                                            <div className="md:hidden mt-1 text-xs font-medium text-slate-500 flex items-center gap-1">
+                                                                <CheckCircle2 size={12} className="text-emerald-500" />
+                                                                {item.raw_score ?? item.correct_answers ?? 0}/{item.total_questions || 40}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* --- MIDDLE SECTION: Desktop Stats (Hidden on Mobile) --- */}
+                                                    <div className="hidden md:flex flex-col items-center px-6 border-l border-slate-100 shrink-0">
+                                                        <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">To'g'ri Javoblar</span>
+                                                        <span className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+                                                            <CheckCircle2 size={16} className="text-emerald-500" />
+                                                            {item.raw_score ?? item.correct_answers ?? 0} / {item.total_questions || 40}
+                                                        </span>
+                                                    </div>
+
+                                                    {/* --- RIGHT SECTION: Score & Level & Action --- */}
+                                                    {/* flex-wrap: Mobil ekranlarda sig'may qolsa pastga tushib ketishiga yo'l qo'yadi (yoki aksincha nowrap bilan siqib qo'yadi).
+    shrink-0: O'ng taraf qisqarib ketmasligi uchun.
+*/}
+                                                    <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 w-full sm:w-auto border-t sm:border-t-0 border-slate-100 pt-4 sm:pt-0 shrink-0">
+
+                                                        {/* Score (Ball) */}
+                                                        <div className="text-right min-w-[60px]">
+                                                            <p className="text-[10px] font-bold text-slate-400 uppercase mb-0.5 tracking-wide">Score</p>
+                                                            <p className={`text-xl font-black ${theme.text}`}>
+                                                                {item.standard_score ?? 0}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Level Badge (Daraja) */}
+                                                        {/* w-12 h-12: Kvadrat shaklida. Flex col va center: Matnni o'rtaga joylash uchun. */}
+                                                        <div className={`flex flex-col items-center justify-center w-28 h-12 rounded-xl border ${levelStyle.bg} ${levelStyle.text} ${levelStyle.border}`}>
+                                                            <span className="text-sm font-bold">{item.cefr_level || "-"}</span>
+                                                        </div>
+
+                                                        {/* Action Button (Ko'rish tugmasi) */}
+                                                        <Link
+                                                            href={`/dashboard/result/${item.section.toLowerCase()}/view?id=${item.id}`}
+                                                            className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all shadow-sm group-hover:shadow-md"
+                                                            title="Batafsil ko'rish"
+                                                        >
+                                                            <ArrowUpRight size={20} />
+                                                        </Link>
+
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )
+                                    })}
+                                </AnimatePresence>
+                            )}
+
+                            {!loading && filteredResults.length === 0 && (
+                                <div className="text-center py-20 bg-white rounded-[24px] border border-dashed border-slate-300">
+                                    <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400">
+                                        <FileText size={24} />
+                                    </div>
+                                    <p className="text-slate-500 font-medium text-sm">Hozircha natijalar yo'q</p>
+                                </div>
+                            )}
+                        </div>
                     </div>
+
+                    {/* --- RIGHT COLUMN: STATS SIDEBAR (1/4 qism) --- */}
+                    <div className="xl:col-span-1 space-y-6">
+                        <div className="sticky top-8 space-y-6">
+
+                            {/* Stats Card */}
+                            <div className="bg-slate-900 rounded-[24px] p-6 text-white shadow-xl shadow-slate-200">
+                                <div className="flex items-center gap-3 mb-6">
+                                    <div className="p-2 bg-white/10 rounded-lg">
+                                        <Activity size={20} />
+                                    </div>
+                                    <span className="font-bold text-sm">Umumiy Statistika</span>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center border-b border-white/10 pb-4">
+                                        <p className="text-slate-400 text-xs font-medium">Jami Urinishlar</p>
+                                        <p className="text-2xl font-bold flex items-center gap-2">
+                                            <Trophy size={18} className="text-yellow-500" /> {totalAttempts}
+                                        </p>
+                                    </div>
+                                    <div className="flex justify-between items-center">
+                                        <p className="text-slate-400 text-xs font-medium">O'rtacha Ball</p>
+                                        <p className="text-2xl font-bold flex items-center gap-2">
+                                            <Target size={18} className="text-blue-400" /> {avgScore}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Progress Stats */}
+                            <div className="bg-white p-6 rounded-[24px] border border-slate-200 shadow-sm">
+                                <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-6">Faollik</h3>
+                                <div className="space-y-6">
+                                    {/* Reading Bar */}
+                                    <div>
+                                        <div className="flex justify-between mb-2 text-sm">
+                                            <span className="font-medium text-slate-600 flex items-center gap-2">
+                                                <BookOpen size={16} className="text-blue-500" /> Reading
+                                            </span>
+                                            <span className="font-bold text-slate-900">{results.filter(r => r.section === 'READING').length}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-blue-500 h-full rounded-full" style={{ width: `${totalAttempts ? (results.filter(r => r.section === 'READING').length / totalAttempts) * 100 : 0}%` }}></div>
+                                        </div>
+                                    </div>
+
+                                    {/* Listening Bar */}
+                                    <div>
+                                        <div className="flex justify-between mb-2 text-sm">
+                                            <span className="font-medium text-slate-600 flex items-center gap-2">
+                                                <Headphones size={16} className="text-purple-500" /> Listening
+                                            </span>
+                                            <span className="font-bold text-slate-900">{results.filter(r => r.section === 'LISTENING').length}</span>
+                                        </div>
+                                        <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                                            <div className="bg-purple-500 h-full rounded-full" style={{ width: `${totalAttempts ? (results.filter(r => r.section === 'LISTENING').length / totalAttempts) * 100 : 0}%` }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
                 </div>
             </div>
-
-            {loading ? (
-                <div className="flex flex-col items-center justify-center py-20">
-                    <Loader2 className="w-10 h-10 animate-spin mb-4 text-blue-600" />
-                    <p className="font-black text-slate-400 uppercase tracking-widest text-[9px]">Yuklanmoqda...</p>
-                </div>
-            ) : results.length > 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                    {/* DESKTOP TABLE (Faqat MD va undan katta ekranlar uchun) */}
-                    <div className="hidden md:block bg-white rounded-[40px] border border-slate-100 shadow-xl overflow-hidden">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/50 border-b border-slate-100">
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Bo'lim</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Sana</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Natija</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Daraja</th>
-                                    <th className="p-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ball</th>
-                                    <th className="p-6"></th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {results.map((res) => (
-                                    <tr key={`${res.section}-${res.id}`} className="hover:bg-slate-50/80 transition-all group">
-                                        <td className="p-6">
-                                            <div className="flex items-center gap-4">
-                                                <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${res.section === 'READING' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                                                    {res.section === 'READING' ? <BookOpen size={20} /> : <Headphones size={20} />}
-                                                </div>
-                                                <p className="text-xs font-black text-slate-900 uppercase">#{res.exam_id}</p>
-                                            </div>
-                                        </td>
-                                        <td className="p-6 text-xs font-bold text-slate-500">{formatDate(res.created_at)}</td>
-                                        <td className="p-6 text-center font-bold text-xs">{res.raw_score ?? res.correct_answers ?? 0} / {res.total_questions || 40}</td>
-                                        <td className="p-6 text-center">
-                                            <span className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase ${getLevelBadge(res.cefr_level)}`}>
-                                                {res.cefr_level || "N/A"}
-                                            </span>
-                                        </td>
-                                        <td className="p-6 text-center font-black text-lg text-slate-800">{res.standard_score ?? 0}</td>
-                                        <td className="p-6 text-right">
-                                            <Link href={`/dashboard/result/${(res.section || 'reading').toLowerCase()}/${res.id}`}
-                                                className="inline-flex items-center justify-center w-10 h-10 rounded-xl bg-slate-100 text-slate-400 hover:bg-slate-900 hover:text-white transition-all">
-                                                <ChevronRight size={18} />
-                                            </Link>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* MOBILE CARDS (Faqat kichik ekranlar uchun) */}
-                    <div className="md:hidden space-y-4">
-                        <AnimatePresence>
-                            {results.map((res, index) => (
-                                <motion.div 
-                                    key={`${res.section}-${res.id}`}
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: index * 0.05 }}
-                                    className="bg-white p-5 rounded-[30px] border border-slate-100 shadow-sm relative overflow-hidden"
-                                >
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className={`w-10 h-10 rounded-2xl flex items-center justify-center ${res.section === 'READING' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}`}>
-                                                {res.section === 'READING' ? <BookOpen size={18} /> : <Headphones size={18} />}
-                                            </div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{res.section}</p>
-                                                <p className="text-sm font-black text-slate-900 uppercase leading-none">Exam #{res.exam_id}</p>
-                                            </div>
-                                        </div>
-                                        <span className={`px-3 py-1 rounded-lg text-[9px] font-black border uppercase italic ${getLevelBadge(res.cefr_level)}`}>
-                                            {res.cefr_level || "N/A"}
-                                        </span>
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-4 py-3 border-y border-slate-50">
-                                        <div>
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">To'g'ri javoblar</p>
-                                            <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                                <CheckCircle2 size={12} className="text-emerald-500" />
-                                                {res.raw_score ?? res.correct_answers ?? 0} / {res.total_questions || 40}
-                                            </p>
-                                        </div>
-                                        <div>
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Topshirilgan sana</p>
-                                            <p className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                                                <Calendar size={12} className="text-slate-400" />
-                                                {formatDate(res.created_at)}
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex items-center justify-between mt-4">
-                                        <div>
-                                            <p className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Standard Score</p>
-                                            <p className={`text-2xl font-black tracking-tighter ${res.section === 'READING' ? 'text-blue-600' : 'text-purple-600'}`}>
-                                                {res.standard_score ?? 0}
-                                            </p>
-                                        </div>
-                                        <Link 
-                                            href={`/dashboard/result/${(res.section || 'reading').toLowerCase()}/${res.id}`}
-                                            className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-slate-200"
-                                        >
-                                            Tahlil <ChevronRight size={14} />
-                                        </Link>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
-                    </div>
-                </div>
-            ) : (
-                <div className="py-20 text-center bg-white rounded-[40px] border border-slate-100 shadow-sm">
-                    <div className="w-20 h-20 bg-slate-50 rounded-[30px] flex items-center justify-center mx-auto mb-6">
-                        <FileText size={40} className="text-slate-200" />
-                    </div>
-                    <h3 className="text-lg font-black text-slate-800 mb-1 uppercase">Hali natijalar yo'q</h3>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mb-8">Testni topshirib natijangizni ko'ring</p>
-                    <Link href="/dashboard/test/reading" className="inline-flex items-center gap-3 bg-blue-600 text-white px-8 py-4 rounded-2xl font-black text-[10px] uppercase shadow-xl hover:bg-blue-700 transition-all">
-                        Testni boshlash <ArrowRight size={16} />
-                    </Link>
-                </div>
-            )}
         </div>
     )
 }

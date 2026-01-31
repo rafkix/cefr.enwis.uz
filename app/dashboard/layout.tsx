@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
-    LayoutGrid, FileText, User, LogOut, Menu, X, Loader2, BrainCircuit, ChevronRight, Bell
+    LayoutGrid, FileText, User, LogOut, Menu, X, Loader2, BrainCircuit, ChevronRight, Bell, BookCheck
 } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
 import { meAPI } from "@/lib/api/auth"
@@ -73,7 +73,8 @@ export default function DashboardLayout({
     }
 
     const menuItems = [
-        { name: "Imtihonlar", href: "/dashboard/test", icon: LayoutGrid },
+        { name: "Imthon", href: "/dashboard/exams", icon: BookCheck },
+        { name: "Amaliyot", href: "/dashboard/test", icon: LayoutGrid },
         { name: "Natijalar", href: "/dashboard/result", icon: FileText },
         { name: "Profil", href: "/dashboard/profile", icon: User },
     ]
