@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation"
 import { motion, useScroll, useMotionValueEvent } from "framer-motion"
 import {
     ArrowRight, Zap, Mic, PenTool, Headphones, BookOpen, ShieldCheck,
-    CheckCircle2, AlertTriangle, Sparkles, Heart, HandHeart, GraduationCap // ❤️ Kerakli iconlar
+    CheckCircle2, AlertTriangle, Sparkles, Heart, HandHeart, GraduationCap, // ❤️ Kerakli iconlar
+    BarChart3
 } from "lucide-react"
 
 // --- ANIMATIONS ---
