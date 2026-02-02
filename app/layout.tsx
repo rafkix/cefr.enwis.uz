@@ -1,36 +1,35 @@
-import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
 import { Analytics } from "@vercel/analytics/next"
 import LayoutWrapper from "@/components/LayoutWrapper"
 
-const geist = Geist({ subsets: ["latin"] })
-const geistMono = Geist_Mono({ subsets: ["latin"] })
+/* Fonts */
+const geist = Geist({
+  subsets: ["latin"],
+})
 
-import type React from "react"
-import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
-import "./globals.css"
-import { Analytics } from "@vercel/analytics/next"
-import LayoutWrapper from "@/components/LayoutWrapper"
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+})
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist" })
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" })
+/* Mobile / viewport */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+}
 
+/* SEO + Telegram / OpenGraph */
 export const metadata: Metadata = {
+  metadataBase: new URL("https://cefr.enwis.uz"),
+
   title: {
     default: "ENWIS – CEFR imtihoniga tayyorgarlik platformasi",
     template: "%s | ENWIS",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-  },
+
   description:
     "CEFR imtihoniga real formatda tayyorlaning: listening, reading, writing va speaking uchun tizimli platforma",
-
-  metadataBase: new URL("https://cefr.enwis.uz"),
 
   alternates: {
     canonical: "https://cefr.enwis.uz",
@@ -46,7 +45,7 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/og-image.jpg", // metadataBase bilan birga ishlaydi
+        url: "/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "ENWIS CEFR platformasi",
@@ -73,7 +72,7 @@ export const metadata: Metadata = {
   },
 }
 
-
+/* Root layout */
 export default function RootLayout({
   children,
 }: {
@@ -81,7 +80,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="uz">
-      <body className="font-sans antialiased">
+      <body
+        className={`${geist.className} ${geistMono.className} antialiased`}
+      >
         <LayoutWrapper>{children}</LayoutWrapper>
         <Analytics />
       </body>
