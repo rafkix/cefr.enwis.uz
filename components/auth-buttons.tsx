@@ -76,54 +76,62 @@ export const GoogleSignInButton = () => {
     );
 };
 
+/**
+ * TELEGRAM SIGN IN WIDGET
+ * Invalid domain holatida ham Telegram logosi bilan chiroyli turadi
+ */
 export const TelegramSignInWidget = () => {
     const telegramWrapperRef = useRef<HTMLDivElement>(null);
     const [widgetLoaded, setWidgetLoaded] = useState(false);
     const router = useRouter();
-    const searchParams = useSearchParams();
-    const { refreshUser } = useAuth();
-
-    const clientIdParam = searchParams.get("client_id");
-    const redirectUri = searchParams.get("redirect_uri");
-    const state = searchParams.get("state");
+    const searchParams = useSearchParams()
+    const { refreshUser } = useAuth()
+    const clientId = searchParams.get("client_id")
+    const redirectUri = searchParams.get("redirect_uri")
+    const state = searchParams.get("state")
+    const getQueryString = () => clientId ? `?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : ""
 
     useEffect(() => {
-        if (widgetLoaded || !telegramWrapperRef.current) return;
-
-        (window as any).onTelegramAuth = async (user: any) => {
-            try {
-                await authService.telegramLogin(user);
-                await refreshUser();
-                const nextPath = clientIdParam ? `/auth/authorize?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
-                router.push(nextPath);
-            } catch (error: any) {
-                alert("Telegram auth xatosi");
+            if (widgetLoaded) return
+            const script = document.createElement("script")
+            script.src = "https://telegram.org/js/telegram-widget.js?22"
+            script.async = true
+            script.setAttribute("data-telegram-login", "EnwisAuthBot")
+            script.setAttribute("data-size", "large")
+            script.setAttribute("data-radius", "20")
+            script.setAttribute("data-onauth", "onTelegramAuth(user)")
+    
+            if (telegramWrapperRef.current) {
+                telegramWrapperRef.current.appendChild(script)
+                setWidgetLoaded(true)
             }
-        };
-
-        const script = document.createElement("script");
-        script.src = "https://telegram.org/js/telegram-widget.js?22";
-        script.async = true;
-        script.setAttribute("data-telegram-login", "EnwisAuthBot");
-        script.setAttribute("data-size", "large");
-        script.setAttribute("data-radius", "20");
-        script.setAttribute("data-onauth", "onTelegramAuth(user)");
-
-        telegramWrapperRef.current.appendChild(script);
-        setWidgetLoaded(true);
-
-        return () => { delete (window as any).onTelegramAuth; };
-    }, [widgetLoaded, clientIdParam]);
+    
+            (window as any).onTelegramAuth = async (user: any) => {
+                try {
+                    await authService.telegramLogin(user)
+                    await refreshUser()
+                    clientId ? router.push(`/auth/authorize${getQueryString()}`) : router.push('/dashboard')
+                } catch (error: any) {
+                    alert(error.response?.data?.detail || "Xatolik yuz berdi.")
+                }
+            }
+        }, [widgetLoaded])
 
     return (
-        <div className="relative h-11 w-full flex items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white hover:bg-slate-50 transition-all">
+        <div className="relative h-11 w-full flex items-center justify-center overflow-hidden rounded-xl border border-slate-100 bg-white group cursor-pointer transition-all hover:bg-slate-50">
+            {/* Orqa fondagi dizayn (Widget ishlamasa ham turadi) */}
             <div className="absolute inset-0 flex items-center justify-center gap-2 pointer-events-none">
                 <svg className="w-4 h-4 text-[#229ED9]" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 00-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .33z" />
                 </svg>
-                <span className="font-bold text-[#229ED9] text-xs uppercase">Telegram</span>
+                <span className="font-bold text-[#229ED9] text-xs uppercase tracking-tight">Telegram</span>
             </div>
-            <div ref={telegramWrapperRef} className="relative z-10 opacity-0 cursor-pointer scale-[3]" />
+
+            {/* Old fondagi haqiqiy shaffof widget */}
+            <div 
+                ref={telegramWrapperRef} 
+                className="relative z-10 opacity-0 cursor-pointer scale-[3]" 
+            />
         </div>
     );
 };
