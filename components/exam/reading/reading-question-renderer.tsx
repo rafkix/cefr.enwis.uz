@@ -1,5 +1,8 @@
 "use client"
 
+import { useState, useRef, useEffect, useLayoutEffect } from "react"
+import { createPortal } from "react-dom"
+import { ChevronDown, Check, X } from "lucide-react"
 import type { Question } from "@/lib/types/reading"
 
 interface QuestionRendererProps {
@@ -10,44 +13,56 @@ interface QuestionRendererProps {
     fontSize?: number
 }
 
-// 1. TRUE/FALSE/NOT GIVEN - Tugmalar
+// ----------------------------------------------------------------------
+// 1. TRUE/FALSE/NOT GIVEN (Grid Layout)
+// ----------------------------------------------------------------------
 export function TrueFalseNotGivenRenderer({
     answer,
     onAnswer,
-    fontSize = 16
+    fontSize = 13
 }: {
     answer: string
     onAnswer: (value: string) => void
     fontSize?: number
 }) {
-    const options = ["TRUE", "FALSE", "NOT GIVEN"]
+    const options = [
+        { label: "TRUE", value: "A" },
+        { label: "FALSE", value: "B" },
+        { label: "NOT GIVEN", value: "C" }
+    ]
 
     return (
-        <div className="flex flex-wrap gap-2">
-            {options.map((option) => (
-                <button
-                    key={option}
-                    onClick={() => onAnswer(option)}
-                    className={`px-4 py-2 rounded-lg border-2 text-[11px] font-bold transition-all duration-200 
-                        ${answer === option
-                            ? "bg-blue-600 border-blue-600 text-white shadow-md shadow-blue-100"
-                            : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:bg-blue-50/30"
-                        }`}
-                    style={{ fontSize: `${Math.max(fontSize - 4, 11)}px` }}
-                >
-                    {option}
-                </button>
-            ))}
+        <div className="grid grid-cols-3 gap-1.5 w-full">
+            {options.map((option) => {
+                const isActive = answer === option.value;
+                return (
+                    <button
+                        key={option.value}
+                        onClick={() => onAnswer(option.value)}
+                        className={`px-1 py-1.5 rounded-md border text-[10px] sm:text-xs font-bold transition-all duration-200 shadow-sm truncate
+                            ${isActive
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "bg-white border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                            }`}
+                        style={{ fontSize: `${Math.min(fontSize - 2, 12)}px` }}
+                        title={option.label}
+                    >
+                        {option.label}
+                    </button>
+                )
+            })}
         </div>
     )
 }
 
-// 2. MULTIPLE CHOICE - Variantli savollar
+// ----------------------------------------------------------------------
+// 2. MULTIPLE CHOICE (Grid Layout + Overflow Safe)
+// ----------------------------------------------------------------------
 export function MultipleChoiceRenderer({
     question,
     answer,
     onAnswer,
-    fontSize = 16
+    fontSize = 13
 }: {
     question: Question
     answer: string
@@ -55,74 +70,82 @@ export function MultipleChoiceRenderer({
     fontSize?: number
 }) {
     return (
-        <div className="space-y-2">
-            {question.options?.map((option) => (
-                <button
-                    key={option.value}
-                    // MUHIM: Multiple Choice da javob sifatida LABEL ("A", "B") ketadi
-                    onClick={() => onAnswer(option.label)}
-                    className={`w-full flex items-start gap-3 p-3 rounded-xl border-2 transition-all duration-200 text-left
-                        ${answer === option.label
-                            ? "bg-blue-50 border-blue-500 shadow-sm ring-1 ring-blue-200"
-                            : "bg-white border-gray-100 hover:border-gray-300 hover:bg-gray-50"
-                        }`}
-                >
-                    {/* Radio Circle */}
-                    <div className={`mt-0.6 h-6 w-6 shrink-0 rounded-full border-2 flex items-center justify-center 
-                        ${answer === option.label ? "border-blue-600" : "border-gray-300"}`}
+        <div className="space-y-1.5 w-full max-w-full">
+            {question.options?.map((option) => {
+                const isSelected = answer === option.label;
+                return (
+                    <button
+                        key={option.value}
+                        onClick={() => onAnswer(option.label)}
+                        className={`w-full grid grid-cols-[auto_1fr] gap-2.5 p-2 rounded-lg border transition-all duration-200 text-left group
+                            ${isSelected
+                                ? "bg-blue-50 border-blue-400/50 shadow-sm"
+                                : "bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50"
+                            }`}
                     >
-                        {answer === option.label && <div className="h-2.5 w-2.5 rounded-full bg-blue-600" />}
-                    {option.value}
-                    </div>
-                    
+                        {/* Harf */}
+                        <div 
+                            className={`w-5 h-5 flex items-center justify-center rounded text-[10px] font-bold border transition-colors mt-0.5
+                            ${isSelected
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "bg-slate-50 border-slate-200 text-slate-400 group-hover:border-slate-300"
+                            }`}
+                        >
+                            {option.value}
+                        </div>
 
-                    {/* Text: A) Variant matni */}
-                    <span
-                        className={`leading-tight ${answer === option.label ? "text-blue-900 font-bold" : "text-gray-700 font-medium"}`}
-                        style={{ fontSize: `${fontSize - 2}px` }}
-                        
-                    >
-                        <span className="font-bold mr-2">{option.label}</span>
-                    </span>
-                </button>
-            ))}
+                        {/* Matn */}
+                        <div className="min-w-0 overflow-hidden">
+                            <span 
+                                className={`block break-words leading-tight ${isSelected ? "text-blue-900 font-semibold" : "text-slate-600 font-medium"}`}
+                                style={{ fontSize: `${Math.min(fontSize, 14)}px` }}
+                            >
+                                {option.label}
+                            </span>
+                        </div>
+                    </button>
+                )
+            })}
         </div>
     )
 }
 
-// 3. GAP FILL FILL - Sidebar uchun input (Agar ExamContent ishlatmasa)
+// ----------------------------------------------------------------------
+// 3. GAP FILL INPUT
+// ----------------------------------------------------------------------
 export function GapFillFillRenderer({
     answer,
     onInputChange,
-    fontSize = 16
+    fontSize = 13
 }: {
     answer: string
     onInputChange: (value: string) => void
     fontSize?: number
 }) {
     return (
-        <div className="w-full space-y-2">
+        <div className="w-full max-w-full">
             <input
                 type="text"
-                placeholder="Type your answer..."
-                value={answer}
+                placeholder="Type answer..."
+                value={answer || ""}
                 onChange={(e) => onInputChange(e.target.value)}
-                // 🟢 MUHIM: Tashqaridagi onClick ishlashini to'xtatadi
                 onClick={(e) => e.stopPropagation()} 
-                className="w-full px-4 py-2.5 rounded-lg border-2 border-blue-100 bg-blue-50/30 text-blue-900 font-bold outline-none focus:border-blue-500 focus:bg-white transition-all"
-                style={{ fontSize: `${fontSize}px` }}
+                className="w-full min-w-0 px-3 py-1.5 rounded-lg border border-slate-300 bg-white text-slate-800 font-medium text-sm outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 transition-all placeholder:text-slate-400 shadow-sm"
+                style={{ fontSize: `${Math.min(fontSize, 14)}px` }}
             />
         </div>
     )
 }
 
-// 4. SELECT RENDERER - Matching (Headings, Text match)
+// ----------------------------------------------------------------------
+// 4. SELECT MATCHING (Scroll-Proof & Grid)
+// ----------------------------------------------------------------------
 export function SelectRenderer({
     question,
     answer,
     onAnswer,
-    fontSize = 16,
-    placeholder = "-- Select an option --"
+    fontSize = 13,
+    placeholder = "Select..."
 }: {
     question: Question
     answer: string
@@ -130,41 +153,181 @@ export function SelectRenderer({
     fontSize?: number
     placeholder?: string
 }) {
-    return (
-        <div className="relative">
-            <select
-                value={answer}
-                onChange={(e) => onAnswer(e.target.value)}
-                className="w-full px-3 py-2.5 rounded-lg border-2 border-gray-200 bg-white focus:border-blue-500 outline-none appearance-none font-bold text-gray-800 cursor-pointer transition-all hover:border-blue-300"
-                style={{ fontSize: `${fontSize - 2}px` }}
-            >
-                <option value="" className="text-gray-400 font-normal">{placeholder}</option>
-                {question.options?.map((option, idx) => (
-                    // Match savollarida VALUE ("A", "B", "I"...) javob sifatida ketadi
-                    <option key={idx} value={option.value}>
-                        {option.label}
-                    </option>
-                ))}
-            </select>
+    const [isOpen, setIsOpen] = useState(false);
+    const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+    const buttonRef = useRef<HTMLButtonElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
 
-            {/* Custom Arrow Icon */}
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+    const selectedOption = question.options?.find(opt => opt.value === answer);
+
+    // Pozitsiyani yangilash (Scroll qilganda ham chaqiriladi)
+    const updatePosition = () => {
+        if (!buttonRef.current || !isOpen) return;
+        
+        const rect = buttonRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const viewportWidth = window.innerWidth;
+        const spaceBelow = viewportHeight - rect.bottom;
+        
+        const menuHeight = Math.min((question.options?.length || 0) * 40 + 40, 300);
+        const opensUpwards = spaceBelow < menuHeight + 10;
+        const maxWidth = viewportWidth - 20;
+
+        setMenuStyle({
+            position: "fixed",
+            left: `${rect.left}px`,
+            width: `${rect.width}px`, 
+            maxWidth: `${maxWidth}px`,
+            // Scroll qilganda menyu qotib qolmasligi uchun doimiy yangilanadi
+            top: opensUpwards ? "auto" : `${rect.bottom + 4}px`,
+            bottom: opensUpwards ? `${viewportHeight - rect.top + 4}px` : "auto",
+            zIndex: 99999,
+        });
+    };
+
+    // Scroll va Resize hodisalarini kuzatish
+    useLayoutEffect(() => {
+        if (isOpen) {
+            updatePosition();
+            // capture: true muhim, chunki scroll hodisasi bubling qilmaydi
+            window.addEventListener("scroll", updatePosition, { capture: true });
+            window.addEventListener("resize", updatePosition);
+        }
+        return () => {
+            window.removeEventListener("scroll", updatePosition, { capture: true });
+            window.removeEventListener("resize", updatePosition);
+        };
+    }, [isOpen]);
+
+    // Tashqariga bosganda yopish
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            // Agar menyu ichiga yoki tugma ichiga bosilmagan bo'lsa
+            if (
+                menuRef.current && !menuRef.current.contains(event.target as Node) &&
+                buttonRef.current && !buttonRef.current.contains(event.target as Node)
+            ) {
+                setIsOpen(false);
+            }
+        }
+        if (isOpen) document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, [isOpen]);
+
+    // Portal Menyu
+    const DropdownMenu = (
+        <div 
+            ref={menuRef}
+            className="flex flex-col bg-white border border-slate-200 rounded-lg shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+            style={{ ...menuStyle, maxHeight: "300px" }}
+        >
+            {/* Clear Button */}
+            {answer && (
+                <div className="flex justify-end px-2 py-1.5 border-b border-slate-50 bg-slate-50/50">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onAnswer(""); setIsOpen(false); }}
+                        className="text-[10px] flex items-center gap-1 text-red-500 hover:text-red-600 font-semibold px-2 py-0.5 rounded hover:bg-red-50 transition-colors"
+                    >
+                        <X size={10} /> Clear
+                    </button>
+                </div>
+            )}
+
+            {/* Options */}
+            <div className="overflow-y-auto p-1 space-y-0.5 custom-scrollbar">
+                {question.options?.map((option, idx) => {
+                    const isSelected = answer === option.value;
+                    return (
+                        <div
+                            key={idx}
+                            onClick={() => { onAnswer(option.value); setIsOpen(false); }}
+                            // Grid Layout (Xuddi Multiple Choice kabi)
+                            className={`grid grid-cols-[auto_1fr] gap-2.5 px-2.5 py-2 rounded-md cursor-pointer transition-colors border
+                                ${isSelected 
+                                    ? "bg-blue-50 border-blue-100" 
+                                    : "border-transparent hover:bg-slate-50"
+                                }`}
+                        >
+                            {/* Checkbox/Badge */}
+                            <div className={`mt-0.5 w-4 h-4 flex items-center justify-center rounded text-[9px] font-bold border transition-colors
+                                ${isSelected ? "bg-blue-600 text-white border-blue-600" : "bg-slate-50 text-slate-400 border-slate-200"}`}>
+                                {isSelected ? <Check size={10} strokeWidth={3} /> : option.value}
+                            </div>
+
+                            {/* Matn */}
+                            <div className="min-w-0">
+                                <span 
+                                    className={`block text-xs sm:text-sm leading-tight break-words ${isSelected ? "text-slate-800 font-bold" : "text-slate-600 font-medium"}`}
+                                    style={{ fontSize: `${Math.min(fontSize - 1, 13)}px` }}
+                                >
+                                    {option.label}
+                                </span>
+                            </div>
+                        </div>
+                    )
+                })}
             </div>
         </div>
+    );
+
+    return (
+        <>
+            <div className="relative w-full max-w-full">
+                <button
+                    ref={buttonRef}
+                    onClick={() => setIsOpen(!isOpen)}
+                    // Grid Layout (Tugma uchun)
+                    className={`w-full grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 text-left bg-white
+                        ${isOpen 
+                            ? "border-blue-400 ring-2 ring-blue-500/10 shadow-sm" 
+                            : "border-slate-200 hover:border-slate-300"
+                        }`}
+                >
+                    <div className="min-w-0 overflow-hidden">
+                        {selectedOption ? (
+                            <div className="flex items-center gap-2">
+                                <span className="shrink-0 flex h-4 w-4 items-center justify-center rounded bg-blue-100 text-blue-700 text-[9px] font-bold">
+                                    {selectedOption.value}
+                                </span>
+                                {/* Truncate (Tugma ichida sig'magan matn kesiladi) */}
+                                <span 
+                                    className="block truncate font-semibold text-slate-800"
+                                    style={{ fontSize: `${Math.min(fontSize, 14)}px` }}
+                                    title={selectedOption.label} 
+                                >
+                                    {selectedOption.label}
+                                </span>
+                            </div>
+                        ) : (
+                            <span className="text-slate-400 text-xs sm:text-sm font-medium block truncate">{placeholder}</span>
+                        )}
+                    </div>
+                    
+                    <ChevronDown 
+                        size={14} 
+                        className={`text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180 text-blue-500" : ""}`} 
+                    />
+                </button>
+            </div>
+            
+            {/* Portal Body ga ulanadi (Z-index muammosi bo'lmaydi) */}
+            {isOpen && typeof document !== 'undefined' && createPortal(DropdownMenu, document.body)}
+        </>
     )
 }
 
-// --- ASOSIY RENDER KOMPONENTI ---
+// ----------------------------------------------------------------------
+// ASOSIY RENDER
+// ----------------------------------------------------------------------
 export default function QuestionRenderer({
     question,
     answer = "",
     onAnswer,
     onInputChange,
-    fontSize = 16
+    fontSize = 14
 }: QuestionRendererProps) {
 
-    if (!question) return null
+    if (!question) return null;
 
     const commonProps = { question, answer, onAnswer, onInputChange, fontSize }
 
@@ -176,24 +339,21 @@ export default function QuestionRenderer({
             return <MultipleChoiceRenderer {...commonProps} />
 
         case "GAP_FILL_FILL":
-            // Eslatma: ExamContent odatda buni o'zi render qiladi, 
-            // lekin fallback sifatida bu yerda ham tursa ziyon qilmaydi.
             return <GapFillFillRenderer {...commonProps} />
 
         case "TEXT_MATCH":
-            return <SelectRenderer {...commonProps} placeholder="-- Select Paragraph --" />
+            return <SelectRenderer {...commonProps} placeholder="Select Paragraph..." />
 
         case "HEADINGS_MATCH":
-            return <SelectRenderer {...commonProps} placeholder="-- Select Heading --" />
+            return <SelectRenderer {...commonProps} placeholder="Select Heading..." />
 
-        // GAP_FILL (Part 1) matn ichida bo'lgani uchun bu yerda render qilinmaydi
         case "GAP_FILL":
             return null
 
         default:
             return (
-                <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600 font-medium">
-                    Unsupported question type: {question.type}
+                <div className="p-2 bg-red-50 border border-red-200 rounded text-[10px] text-red-600 font-medium">
+                    Unsupported: {question.type}
                 </div>
             )
     }

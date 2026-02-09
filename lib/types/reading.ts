@@ -52,6 +52,8 @@ export interface ResultSubmission {
 }
 
 export interface ResultSummary {
+  result_id: any;
+  summary: any;
   id: number;
   exam_id: string;
   raw_score: number;

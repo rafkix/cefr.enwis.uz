@@ -7,7 +7,7 @@ import {
     LayoutGrid, FileText, User, LogOut, Menu, X, Loader2, BrainCircuit, ChevronRight, Bell, BookCheck
 } from "lucide-react"
 import { AnimatePresence, motion } from "framer-motion"
-import { meAPI } from "@/lib/api/auth"
+import { useAuth } from "@/lib/AuthContext" // AuthContext'dan foydalanamiz
 
 export default function DashboardLayout({
     children,
@@ -16,51 +16,34 @@ export default function DashboardLayout({
 }) {
     const router = useRouter()
     const pathname = usePathname()
+    // AuthContext'dan user ma'lumotlari va refresh funksiyasini olamiz
+    const { user, loading: authLoading, logout, refreshUser } = useAuth()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [isLoading, setIsLoading] = useState(true)
-    const [userData, setUserData] = useState<any>(null)
 
     const isExamPage = pathname.includes("/test/listening/") || pathname.includes("/test/reading/")
 
-    // 1. Foydalanuvchi ma'lumotlarini yuklash va Seansni tekshirish (2 kunlik mantiq bilan)
+    // Seans muddatini tekshirish
     useEffect(() => {
-        const fetchUser = async () => {
-            const token = localStorage.getItem("token")
-            const loginAt = localStorage.getItem("login_at")
-            const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
+        const loginAt = localStorage.getItem("login_at")
+        const TWO_DAYS = 2 * 24 * 60 * 60 * 1000
 
-            if (!token || !loginAt || (new Date().getTime() - parseInt(loginAt) > TWO_DAYS)) {
-                localStorage.clear()
-                router.replace("/auth/phone")
-                return
-            }
-
-            try {
-                const response = await meAPI()
-                setUserData(response.data)
-            } catch (err: any) {
-                if (err.response?.status === 401) {
-                    localStorage.clear()
-                    router.replace("/auth/phone")
-                }
-            } finally {
-                setIsLoading(false)
-            }
+        if (loginAt && (new Date().getTime() - parseInt(loginAt) > TWO_DAYS)) {
+            logout()
+            return
         }
-        fetchUser()
-    }, [router])
+
+        // Agar user datasi bo'lmasa va loading tugagan bo'lsa - login'ga yo'naltirish
+        if (!authLoading && !user) {
+            router.replace("/auth/login")
+        }
+    }, [user, authLoading, router, logout])
 
     // Sahifa o'zgarganda mobil menyuni yopish
     useEffect(() => {
         setIsMobileMenuOpen(false)
     }, [pathname])
 
-    const handleLogout = () => {
-        localStorage.clear()
-        router.push("/auth/phone")
-    }
-
-    if (isLoading) {
+    if (authLoading) {
         return (
             <div className="h-screen w-full flex items-center justify-center bg-white">
                 <Loader2 className="w-10 h-10 animate-spin text-[#17776A]" />
@@ -73,7 +56,7 @@ export default function DashboardLayout({
     }
 
     const menuItems = [
-        { name: "Imthon", href: "/dashboard/exams", icon: BookCheck },
+        { name: "Imtihon", href: "/dashboard/exams", icon: BookCheck },
         { name: "Amaliyot", href: "/dashboard/test", icon: LayoutGrid },
         { name: "Natijalar", href: "/dashboard/result", icon: FileText },
         { name: "Profil", href: "/dashboard/profile", icon: User },
@@ -84,7 +67,7 @@ export default function DashboardLayout({
     return (
         <div className="min-h-screen bg-[#FDFDFD] flex font-sans selection:bg-[#17776A]/10 text-slate-900 overflow-x-hidden">
 
-            {/* Desktop Sidebar (Faqat katta ekranlarda) */}
+            {/* Desktop Sidebar */}
             <aside className="hidden lg:flex flex-col w-72 bg-white border-r border-slate-100 fixed h-full z-40">
                 <div className="h-24 flex items-center px-8">
                     <Link href="/" className="flex items-center gap-3">
@@ -113,30 +96,24 @@ export default function DashboardLayout({
                 </nav>
 
                 <div className="p-6">
-                    <button onClick={handleLogout} className="flex items-center gap-3 px-6 py-4 w-full rounded-2xl font-bold text-sm text-red-500 bg-red-50 hover:bg-red-100 transition-all">
+                    <button onClick={logout} className="flex items-center gap-3 px-6 py-4 w-full rounded-2xl font-bold text-sm text-red-500 bg-red-50 hover:bg-red-100 transition-all">
                         <LogOut size={18} />
                         <span>Chiqish</span>
                     </button>
                 </div>
             </aside>
 
-            {/* Mobile Sidebar (Drawer) */}
+            {/* Mobile Sidebar */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <>
-                        {/* Qora fon (Overlay) */}
                         <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
+                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                             onClick={() => setIsMobileMenuOpen(false)}
                             className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[50] lg:hidden"
                         />
-                        {/* Menyu paneli */}
                         <motion.aside
-                            initial={{ x: "-100%" }}
-                            animate={{ x: 0 }}
-                            exit={{ x: "-100%" }}
+                            initial={{ x: "-100%" }} animate={{ x: 0 }} exit={{ x: "-100%" }}
                             transition={{ type: "spring", damping: 25, stiffness: 200 }}
                             className="fixed inset-y-0 left-0 w-80 bg-white z-[60] lg:hidden flex flex-col shadow-2xl"
                         >
@@ -167,7 +144,7 @@ export default function DashboardLayout({
                             </nav>
 
                             <div className="p-6 border-t border-slate-50">
-                                <button onClick={handleLogout} className="flex items-center gap-4 px-6 py-4 w-full rounded-2xl font-bold text-red-500 bg-red-50">
+                                <button onClick={logout} className="flex items-center gap-4 px-6 py-4 w-full rounded-2xl font-bold text-red-500 bg-red-50">
                                     <LogOut size={20} />
                                     <span>Chiqish</span>
                                 </button>
@@ -179,7 +156,6 @@ export default function DashboardLayout({
 
             {/* Main Content Area */}
             <div className="flex-1 flex flex-col lg:ml-72 min-w-0">
-                {/* Header: Mobil va Desktop uchun optimallashgan */}
                 <header className="h-20 lg:h-24 px-4 lg:px-12 sticky top-0 bg-white/80 backdrop-blur-md z-30 border-b border-slate-100/50 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <button onClick={() => setIsMobileMenuOpen(true)}
@@ -191,7 +167,7 @@ export default function DashboardLayout({
                                 {currentPage}
                             </h2>
                             <p className="hidden md:block text-[10px] text-slate-400 font-bold uppercase tracking-wider">
-                                Xush kelibsiz, {userData?.full_name?.split(' ')[0] || 'Foydalanuvchi'}!
+                                Xush kelibsiz, {user?.profile?.full_name?.split(' ')[0] || 'Foydalanuvchi'}!
                             </p>
                         </div>
                     </div>
@@ -204,38 +180,47 @@ export default function DashboardLayout({
 
                         <div className="w-px h-8 bg-slate-100 hidden sm:block"></div>
 
-                        {/* Profil qismi: Mobil ekranlarda faqat rasm qolishi mumkin */}
+                        {/* Header Profile Link */}
                         <Link href="/dashboard/profile" className="flex items-center gap-2 lg:gap-3 group shrink-0">
                             <div className="hidden sm:flex flex-col items-end">
                                 <span className="text-sm font-black text-slate-900 group-hover:text-[#17776A] transition-colors line-clamp-1">
-                                    {userData?.full_name || 'Foydalanuvchi'}
+                                    {user?.profile?.full_name || user?.profile.username || 'Foydalanuvchi'}
                                 </span>
                                 <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tight">
-                                    {userData?.phone || 'Profil'}
+                                    {/* username odatda profile ichida emas, user obyektining o'zida bo'ladi */}
+                                    @{user?.profile.username || 'Profil'}
                                 </span>
                             </div>
+
                             <div className="w-10 h-10 lg:w-12 lg:h-12 rounded-xl lg:rounded-2xl bg-slate-100 border-2 border-white shadow-sm overflow-hidden flex items-center justify-center group-hover:border-[#17776A]/20 transition-all">
-                                {userData?.full_name ? (
+                                {user?.profile?.avatar_url ? (
                                     <img
-                                        src={`https://api.dicebear.com/7.x/initials/svg?seed=${userData.full_name}&backgroundColor=17776A&fontColor=ffffff`}
-                                        alt="User"
-                                        className="w-full h-full object-cover"
+                                        // API_URL ni environment'dan olamiz va rasm yo'li bilan birlashtiramiz
+                                        src={user.profile.avatar_url.startsWith('http')
+                                            ? user.profile.avatar_url
+                                            : `${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '')}${user.profile.avatar_url}`}
+                                        alt="User avatar"
+                                        className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                     />
                                 ) : (
-                                    <User size={20} className="text-[#17776A]" />
+                                    <div className="w-full h-full bg-[#17776A] flex items-center justify-center text-white font-bold text-lg">
+                                        {/* Ismning birinchi harfi yoki standart ikonka */}
+                                        {user?.profile?.full_name
+                                            ? user.profile.full_name.charAt(0).toUpperCase()
+                                            : user?.profile.username?.charAt(0).toUpperCase() || <User size={20} />}
+                                    </div>
                                 )}
                             </div>
                         </Link>
                     </div>
                 </header>
 
-                {/* Asosiy Content: Mobil paddinglar bilan */}
                 <main className="p-4 lg:p-12 min-h-[calc(100vh-5rem)]">
                     <div className="max-w-6xl mx-auto">
                         <motion.div
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
-                            key={pathname} // Har bir sahifa almashganda animatsiya bo'ladi
+                            key={pathname}
                         >
                             {children}
                         </motion.div>

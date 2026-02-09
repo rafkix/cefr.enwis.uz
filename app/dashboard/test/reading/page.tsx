@@ -4,25 +4,15 @@ import { useState, useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-    BookOpen,
-    Clock,
-    FileText,
-    ChevronRight,
-    ChevronLeft,
-    Zap,
-    Search,
-    Inbox,
-    Filter,
-    Activity,
-    Lock,
-    Award
+    BookOpen, Clock, FileText, ChevronRight, ChevronLeft, Zap, Search, Inbox,
+    Filter, Activity, Lock, Award
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-import { getAllReadingExamsAPI } from "@/lib/api/reading"
+import { getAllReadingExamsAPI } from "@/lib/api/reading" 
 import { UnlockModal } from "@/components/UnlockModal"
 
-export interface ReadingExam {
+export interface ExamCardItem {
     id: string
     title: string
     isDemo: boolean
@@ -32,42 +22,49 @@ export interface ReadingExam {
     level: string
     duration: number
     totalQuestions: number
+    price: number
 }
 
 export default function ReadingPage() {
     const router = useRouter()
 
-    const [exams, setExams] = useState<ReadingExam[]>([])
+    const [exams, setExams] = useState<ExamCardItem[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium' | 'mock'>('all')
+    // "mock" tabi olib tashlandi, chunki bu yerda faqat practice bo'ladi
+    const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium'>('all')
     const [searchTerm, setSearchTerm] = useState("")
     
     const [showUnlockModal, setShowUnlockModal] = useState(false)
     const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
 
+    // --- 1. MA'LUMOTLARNI YUKLASH ---
     useEffect(() => {
         const fetchData = async () => {
             try {
                 setLoading(true)
-                const response: any = await getAllReadingExamsAPI()
-                const dataArray = Array.isArray(response) ? response : (response?.items || response?.data || [])
-                
-                const formattedData: ReadingExam[] = dataArray
-                    .map((item: any) => ({
-                        id: String(item.id),
-                        title: item.title || "Nomsiz Test",
-                        isDemo: item.is_demo ?? false,
-                        isFree: item.is_free ?? false,
-                        isMock: item.is_mock ?? false,
-                        isActive: item.is_active ?? true,        
-                        level: item.cefr_level || "B2",
-                        duration: item.duration_minutes || 60,
-                        totalQuestions: item.total_questions || 40
-                    }))
+                const response = await getAllReadingExamsAPI()
+                const rawData: any[] = Array.isArray(response.data) ? response.data : (response.data as any)?.items || [];
 
-                setExams(formattedData)
+                const formattedData: ExamCardItem[] = rawData.map((item) => ({
+                    id: String(item.id),
+                    title: item.title || "Nomsiz Test",
+                    isDemo: item.is_demo ?? false,
+                    isFree: item.is_free ?? false,
+                    isMock: item.is_mock ?? false,
+                    isActive: item.is_active ?? true, 
+                    level: item.cefr_level || "General",
+                    duration: item.duration_minutes || 60,
+                    totalQuestions: item.total_questions || 0,
+                    price: item.price || 0
+                }))
+
+                // MOCKLARNI OLIB TASHLASH (Client-side filtering)
+                // Agar backend faqat readinglarni bersa yaxshi, lekin agar aralash bersa shu yerda filtrlaymiz
+                const onlyReadingPractice = formattedData.filter(exam => !exam.isMock);
+
+                setExams(onlyReadingPractice)
             } catch (error) {
-                console.error("Imtihonlarni yuklashda xatolik:", error)
+                console.error("Testlarni yuklashda xatolik:", error)
             } finally {
                 setLoading(false)
             }
@@ -75,6 +72,7 @@ export default function ReadingPage() {
         fetchData()
     }, [])
 
+    // --- 2. FILTRLASH MANTIGI ---
     const filteredTests = useMemo(() => {
         return exams.filter((test) => {
             const matchesSearch =
@@ -83,27 +81,28 @@ export default function ReadingPage() {
 
             if (activeTab === 'free') return matchesSearch && test.isFree;
             if (activeTab === 'premium') return matchesSearch && !test.isFree;
-            if (activeTab === 'mock') return matchesSearch && test.isMock;
 
             return matchesSearch;
         });
     }, [exams, searchTerm, activeTab]);
 
-    const handleTestAction = (testId: string, isFree: boolean, isActive: boolean) => {
-        if (!testId) return;
+    // --- 3. BOSILGANDA ---
+    const handleTestClick = (test: ExamCardItem) => {
+        if (!test.isActive) return;
 
-        if (isFree) {
-            router.push(`/dashboard/test/reading/start?id=${testId}`)
+        // Bu yerda faqat Practice testlar bor, shuning uchun Mock tekshiruvi shart emas
+        if (test.isFree) {
+            router.push(`/dashboard/test/reading/start?id=${test.id}&mode=practice`)
         } else {
-            setSelectedTestId(testId)
+            setSelectedTestId(test.id)
             setShowUnlockModal(true)
         }
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-10 px-2 sm:px-0">
+        <div className="max-w-7xl mx-auto space-y-6 pb-10 px-2 sm:px-0 pt-6">
             
-            {/* --- BACK BUTTON --- */}
+            {/* Back Button */}
             <motion.button 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -116,7 +115,7 @@ export default function ReadingPage() {
                 <span className="text-[10px] font-black uppercase tracking-[0.2em]">Orqaga qaytish</span>
             </motion.button>
 
-            {/* 1. TOP HERO BANNER (Blue Gradient) */}
+            {/* Banner va Filter */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <motion.div
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -125,18 +124,17 @@ export default function ReadingPage() {
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-4 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-md">
                             <Zap size={16} className="fill-yellow-400 text-yellow-400" />
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Reading Mastery</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Reading Practice</span>
                         </div>
-                        <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">O'qish ko'nikmalaringizni <br />professional darajaga olib chiqing.</h2>
+                        <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">Reading ko'nikmalaringizni <br />oshiring.</h2>
                         <p className="text-blue-100 text-sm font-medium max-w-md opacity-90 leading-relaxed italic">
-                            Haqiqiy imtihon muhiti, akademik matnlar va batafsil natijalar tahlili sizni kutmoqda.
+                            Har xil darajadagi matnlar va savollar bilan shug'ullaning.
                         </p>
                     </div>
                     <div className="absolute inset-0 opacity-10 pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
                     <BookOpen size={180} className="absolute -right-10 -bottom-10 text-white opacity-10 rotate-12" />
                 </motion.div>
 
-                {/* CATEGORY FILTER (Blue Theme) */}
                 <div className="p-8 rounded-[32px] bg-white border border-slate-100 flex flex-col justify-center shadow-sm">
                     <div className="flex items-center gap-4 mb-6">
                         <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600 shadow-inner">
@@ -148,7 +146,7 @@ export default function ReadingPage() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {(['all', 'free', 'premium', 'mock'] as const).map((tab) => (
+                        {(['all', 'free', 'premium'] as const).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
@@ -157,14 +155,14 @@ export default function ReadingPage() {
                                     : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
                                 }`}
                             >
-                                {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Mashqlar' : tab === 'mock' ? 'Mock Testlar' : 'Premium Imtihonlar'}
+                                {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Mashqlar' : 'Premium Mashqlar'}
                             </button>
                         ))}
                     </div>
                 </div>
             </div>
 
-            {/* 2. SEARCH AREA (Blue Focus) */}
+            {/* Qidiruv */}
             <div className="relative group">
                 <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-300 group-focus-within:text-blue-500 transition-colors" />
                 <input
@@ -176,12 +174,12 @@ export default function ReadingPage() {
                 />
             </div>
 
-            {/* 3. TEST LIST AREA */}
+            {/* Testlar Ro'yxati */}
             <div className="space-y-5">
                 <div className="flex items-center justify-between px-2">
                     <div className="flex items-center gap-2">
                         <Activity size={18} className="text-blue-500 animate-pulse" />
-                        <h3 className="font-black text-slate-800 text-xs tracking-[0.2em] uppercase">Mavjud Imtihonlar</h3>
+                        <h3 className="font-black text-slate-800 text-xs tracking-[0.2em] uppercase">Mavjud Mashqlar</h3>
                     </div>
                     <Badge variant="secondary" className="bg-blue-50 text-blue-600 rounded-full px-4 py-1 border-none font-black text-[10px]">
                         {filteredTests.length} TA TEST
@@ -208,16 +206,17 @@ export default function ReadingPage() {
                                         animate={{ opacity: 1, y: 0 }}
                                         exit={{ opacity: 0, scale: 0.95 }}
                                         transition={{ delay: index * 0.05 }}
-                                        onClick={() => handleTestAction(test.id, test.isFree, test.isActive)}
+                                        onClick={() => handleTestClick(test)}
                                         className={`group flex flex-col sm:flex-row items-center justify-between p-6 rounded-[32px] bg-white border border-slate-100 hover:border-blue-300 hover:shadow-2xl hover:shadow-blue-500/[0.06] transition-all cursor-pointer relative overflow-hidden 
-                                            ${!test.isActive ? 'opacity-75' : ''}`}
+                                            ${!test.isActive ? 'opacity-75 grayscale pointer-events-none' : ''}`}
                                     >
                                         <div className="flex items-center gap-6 z-10 w-full sm:w-auto">
+                                            {/* Icon */}
                                             <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center transition-all duration-500 shadow-inner shrink-0
                                                 ${isLocked 
                                                     ? 'bg-slate-50 text-slate-300' 
                                                     : 'bg-blue-50 text-blue-600 group-hover:bg-blue-600 group-hover:text-white'}`}>
-                                                {isLocked ? <Lock size={26} /> : test.isMock ? <Award size={28}/> : <BookOpen size={26} />}
+                                                {isLocked ? <Lock size={26} /> : <BookOpen size={26} />}
                                             </div>
 
                                             <div className="flex-1">
@@ -226,16 +225,8 @@ export default function ReadingPage() {
                                                         {test.title}
                                                     </h3>
                                                     
-                                                    {/* BADGES */}
-                                                    {!test.isActive && (
-                                                        <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-black uppercase border border-slate-200">YAQINDA</span>
-                                                    )}
-                                                    {test.isDemo && (
-                                                        <span className="px-2 py-0.5 rounded-lg bg-amber-50 text-amber-600 text-[10px] font-black uppercase border border-amber-100">Demo</span>
-                                                    )}
-                                                    {test.isMock && (
-                                                        <span className="px-2 py-0.5 rounded-lg bg-rose-50 text-rose-600 text-[10px] font-black uppercase border border-rose-100">Mock Exam</span>
-                                                    )}
+                                                    {!test.isActive && <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-black uppercase border border-slate-200">YAQINDA</span>}
+                                                    
                                                     {test.isFree ? (
                                                         <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-black">OPEN</Badge>
                                                     ) : (
@@ -260,7 +251,8 @@ export default function ReadingPage() {
                                         <div className={`mt-4 sm:mt-0 shrink-0 w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-300 shadow-sm
                                             ${isLocked 
                                                 ? 'text-slate-200' 
-                                                : 'bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-lg'}`}>
+                                                : 'bg-slate-50 text-slate-300 group-hover:bg-blue-600 group-hover:text-white group-hover:shadow-lg'
+                                            }`}>
                                             <ChevronRight size={24} className="group-hover:translate-x-1 transition-transform" />
                                         </div>
                                     </motion.div>
@@ -278,6 +270,7 @@ export default function ReadingPage() {
                 )}
             </div>
 
+            {/* Modal */}
             {selectedTestId && (
                 <UnlockModal 
                     open={showUnlockModal} 

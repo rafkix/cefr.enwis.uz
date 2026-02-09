@@ -9,7 +9,7 @@ import {
   Clock,
   FileText,
   Lock,
-  Search,
+  Search,n
   Sparkles,
   ChevronRight,
 } from "lucide-react"

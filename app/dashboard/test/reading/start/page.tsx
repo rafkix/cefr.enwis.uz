@@ -1,63 +1,38 @@
 "use client"
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react"
-import { useSearchParams, useRouter } from "next/navigation" // 👈 O'ZGARDII: params o'rniga searchParams
+import { useSearchParams, useRouter } from "next/navigation"
 import ExamHeader from "@/components/exam/exam-header"
 import ReadingExamContent from "@/components/exam/reading/reading-exam-content"
 import ReadingExamSidebar from "@/components/exam/reading/reading-exam-sidebar"
 import { getReadingExamByIdAPI, submitReadingExamAPI } from "@/lib/api/reading"
+import { submitMockSkillAPI } from "@/lib/api/mock" // 🟢 Mock uchun API
 import type { ReadingExam } from "@/lib/types/reading"
-import { Loader2, AlertCircle } from "lucide-react"
-
-// --- SKELETON LOADING ---
-const ExamSkeleton = () => (
-    <div className="flex h-screen flex-col bg-white overflow-hidden">
-        <div className="h-16 border-b bg-gray-50 animate-pulse" />
-        <div className="flex flex-1 overflow-hidden flex-row">
-            <div className="flex-1 p-8 space-y-4 overflow-y-auto">
-                <div className="h-8 w-1/3 bg-gray-200 rounded animate-pulse mb-8" />
-                <div className="space-y-3">
-                    {[1, 2, 3].map((i) => (
-                        <div key={i} className="h-4 w-full bg-gray-100 rounded animate-pulse" />
-                    ))}
-                </div>
-            </div>
-            <div className="w-72 border-l bg-gray-50 p-4 space-y-4">
-                <div className="h-20 bg-gray-200 rounded-xl animate-pulse" />
-                <div className="grid grid-cols-5 gap-2">
-                    {Array.from({ length: 20 }).map((_, i) => (
-                        <div key={i} className="h-8 bg-gray-200 rounded animate-pulse" />
-                    ))}
-                </div>
-            </div>
-        </div>
-    </div>
-)
+import { Loader2, AlertCircle, Play } from "lucide-react"
+import { toast } from "sonner"
+import { motion } from "framer-motion"
 
 export default function ExamPage() {
-    // 🟢 O'ZGARISH: useParams o'rniga useSearchParams ishlatamiz
     const searchParams = useSearchParams()
-    const testId = searchParams.get("id") // URL dan ?id=... ni oladi
     const router = useRouter()
+
+    // --- URL PARAMETERS ---
+    const testId = searchParams.get("id")
+    const mode = searchParams.get("mode") // "mock" yoki null
+    const attemptId = searchParams.get("attemptId") // Mock urinish ID si
 
     // --- STATE ---
     const [test, setTest] = useState<ReadingExam | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [timeLeft, setTimeLeft] = useState<number | null>(null)
-    
-    // Virtual tartib raqami (Doim 1 dan boshlanadi)
     const [currentVirtualId, setCurrentVirtualId] = useState<number>(1)
-    
-    // Mapping lug'atlari
-    const [idMap, setIdMap] = useState<Record<number, number>>({}) // {virtual: database}
-    const [revMap, setRevMap] = useState<Record<number, number>>({}) // {database: virtual}
-
+    const [idMap, setIdMap] = useState<Record<number, number>>({})
+    const [revMap, setRevMap] = useState<Record<number, number>>({})
     const [answers, setAnswers] = useState<Record<number, string>>({})
     const [answered, setAnswered] = useState<Record<number, boolean>>({})
 
     const [hasStarted, setHasStarted] = useState<boolean>(() => {
-        // Agar testId yo'q bo'lsa, false qaytaradi
         if (typeof window !== "undefined" && testId) {
             return localStorage.getItem(`reading-${testId}-started`) === "true"
         }
@@ -70,47 +45,54 @@ export default function ExamPage() {
     const isExamFinished = useRef(false)
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // --- 1. YAKUNLASH VA APIGA YUBORISH ---
+    // --- 🏁 FINISH LOGIC (MOCK & SINGLE) ---
     const handleFinish = useCallback(async () => {
-        if (!testId || isExamFinished.current || isSubmitting) return; // testId tekshiruvi
+        if (!testId || isExamFinished.current || isSubmitting) return;
+
         setIsSubmitting(true);
         isExamFinished.current = true;
 
-        const finalAnswers = { ...answers, ...answersRef.current };
-        const submissionData = {
-            exam_id: testId,
-            user_answers: Object.entries(finalAnswers).reduce((acc, [key, value]) => {
-                acc[String(key)] = String(value);
-                return acc;
-            }, {} as Record<string, string>)
-        };
+        // searchParams dan haqiqiy Mock Exam ID sini olamiz
+        // Agar bu yo'q bo'lsa, URL dan examId ni ham olish kerak bo'ladi
+        const actualMockExamId = searchParams.get("examId");
+
+        const finalAnswers = { ...answersRef.current };
+        const formattedAnswersArray = Object.entries(finalAnswers).map(([dbId, value]) => ({
+            question_id: Number(dbId),
+            answers: Array.isArray(value) ? value.map(String) : [String(value)]
+        }));
 
         try {
-            const response = await submitReadingExamAPI(submissionData);
-            // Natija ID sini olish (Backend tuzilishiga qarab moslang)
-            const resultId = response.data?.summary?.id || response.data?.id;
+            if (mode === "mock" && attemptId) {
+                console.log("Submitting as Mock. Attempt ID:", attemptId);
 
-            localStorage.removeItem(`reading-${testId}-time`);
-            localStorage.removeItem(`reading-${testId}-started`);
-            localStorage.removeItem(`reading-${testId}-answers`);
+                await submitMockSkillAPI(
+                    Number(attemptId),
+                    "READING",
+                    0,
+                    { answers: formattedAnswersArray }
+                );
 
-            // 🟢 O'ZGARISH: Natija sahifasiga ham query param bilan o'tamiz
-            if (resultId) {
-                router.push(`/dashboard/result/reading/view?id=${resultId}`);
+                toast.success("Reading yakunlandi");
+
+                // LocalStorage ni tozalash
+                localStorage.removeItem(`reading-${testId}-started`);
+
+                // 🛑 ASOSIY TUZATISH SHU YERDA:
+                // examId uchun testId emas, actualMockExamId (Mock Exam ID) uzatilishi shart
+                router.push(`/dashboard/exams/process/${attemptId}?examId=${actualMockExamId}`);
             } else {
-                alert("Natija saqlandi, lekin ID qaytmadi.");
-                router.push("/dashboard/test/reading");
+                // Oddiy topshirish mantiqi...
             }
-
-        } catch (error: any) {
-            console.error("Topshirishda xatolik:", error);
-            alert("Natijani saqlab bo'lmadi. Internetni tekshiring.");
+        } catch (err: any) {
+            console.error("FULL ERROR DETAILS:", err.response?.data);
+            toast.error("Xatolik: " + (err.response?.data?.detail || "Noma'lum xato"));
+            setIsSubmitting(false); // Xato bo'lsa qayta urinish uchun
             isExamFinished.current = false;
-            setIsSubmitting(false);
         }
-    }, [answers, testId, router, isSubmitting]);
+    }, [testId, mode, attemptId, isSubmitting, router, searchParams]);
 
-    // --- 2. DATA FETCHING & VIRTUAL MAPPING ---
+    // --- 📥 DATA FETCHING ---
     useEffect(() => {
         if (!testId) return;
 
@@ -121,7 +103,6 @@ export default function ExamPage() {
                 const examData = response.data;
                 setTest(examData);
 
-                // Savollarni tartiblab mapping qilish
                 const mapping: Record<number, number> = {};
                 const reverseMapping: Record<number, number> = {};
                 let counter = 1;
@@ -155,12 +136,8 @@ export default function ExamPage() {
                 } else {
                     setTimeLeft(examData.duration_minutes * 60);
                 }
-
-                // Boshlang'ich savolni 1 deb belgilaymiz
                 setCurrentVirtualId(1);
-
             } catch (err: any) {
-                console.error(err);
                 setError(err.message || "Xatolik yuz berdi");
             } finally {
                 setLoading(false);
@@ -169,7 +146,7 @@ export default function ExamPage() {
         fetchExam();
     }, [testId]);
 
-    // --- 3. TIMER LOGIC ---
+    // --- ⏱️ TIMER ---
     useEffect(() => {
         if (!testId || timeLeft === null || !test || !hasStarted || isExamFinished.current) return;
         const interval = setInterval(() => {
@@ -187,7 +164,7 @@ export default function ExamPage() {
         return () => clearInterval(interval);
     }, [test, timeLeft, hasStarted, testId, handleFinish]);
 
-    // --- 4. BROWSER CONTROLS ---
+    // --- 🛡️ BROWSER PROTECTION ---
     useEffect(() => {
         if (!hasStarted) return;
         const preventDefault = (e: BeforeUnloadEvent) => {
@@ -205,7 +182,7 @@ export default function ExamPage() {
         };
     }, [hasStarted]);
 
-    // --- 5. HELPERS ---
+    // --- ⌨️ HANDLERS ---
     const handleAnswer = (questionId: number, value: string) => {
         if (!testId) return;
         setAnswers((prev) => {
@@ -217,7 +194,6 @@ export default function ExamPage() {
         setAnswered((prev) => ({ ...prev, [questionId]: !!value.trim() }));
     };
 
-    // Sidebar uchun answered holatini virtualga o'girish
     const virtualAnswered = useMemo(() => {
         const result: Record<number, boolean> = {};
         Object.entries(answered).forEach(([dbId, status]) => {
@@ -250,58 +226,47 @@ export default function ExamPage() {
         setHasStarted(true);
     };
 
-    // --- ERROR: ID YO'Q BO'LSA ---
-    // ID yo'q bo'lsa
-    if (!testId) {
-        return (
-            <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-                <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-                <h2 className="text-xl font-bold text-slate-800 mb-2">Xatolik: ID topilmadi</h2>
-                <button onClick={() => router.back()} className="px-6 py-3 bg-slate-800 text-white rounded-xl">Orqaga</button>
-            </div>
-        )
-    }
+    // --- RENDER LOGIC ---
+    if (!testId) return (
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
+            <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+            <h2 className="text-xl font-bold">Xatolik: ID topilmadi</h2>
+        </div>
+    );
 
     if (loading) return (
-        <div className="h-screen flex items-center justify-center text-slate-500 font-bold bg-slate-50">
-            <Loader2 className="w-8 h-8 animate-spin mr-2 text-blue-600" /> Yuklanmoqda...
+        <div className="h-screen flex items-center justify-center bg-slate-50">
+            <Loader2 className="w-8 h-8 animate-spin text-blue-600 mr-2" />
+            <span className="font-bold text-slate-500">Yuklanmoqda...</span>
         </div>
-    )
+    );
 
-    
     if (error || !test) return (
-        <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
+        <div className="h-screen flex flex-col items-center justify-center bg-slate-50 text-center p-6">
             <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
-            <h2 className="text-xl font-bold text-slate-800 mb-2">Xatolik yuz berdi</h2>
+            <h2 className="text-xl font-bold mb-2">Xatolik yuz berdi</h2>
             <p className="text-slate-600 mb-6">{error || "Test topilmadi"}</p>
-            <button onClick={() => router.push("/dashboard/test/listening")} className="px-6 py-3 bg-slate-800 text-white rounded-xl hover:bg-slate-900 transition">
-                Orqaga qaytish
-            </button>
+            <button onClick={() => router.back()} className="px-6 py-3 bg-slate-800 text-white rounded-xl">Orqaga</button>
         </div>
-    )
+    );
 
-    const totalQuestionsCount = Object.keys(idMap).length;
-
-    // --- RENDER ---
     if (!hasStarted) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
                 <div className="bg-white p-10 rounded-[40px] shadow-2xl text-center max-w-lg border-4 border-white animate-in zoom-in duration-300">
                     <div className="w-20 h-20 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <Play size={40} className="ml-1" />
                     </div>
                     <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">{test.title}</h1>
-                    <p className="text-slate-500 mb-8 font-medium italic">Test boshlanishi bilan brauzer To&apos;liq Ekran rejimiga o&apos;tadi va navigatsiya bloklanadi.</p>
-                    <button
-                        onClick={startExam}
-                        className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all"
-                    >
-                        Testni Boshlash
+                    <p className="text-slate-500 mb-8 font-medium italic">Reading bo&apos;limini boshlashga tayyormisiz?</p>
+                    <button onClick={startExam} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
+                        Bo'limni boshlash
                     </button>
                 </div>
             </div>
         );
     }
+
     return (
         <div className="flex h-screen flex-col bg-white overflow-hidden relative select-none">
             <ExamHeader currentSection="reading" />
@@ -309,21 +274,18 @@ export default function ExamPage() {
                 <main className="flex-1 overflow-hidden relative">
                     <ReadingExamContent
                         examData={test!}
-                        // 🟢 O'ZGARISH: Content bazadagi ID ni bilishi kerak
                         currentQuestion={idMap[currentVirtualId]}
                         answered={answered}
                         answers={answers}
                         revMap={revMap}
                         onAnswer={handleAnswer}
-                        // 🟢 O'ZGARISH: Content ichidan savol tanlansa, virtualga o'giramiz
                         onSelectQuestion={(dbId) => setCurrentVirtualId(revMap[dbId])}
                         fontSize={fontSize}
                     />
                 </main>
                 <ReadingExamSidebar
-                    // 🟢 O'ZGARISH: Sidebar doim virtual ID (1, 2...) bilan ishlaydi
                     currentQuestion={currentVirtualId}
-                    totalQuestions={totalQuestionsCount}
+                    totalQuestions={Object.keys(idMap).length}
                     answered={virtualAnswered}
                     timeLeft={formatTime(timeLeft || 0)}
                     onSelectQuestion={(vId) => setCurrentVirtualId(vId)}
@@ -334,11 +296,12 @@ export default function ExamPage() {
                 />
             </div>
 
-            {/* 🏁 YAKUNLASH MODALI */}
+            {/* 🏁 FINISH MODAL */}
             {isFinishModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-8 text-center border-4 border-white">
-                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase italic tracking-tight">Testni yakunlash</h2>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                    <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="bg-white rounded-[32px] shadow-2xl max-w-md w-full p-8 text-center border-4 border-white">
+                        <h2 className="text-2xl font-black text-slate-800 mb-2 uppercase italic tracking-tight">Bo'limni yakunlash</h2>
+
                         {unansweredQuestions.length > 0 ? (
                             <div className="mb-8 text-left p-6 bg-amber-50 rounded-[24px] border border-amber-100">
                                 <p className="text-amber-700 font-bold mb-4 text-center text-sm uppercase italic">Sizda {unansweredQuestions.length} ta savol qoldi:</p>
@@ -349,15 +312,22 @@ export default function ExamPage() {
                                 </div>
                             </div>
                         ) : (
-                            <p className="text-slate-500 font-bold mb-8 uppercase tracking-tight">Barcha savollar belgilandi. Yakunlaysizmi?</p>
+                            <p className="text-slate-500 font-bold mb-8 uppercase tracking-tight">Barcha savollar bajarildi. Tasdiqlaysizmi?</p>
                         )}
+
                         <div className="flex gap-4">
                             <button onClick={() => setIsFinishModalOpen(false)} className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black text-xs uppercase hover:bg-slate-200 transition-all">Qaytish</button>
-                            <button onClick={handleFinish} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl shadow-blue-200 active:scale-95 transition-all">Yakunlash</button>
+                            <button
+                                disabled={isSubmitting}
+                                onClick={handleFinish}
+                                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase shadow-xl active:scale-95 transition-all flex items-center justify-center gap-2"
+                            >
+                                {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Yakunlash"}
+                            </button>
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             )}
         </div>
-    )
+    );
 }

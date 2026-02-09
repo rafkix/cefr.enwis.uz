@@ -1,41 +1,76 @@
 import axios from "axios";
 
-const API_URL = "https://api.enwis.uz/v1/api"; 
+// Backend URL ni environment variable orqali boshqarish tavsiya etiladi
+const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, ''); // Oxiridagi / ni olib tashlaymiz
 
 const api = axios.create({
-    baseURL: API_URL,
-    // ⚠️ DIQQAT: Agar Backend CORS da allowCredentials=True qilmagan bo'lsa, 
-    // pastdagi qatorni olib tashlang, aks holda Network Error beradi.
-    // withCredentials: true, 
+    baseURL: `${API_URL}/api/v1`, // Agar API v1 bo'lsa, yo'lni shu yerda yakunlash qulay
+    headers: {
+        "Content-Type": "application/json",
+    },
+    withCredentials: false 
 });
 
-api.interceptors.request.use((config) => {
-    if (typeof window !== "undefined") {
-        // 1. Ikkala nom bilan ham qidirib ko'ramiz (xatolikni oldini olish uchun)
-        const token = localStorage.getItem("token") || localStorage.getItem("access_token");
-        
-        // 🔍 DEBUG: Konsolga qarang (F12)
-        console.log("📡 So'rov yuborilmoqda...");
-        console.log("🔑 Token holati:", token ? "Mavjud ✅" : "Yo'q ❌");
+/**
+ * Request Interceptor
+ * Har bir so'rov yuborilishidan oldin tokenni Header'ga qo'shadi
+ */
+api.interceptors.request.use(
+    (config) => {
+        // Faqat Client-side (brauzer) da ishlashini ta'minlaymiz
+        if (typeof window !== "undefined") {
+            const token = localStorage.getItem("access_token") || localStorage.getItem("token");
 
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+            // Token string ekanligini va oddiy "null"/"undefined" emasligini tekshiramiz
+            if (token && token !== "undefined" && token !== "null") {
+                config.headers.Authorization = `Bearer ${token}`;
+                
+                // Debug uchun (faqat development rejimida ko'rinadi)
+                if (process.env.NODE_ENV === 'development') {
+                    console.log(`🚀 [API] ${config.method?.toUpperCase()} ${config.url} - Auth OK`);
+                }
+            } else {
+                if (process.env.NODE_ENV === 'development') {
+                    console.warn(`⚠️ [API] ${config.url} - Token topilmadi`);
+                }
+            }
         }
-    }
-    return config;
-}, (error) => {
-    return Promise.reject(error);
-});
-
-// Response interceptor (Token eskirgan bo'lsa ushlash uchun)
-api.interceptors.response.use(
-    (response) => response,
+        return config;
+    },
     (error) => {
+        return Promise.reject(error);
+    }
+);
+
+/**
+ * Response Interceptor
+ * Backend'dan kelgan javoblarni qayta ishlaydi (masalan, 401 xatoni ushlash)
+ */
+api.interceptors.response.use(
+    (response) => {
+        return response;
+    },
+    (error) => {
+        // 401 Unauthorized - Token eskirgan yoki noto'g'ri
         if (error.response?.status === 401) {
-            console.log("⛔ 401 Xatolik: Ruxsat yo'q yoki token eskirgan.");
-            // Ixtiyoriy: Login sahifasiga yo'naltirish
-            // window.location.href = "/auth/login";
+            console.error("⛔ [401] Ruxsat rad etildi. Token xato yoki muddati o'tgan.");
+            
+            if (typeof window !== "undefined") {
+                // Tozalash
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("token");
+                
+                // Agar joriy sahifa auth sahifalaridan biri bo'lmasa, login'ga yuborish
+                const currentPath = window.location.pathname;
+                if (!currentPath.includes('/auth/login') && !currentPath.includes('/auth/register')) {
+                    // Muhim: window.location.href sahifani to'liq yangilab yuboradi
+                    // Bu Auth holatini reset qilish uchun eng ishonchli yo'l
+                    window.location.href = "/auth/login";
+                }
+            }
         }
+
+        // Boshqa xatolar (500, 404, 400 va h.k.)
         return Promise.reject(error);
     }
 );

@@ -1,58 +1,74 @@
-import api from "./axios";
+import api from './axios'
 import {
-    RegisterPayload,
-    LoginPayload,
-    TelegramRegisterPayload,
-} from "../types/auth";
+  RegisterPayload,
+  LoginPayload,
+  TelegramLoginPayload,
+  GoogleLoginPayload,
+  AuthResponse,
+  UserMeResponse,
+} from '../types/auth'
 
-// 1. Standart registratsiya
-export const registerAPI = (payload: RegisterPayload) => {
-    return api.post("/auth/register", payload);
-};
+/**
+ * 🔐 Auth System API (v1)
+ * Faqat shaxsiy backend bilan muloqot qiladi.
+ */
+export const authService = {
+  // 1. Registratsiya
+  register: (payload: RegisterPayload) => {
+    return api.post('/auth/register', payload)
+  },
 
-// 2. Standart Login (OAuth2PasswordRequestForm kutyapti)
-export const loginAPI = ({ username, password }: LoginPayload) => {
-    const body = new URLSearchParams();
-    body.append("username", username);
-    body.append("password", password);
+  // 2. Login (Email/Password)
+  login: async (payload: LoginPayload) => {
+    const response = await api.post<AuthResponse>('/auth/login', payload)
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token)
+      localStorage.setItem('refresh_token', response.data.refresh_token)
+    }
+    return response.data
+  },
 
-    return api.post("/auth/login", body, {
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-        },
+  // 3. Google Login
+  googleLogin: async (payload: GoogleLoginPayload) => {
+    const response = await api.post<AuthResponse>('/auth/google', payload)
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token)
+      if (response.data.refresh_token) {
+          localStorage.setItem('refresh_token', response.data.refresh_token)
+      }
+    }
+    return response.data
+  },
+
+  // 4. Telegram Login
+  telegramLogin: async (payload: TelegramLoginPayload) => {
+    const response = await api.post<AuthResponse>('/auth/telegram', payload)
+    if (response.data.access_token) {
+      localStorage.setItem('access_token', response.data.access_token)
+    }
+    return response.data
+  },
+
+  // 5. Tasdiqlash kodini yuborish
+  sendCode: (target: string, purpose: 'register' | 'login' | 'reset' = 'register') => {
+    return api.post('/auth/send-code', { target, purpose })
+  },
+
+  // 6. Profil ma'lumotlarini olish
+  getMe: async () => {
+    const response = await api.get<UserMeResponse>('/auth/me')
+    return response.data
+  },
+
+  // 7. Logout
+  logout: () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    // Agar backendda logout endpoint bo'lsa:
+    return api.post('/auth/logout').catch(() => {
+        console.log("Logout backend error (ignored)");
     });
-};
+  },
+}
 
-/* 📤 3. Telefon kiritib kod olish (Bot start linki uchun) */
-export const requestPhoneCodeAPI = (phone: string) => {
-    // Backend: /v1/api/auth/phone/request
-    return api.post("/auth/phone/request", { phone });
-};
-
-/* ✅ 4. Kodni tekshirish (OTP tasdiqlash) */
-export const verifyPhoneCodeAPI = (phone: string, code: string) => {
-    // Backend: /v1/api/auth/phone/verify
-    // DIQQAT: Swaggerda login_telegram funksiyasi shu URLga bog'langan
-    return api.post("/auth/phone/verify", {
-        phone,
-        code,
-    });
-};
-
-/* 🤖 5. Telegram orqali ro'yxatdan o'tish */
-export const telegramRegisterAPI = (payload: TelegramRegisterPayload) => {
-    // Swaggerda: /v1/api/auth/register/telegram
-    // Sizda kodingizda /auth/telegram_register edi, bu 404 beradi
-    return api.post("/auth/register/telegram", payload);
-};
-
-/* 👤 6. Profil ma'lumotlarini olish */
-export const meAPI = () => {
-    // Swaggerda: /v1/api/auth/me
-    // Sizda kodingizda /users/get_me edi, bu 404 beradi
-    return api.get("/auth/me");
-};
-
-export const logoutAPI = () => {
-    return api.post("/auth/logout");
-};
+export type User = UserMeResponse

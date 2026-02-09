@@ -1,75 +1,91 @@
-import api from "./axios"; // O'zingizning axios instansiyangizni import qiling
-import { 
-  ReadingExam, 
-  ReadingExamUpdate, 
-  ResultSubmission, 
-  ResultSummary, // Sizda ResultSummary deb nomlangan bo'lishi mumkin
-  ReadingResultDetail 
-} from "../types/reading";
+import api from './axios'
+import {
+  ReadingExam,
+  ReadingExamUpdate,
+  ResultSummary,
+  ReadingResultDetail,
+} from '../types/reading'
 
-// URL manzillarini markazlashtirilgan holda saqlash (ixtiyoriy, lekin foydali)
-const BASE_URL = "/services/cefr/reading";
+/**
+ * Backend prefix: /v1/api/cefr/all/reading
+ */
+const BASE_URL = '/cefr/all/reading'
 
-/* ----------------------------------
-    1. CREATE READING EXAM
-    POST /services/cefr/reading/create
----------------------------------- */
-export const createReadingExamAPI = (data: ReadingExam) => {
-  return api.post<ReadingExam>(`${BASE_URL}/create`, data);
-};
-
-/* ----------------------------------
-    2. GET ALL EXAMS
-    GET /services/cefr/reading/list
----------------------------------- */
+// 1. GET ALL TESTS
 export const getAllReadingExamsAPI = () => {
-  return api.get<ReadingExam[]>(`${BASE_URL}/list`);
-};
+  return api.get<ReadingExam[]>(`${BASE_URL}/get_all`)
+}
 
-/* ----------------------------------
-    3. GET EXAM BY ID
-    GET /services/cefr/reading/{examId}
----------------------------------- */
-export const getReadingExamByIdAPI = (examId: string) => {
-  return api.get<ReadingExam>(`${BASE_URL}/${examId}`);
-};
+// 2. GET SINGLE TEST
+export const getReadingExamByIdAPI = (testId: string) => {
+  if (!testId) throw new Error('testId is required')
+  return api.get<ReadingExam>(`${BASE_URL}/get/${testId}`)
+}
 
-/* ----------------------------------
-    4. UPDATE EXAM
-    PUT /services/cefr/reading/update/{examId}
----------------------------------- */
-export const updateReadingExamAPI = (examId: string, data: ReadingExamUpdate) => {
-  return api.put<ReadingExam>(`${BASE_URL}/update/${examId}`, data);
-};
+// 3. SUBMIT ANSWERS (⚠️ Tuzatildi: Swagger'dagi "answers" massiviga moslandi)
+export interface AnswerItem {
+  question_id: number;
+  answers: string[];
+}
 
-/* ----------------------------------
-    5. DELETE EXAM
-    DELETE /services/cefr/reading/delete/{examId}
----------------------------------- */
-export const deleteReadingExamAPI = (examId: string) => {
-  return api.delete<{ success: boolean }>(`${BASE_URL}/delete/${examId}`);
-};
+export interface ReadingSubmission {
+  answers: AnswerItem[];
+  exam_attempt_id: number | null;
+}
 
-/* ----------------------------------
-    6. SUBMIT EXAM RESULTS
-    POST /services/cefr/reading/submit
----------------------------------- */
-export const submitReadingExamAPI = (data: ResultSubmission) => {
-  return api.post<ResultSummary>(`${BASE_URL}/submit`, data);
-};
+export const submitReadingExamAPI = (
+  testId: string,
+  data: ReadingSubmission
+) => {
+  if (!testId) throw new Error("testId is required")
+  
+  // Swagger'da endpoint: /answer/{test_id}/submit
+  return api.post<ReadingResultDetail>(
+    `${BASE_URL}/answer/${testId}/submit`,
+    data
+  )
+}
 
-/* ----------------------------------
-    7. GET MY RESULTS
-    GET /services/cefr/reading/results/my
----------------------------------- */
+// 4. MY RECENT RESULT (By Test ID)
+export const getMyReadingResultAPI = (testId: string) => {
+  if (!testId) throw new Error('testId is required')
+  // Swagger'da endpoint: /{test_id}/my-result
+  return api.get<ReadingResultDetail>(
+    `${BASE_URL}/${testId}/my-result`
+  )
+}
+
+// 5. GET ALL MY RESULTS
 export const getMyReadingResultsAPI = () => {
-  return api.get<ResultSummary[]>(`${BASE_URL}/results/my`);
-};
+  // Swagger'da endpoint: /my-results/all
+  // Eslatma: Swagger "string" qaytaradi deb ko'rsatilgan, 
+  // lekin odatda bu yerda ResultSummary[] kutiladi.
+  return api.get<any>(`${BASE_URL}/my-results/all`); 
+}
 
-/* ----------------------------------
-    8. GET RESULT DETAIL (REVIEW)
-    GET /services/cefr/reading/results/{resultId}
----------------------------------- */
+// 6. GET RESULT BY ID
 export const getReadingResultDetailAPI = (resultId: number) => {
-  return api.get<ReadingResultDetail>(`${BASE_URL}/results/${resultId}`);
-};
+  if (!resultId) throw new Error('resultId is required')
+  // Swagger'da endpoint: /results/{result_id}
+  return api.get<ReadingResultDetail>(
+    `${BASE_URL}/results/${resultId}`
+  )
+}
+
+// 7. ADMIN: CREATE TEST
+export const createReadingExamAPI = (data: Partial<ReadingExam>) => {
+  return api.post<ReadingExam>(`${BASE_URL}/create`, data)
+}
+
+// 8. ADMIN: UPDATE TEST
+export const updateReadingExamAPI = (
+  testId: string,
+  data: ReadingExamUpdate
+) => {
+  return api.put<ReadingExam>(`${BASE_URL}/update/${testId}`, data)
+}
+
+// 9. ADMIN: DELETE TEST
+export const deleteReadingExamAPI = (testId: string) => {
+  return api.delete<{ success: boolean }>(`${BASE_URL}/delete/${testId}`)
+}

@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { meAPI } from "@/lib/api/auth" // API funksiyangiz
 
-type SectionType = "reading" | "listening" | "writing" | "speaking"
+type SectionType = "reading" | "listening" | "writing" | "speaking" | "process"
 
 interface ExamHeaderProps {
     initialSeconds?: number
@@ -40,8 +40,13 @@ const SECTION_CONFIG = {
     speaking: {
         label: "Gapirish qismi",
         icon: Mic,
-        color: "bg-green-600",
+        color: "bg-red-600",
     },
+    process: {
+        label: "Jarayaon",
+        icon: Mic,
+        color: "bg-green-600",
+    }
 }
 
 export default function ExamHeader({
