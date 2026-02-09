@@ -12,7 +12,7 @@ import {
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { meAPI } from "@/lib/api/auth" // API funksiyangiz
+import { authService } from "@/lib/api/auth" // API funksiyangiz
 
 type SectionType = "reading" | "listening" | "writing" | "speaking" | "process"
 
@@ -61,8 +61,8 @@ export default function ExamHeader({
     useEffect(() => {
         const fetchUser = async () => {
             try {
-                const res = await meAPI()
-                setUserData(res.data)
+                const res = await authService.getMe()
+                setUserData(res.profile)
             } catch (err) {
                 console.error("User fetch error in header:", err)
             } finally {
