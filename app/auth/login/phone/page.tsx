@@ -4,32 +4,26 @@ import { useState, useRef, useEffect, Suspense } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     ArrowRight, Phone, Loader2, MessageCircle, ArrowLeft,
-    Globe, Lock, ExternalLink
+    Globe, ExternalLink, ShieldCheck, CheckCircle2
 } from "lucide-react"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { authService } from "@/lib/api/auth"
 import { useAuth } from "@/lib/AuthContext"
 
 const TELEGRAM_BOT_TOKEN = "8542032478:AAH8CiqFMrRLxTZ6k6bbRKHtl5P9X8Yc98s";
 const TELEGRAM_CHANNEL_ID = "@enwis_uz";
+const BOT_USERNAME = "EnwisAuthBot";
 
 function PhoneLoginForm() {
     const router = useRouter()
-    const searchParams = useSearchParams()
     const { refreshUser } = useAuth()
-
-    const clientId = searchParams.get("client_id")
-    const redirectUri = searchParams.get("redirect_uri")
-    const scope = searchParams.get("scope")
-    const state = searchParams.get("state")
 
     const [step, setStep] = useState<"PHONE" | "CODE">("PHONE")
     const [phone, setPhone] = useState("+998")
     const [loading, setLoading] = useState(false)
-    const [otp, setOtp] = useState<string[]>(new Array(4).fill(""))
     const [subscriberCount, setSubscriberCount] = useState<string>("5K+")
-
+    const [otp, setOtp] = useState<string[]>(new Array(6).fill(""))
     const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
     useEffect(() => {
@@ -41,130 +35,196 @@ function PhoneLoginForm() {
                     const count = data.result;
                     setSubscriberCount(count >= 1000 ? `${(count / 1000).toFixed(1)}K+` : count.toString());
                 }
-            } catch (error) { console.error(error); }
+            } catch (error) { console.error("Telegram count error:", error); }
         };
         fetchTelegramSubs();
     }, []);
 
-    useEffect(() => {
-        const fullOtp = otp.join("")
-        if (fullOtp.length === 4 && step === "CODE") handleVerify(fullOtp)
-    }, [otp, step])
-
     const handleRequestCode = async (e?: React.FormEvent) => {
         if (e) e.preventDefault()
-        if (phone.replace(/\s/g, "").length < 13) return
+        const cleanPhone = phone.replace(/[^\d+]/g, "") // Faqat raqam va + ni qoldiradi
+
+        if (cleanPhone.length < 13) {
+            alert("Iltimos, telefon raqamingizni to'liq kiriting!")
+            return
+        }
+
         setLoading(true)
         try {
-            await authService.sendCode(phone.replace(/\s/g, ""), "login")
+            await authService.sendCode(cleanPhone, "login")
+            window.open(`https://t.me/${BOT_USERNAME}?start=${cleanPhone}`, "_blank")
             setStep("CODE")
-        } catch (error: any) { alert("Xatolik!") } finally { setLoading(false) }
+        } catch (error: any) {
+            alert(error.response?.data?.message || "Xatolik yuz berdi.")
+        } finally {
+            setLoading(false)
+        }
     }
 
-    const handleVerify = async (finalCode: string) => {
+    const handleVerify = async (e?: React.FormEvent) => {
+        if (e) e.preventDefault();
+        const finalCode = otp.join("");
+        if (finalCode.length < 6) return;
+
         setLoading(true)
         try {
-            const res = await authService.loginPhone({ phone: phone.replace(/\s/g, ""), code: finalCode })
+            const cleanPhone = phone.replace(/[^\d+]/g, "")
+            const res = await authService.loginPhone({
+                phone: cleanPhone,
+                code: finalCode
+            })
+
             if (res.status === "need_registration") {
-                router.push(`/auth/register-complete?phone=${phone}&code=${finalCode}`)
+                router.push(`/auth/register-complete?phone=${cleanPhone}&code=${finalCode}`)
                 return
             }
-            await refreshUser()
-            router.push("/dashboard")
+
+            if (res.token) {
+                localStorage.setItem('access_token', res.token.access_token);
+                localStorage.setItem('refresh_token', res.token.refresh_token);
+                await refreshUser()
+                router.push("/dashboard")
+            }
         } catch (error: any) {
-            setOtp(new Array(4).fill(""))
+            alert("Kod noto'g'ri yoki muddati o'tgan")
+            setOtp(new Array(6).fill(""))
             inputRefs.current[0]?.focus()
-        } finally { setLoading(false) }
+        } finally {
+            setLoading(false)
+        }
     }
 
+    // --- OTP FUNKSIYALARI ---
+    const handleOtpChange = (index: number, value: string) => {
+        const val = value.replace(/\D/g, "").slice(-1);
+        const newOtp = [...otp];
+        newOtp[index] = val;
+        setOtp(newOtp);
+
+        if (val && index < 5) {
+            inputRefs.current[index + 1]?.focus();
+        }
+    };
+
+    // NUSXA KO'CHIRIB O'TKAZISH (PASTE) IMKONIYATI
+    const handlePaste = (e: React.ClipboardEvent) => {
+        const data = e.clipboardData.getData("text").trim();
+        if (!/^\d{6}$/.test(data)) return; // Agar 6ta raqam bo'lmasa qaytadi
+
+        const digits = data.split("");
+        setOtp(digits);
+        inputRefs.current[5]?.focus(); // Oxirgi katakka fokus
+    };
+
+    const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
+        if (e.key === "Backspace" && !otp[index] && index > 0) {
+            inputRefs.current[index - 1]?.focus();
+        }
+        if (e.key === "Enter" && otp.join("").length === 6) {
+            handleVerify();
+        }
+    };
+
     return (
-        <div className="fixed inset-0 w-full h-full flex flex-col lg:flex-row bg-white overflow-hidden font-sans">
+        <div className="fixed inset-0 w-full h-full flex flex-col lg:flex-row bg-white overflow-hidden font-sans text-slate-900">
 
-            {/* CHAP TOMON: FORM */}
             <div className="w-full lg:w-[45%] h-full flex flex-col justify-center px-8 lg:px-16 bg-white z-20 relative">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[380px] mx-auto">
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[400px] mx-auto">
 
-                    <div className="flex items-center gap-3 mb-10">
-                        <div className="w-10 h-10 bg-[#17776A] rounded-xl flex items-center justify-center text-white shadow-lg shadow-[#17776A]/20">
-                            <Globe size={22} />
+                    <div className="flex items-center gap-3 mb-12">
+                        <div className="w-12 h-12 bg-gradient-to-br from-[#17776A] to-[#249788] rounded-2xl flex items-center justify-center text-white shadow-lg">
+                            <Globe size={24} />
                         </div>
-                        <span className="text-[#17776A] text-xl font-black tracking-tighter uppercase">ENWIS HUB</span>
+                        <div className="flex flex-col">
+                            <span className="text-[#17776A] text-xl font-black tracking-tighter leading-none">ENWIS HUB</span>
+                            <span className="text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase mt-1">Global Education</span>
+                        </div>
                     </div>
 
                     <AnimatePresence mode="wait">
                         {step === "PHONE" ? (
-                            <motion.div key="phone" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-6">
+                            <motion.div key="phone" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-8">
                                 <header>
-                                    <h1 className="text-4xl font-black text-slate-800 leading-tight mb-2 tracking-tight">Kirish</h1>
-                                    <p className="text-slate-400 font-medium">Davom etish uchun raqamingizni kiriting</p>
+                                    <h1 className="text-4xl font-black leading-tight mb-3 tracking-tight">Kirish</h1>
+                                    <p className="text-slate-400 font-medium">Telefon raqamingizni kiriting</p>
                                 </header>
-                                <form onSubmit={handleRequestCode} className="space-y-4">
+
+                                <form onSubmit={handleRequestCode} className="space-y-5">
                                     <div className="group relative">
-                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#17776A] transition-colors">
-                                            <Phone size={18} />
+                                        <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-[#17776A] transition-colors">
+                                            <Phone size={20} />
                                         </div>
                                         <input
                                             type="tel"
                                             value={phone}
                                             onChange={(e) => setPhone(e.target.value)}
-                                            className="w-full h-15 py-4 pl-12 pr-4 rounded-[18px] bg-slate-50 border-2 border-transparent focus:border-[#17776A]/10 focus:bg-white outline-none transition-all font-bold text-slate-700 text-lg"
+                                            className="w-full h-16 py-4 pl-14 pr-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-[#17776A]/20 focus:bg-white outline-none transition-all font-bold text-xl"
                                             placeholder="+998"
                                             required
                                         />
                                     </div>
-                                    <button disabled={loading} className="w-full h-15 bg-[#17776A] text-white rounded-2xl font-bold shadow-xl shadow-[#17776A]/20 hover:brightness-110 active:scale-95 transition-all flex items-center justify-center gap-2">
-                                        {loading ? <Loader2 className="animate-spin" size={20} /> : <>Kodni olish <ArrowRight size={18} /></>}
+
+                                    <button
+                                        type="submit"
+                                        disabled={loading}
+                                        className="w-full h-16 bg-[#17776A] text-white rounded-2xl font-bold shadow-xl shadow-[#17776A]/20 hover:bg-[#136359] active:scale-[0.98] disabled:opacity-70 transition-all flex items-center justify-center gap-3 text-lg"
+                                    >
+                                        {loading ? <Loader2 className="animate-spin" size={24} /> : <>Kodni olish <ArrowRight size={20} /></>}
                                     </button>
-                                    <div className="mt-10 pt-8 border-t border-slate-50 flex justify-center">
-                                        <Link href={`/auth/login`} className="flex items-center gap-2 text-[10px] font-black text-slate-400 hover:text-[#17776A] uppercase tracking-widest transition-all">
-                                            <ArrowLeft size={14} /> Login va parol orqali kirish
-                                        </Link>
-                                    </div>
                                 </form>
                             </motion.div>
                         ) : (
-                            <motion.div key="code" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+                            <motion.div key="code" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
                                 <button onClick={() => setStep("PHONE")} className="flex items-center gap-2 text-slate-400 hover:text-[#17776A] group transition-colors">
-                                    <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">Orqaga</span>
+                                    <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+                                    <span className="text-[11px] font-bold uppercase tracking-widest">Raqamni o'zgartirish</span>
                                 </button>
+
                                 <header>
-                                    <h1 className="text-4xl font-black text-slate-800 mb-2 tracking-tight">Tasdiqlash</h1>
-                                    <p className="text-slate-400 font-medium text-sm">Kod <span className="text-[#17776A] font-bold">{phone}</span> raqamiga yuborildi</p>
+                                    <h1 className="text-4xl font-black mb-3 tracking-tight">Tasdiqlash</h1>
+                                    <p className="text-slate-400 font-medium text-sm">
+                                        Kod <span className="text-[#17776A] font-bold">{phone}</span> raqamiga yuborildi
+                                    </p>
                                 </header>
-                                <div className="flex justify-between gap-3">
+
+                                <div className="flex justify-between gap-2" onPaste={handlePaste}>
                                     {otp.map((data, index) => (
                                         <input
                                             key={index}
                                             type="text"
+                                            inputMode="numeric"
                                             maxLength={1}
                                             ref={(el) => { inputRefs.current[index] = el }}
                                             value={data}
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/\D/g, "");
-                                                if (!val) return;
-                                                const newOtp = [...otp];
-                                                newOtp[index] = val;
-                                                setOtp(newOtp);
-                                                if (index < 3) inputRefs.current[index + 1]?.focus();
-                                            }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Backspace" && !otp[index] && index > 0) inputRefs.current[index - 1]?.focus();
-                                                else if (e.key === "Backspace") { const newOtp = [...otp]; newOtp[index] = ""; setOtp(newOtp); }
-                                            }}
-                                            className="w-full h-16 text-center text-2xl font-black rounded-2xl border-2 border-slate-50 bg-slate-50 focus:border-[#17776A] focus:bg-white focus:ring-4 focus:ring-[#17776A]/5 outline-none transition-all shadow-sm"
+                                            onChange={(e) => handleOtpChange(index, e.target.value)}
+                                            onKeyDown={(e) => handleKeyDown(index, e)}
+                                            className={`w-full h-14 text-center text-2xl font-black rounded-xl border-2 outline-none transition-all shadow-sm
+                                                ${otp[index] ? 'border-[#17776A] bg-white text-[#17776A]' : 'border-slate-100 bg-slate-50'}
+                                                focus:border-[#17776A] focus:bg-white`}
                                         />
                                     ))}
                                 </div>
-                                <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center gap-4 group cursor-pointer hover:bg-[#F0F9F8] transition-colors">
-                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-[#229ED9] shadow-sm shrink-0 group-hover:scale-110 transition-transform">
-                                        <MessageCircle size={24} fill="currentColor" />
+
+                                <button
+                                    onClick={handleVerify}
+                                    disabled={loading || otp.join("").length < 6}
+                                    className="w-full h-16 bg-[#17776A] text-white rounded-2xl font-bold shadow-xl hover:bg-[#136359] disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none transition-all flex items-center justify-center gap-3 text-lg"
+                                >
+                                    {loading ? <Loader2 className="animate-spin" size={24} /> : <>Tasdiqlash va Kirish <CheckCircle2 size={20} /></>}
+                                </button>
+
+                                <div
+                                    className="bg-slate-50 p-5 rounded-2xl border border-slate-100 flex items-center gap-4 group cursor-pointer hover:bg-[#F0F9F8] transition-all"
+                                    onClick={() => !loading && handleRequestCode()}
+                                >
+                                    <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-[#229ED9] shadow-sm shrink-0">
+                                        <MessageCircle size={26} fill="currentColor" />
                                     </div>
                                     <div className="flex-1">
-                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Telegram bot</p>
-                                        <a href="https://t.me/EnwisAuthBot" target="_blank" className="text-xs text-[#229ED9] font-black uppercase flex items-center gap-1">
-                                            Kodni olish <ExternalLink size={10} />
-                                        </a>
+                                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">Telegram Bot</p>
+                                        <span className="text-xs text-[#229ED9] font-black uppercase flex items-center gap-1 mt-0.5">
+                                            Kodni qayta yuborish <ExternalLink size={12} />
+                                        </span>
                                     </div>
                                 </div>
                             </motion.div>
@@ -261,7 +321,7 @@ function PhoneLoginForm() {
 
 export default function PhoneLoginPage() {
     return (
-        <Suspense fallback={<div className="w-full h-screen flex items-center justify-center"><Loader2 className="animate-spin text-[#17776A]" size={40} /></div>}>
+        <Suspense fallback={<div className="w-full h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-[#17776A]" size={48} /></div>}>
             <PhoneLoginForm />
         </Suspense>
     )
