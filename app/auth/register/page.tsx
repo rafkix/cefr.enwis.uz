@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/AuthContext"
 import { authService } from "@/lib/api/auth"
-import { GoogleSignInButton, TelegramSignInWidget } from "@/components/auth-buttons"
+import { SocialAuthButtons } from "@/components/auth-buttons"
 
 function RegisterForm() {
     const router = useRouter()
@@ -169,8 +169,7 @@ function RegisterForm() {
 
                             {/* Google va Telegram Gridi */}
                             <div className="grid grid-cols-2 gap-3">
-                                <GoogleSignInButton />
-                                <TelegramSignInWidget />
+                                <SocialAuthButtons />
                             </div>
 
                             {/* Kirish tugmasi (Gridning tagida, to'liq kenglikda) */}

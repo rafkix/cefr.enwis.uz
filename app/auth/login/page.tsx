@@ -10,7 +10,7 @@ import {
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/AuthContext"
-import { GoogleSignInButton, TelegramSignInWidget } from "@/components/auth-buttons"
+import { SocialAuthButtons } from "@/components/auth-buttons"
 
 // Reklamalar ma'lumotlari: Har biriga alohida rang va URL biriktirildi
 const ADS = [
@@ -162,8 +162,11 @@ function LoginForm() {
                             </button>
                         </div>
 
-                        <div className="flex justify-end px-1">
-                            <Link href="/auth/forgot" className="text-[10px] font-black text-slate-300 uppercase tracking-widest hover:text-[#17776A] transition-colors">
+                        <div className="flex justify-end mt-1">
+                            <Link
+                                href="/auth/forgot"
+                                className="text-xs font-medium text-blue-600 hover:underline"
+                            >
                                 Parolni unutdingizmi?
                             </Link>
                         </div>
@@ -198,8 +201,7 @@ function LoginForm() {
                             </button>
 
                             <div className="grid grid-cols-2 gap-3">
-                                <GoogleSignInButton />
-                                <TelegramSignInWidget />
+                                <SocialAuthButtons />
                             </div>
                         </div>
                     </div>

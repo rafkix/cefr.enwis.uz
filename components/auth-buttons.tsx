@@ -4,6 +4,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/lib/api/auth';
 import { useAuth } from '@/lib/AuthContext';
+import { jwtDecode } from 'jwt-decode'; // Google ma'lumotlarini o'qish uchun
+
+export const SocialAuthButtons = () => {
+    return (
+        <div className="flex w-full flex-col gap-4">
+            {/* Google tugmasi tepada */}
+            <GoogleSignInButton />
+            
+            {/* Telegram tugmasi pastda */}
+            <TelegramSignInWidget />
+        </div>
+    );
+};
 
 export const GoogleSignInButton = () => {
     const [isLoading, setIsLoading] = useState(false);
@@ -15,7 +28,7 @@ export const GoogleSignInButton = () => {
     const redirectUri = searchParams.get("redirect_uri");
     const state = searchParams.get("state");
 
-    const getQueryString = () => 
+    const getQueryString = () =>
         clientIdParam ? `?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` : "";
 
     const handleGoogleLogin = () => {
@@ -38,8 +51,18 @@ export const GoogleSignInButton = () => {
                 client_id: GOOGLE_ID,
                 callback: async (response: any) => {
                     try {
-                        await authService.googleLogin({ token: response.credential });
+                        // Backend kutayotgan GoogleLoginPayload ga moslash
+                        const decoded: any = jwtDecode(response.credential);
+                        const payload = {
+                            google_id: decoded.sub,
+                            email: decoded.email,
+                            name: decoded.name,
+                            picture: decoded.picture
+                        };
+
+                        await authService.googleLogin(payload);
                         await refreshUser();
+                        
                         const nextPath = clientIdParam ? `/auth/authorize${getQueryString()}` : '/dashboard';
                         router.push(nextPath);
                     } catch (error: any) {
@@ -59,44 +82,42 @@ export const GoogleSignInButton = () => {
         <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-100 bg-white font-bold text-slate-600 text-xs transition-all hover:bg-slate-50 active:scale-[0.98]"
+            className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
         >
             {isLoading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-slate-200 border-t-slate-600" />
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
             ) : (
-                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                <svg className="w-5 h-5" viewBox="0 0 24 24">
                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05" />
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
             )}
-            {isLoading ? 'Yuklanmoqda...' : 'Google'}
+            <span>{isLoading ? 'Yuklanmoqda...' : 'Google orqali kirish'}</span>
         </button>
     );
 };
 
-/**
- * TELEGRAM SIGN IN WIDGET
- * Invalid domain holatida ham Telegram logosi bilan chiroyli turadi
- */
 export const TelegramSignInWidget = () => {
     const telegramWrapperRef = useRef<HTMLDivElement>(null);
     const [isLoaded, setIsLoaded] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const { refreshUser } = useAuth();
-    
+
     const clientId = searchParams.get("client_id");
     const redirectUri = searchParams.get("redirect_uri");
     const state = searchParams.get("state");
     const getQueryString = () => clientId ? `?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : "";
 
     useEffect(() => {
-        // Faqat bir marta yuklanishini ta'minlash
-        if (isLoaded) return;
+        const scriptId = "telegram-widget-script";
+        
+        // Agar skript allaqachon bo'lsa, uni o'chirib qayta yuklaymiz (re-render uchun)
+        const existingScript = document.getElementById(scriptId);
+        if (existingScript) existingScript.remove();
 
-        // Global callback funksiyasini yaratish
         (window as any).onTelegramAuth = async (user: any) => {
             try {
                 await authService.telegramLogin(user);
@@ -104,42 +125,39 @@ export const TelegramSignInWidget = () => {
                 const nextPath = clientId ? `/auth/authorize${getQueryString()}` : '/dashboard';
                 router.push(nextPath);
             } catch (error: any) {
-                console.error("Telegram Login Error:", error);
-                alert(error.response?.data?.detail || "Telegram orqali kirishda xatolik yuz berdi.");
+                alert(error.response?.data?.detail || "Telegram xatosi.");
             }
         };
 
         const script = document.createElement("script");
+        script.id = scriptId;
         script.src = "https://telegram.org/js/telegram-widget.js?22";
         script.async = true;
-        // Bot nomini tekshiring: EnwisAuthBot
         script.setAttribute("data-telegram-login", "EnwisAuthBot");
         script.setAttribute("data-size", "large");
-        script.setAttribute("data-radius", "12"); // Dizayningizga mos radius
+        script.setAttribute("data-radius", "12");
         script.setAttribute("data-request-access", "write");
         script.setAttribute("data-onauth", "onTelegramAuth(user)");
 
         if (telegramWrapperRef.current) {
-            telegramWrapperRef.current.innerHTML = ''; // Dublikat bo'lmasligi uchun
+            telegramWrapperRef.current.innerHTML = '';
             telegramWrapperRef.current.appendChild(script);
             setIsLoaded(true);
         }
-    }, [isLoaded]);
+    }, [isLoaded, clientId]);
 
     return (
-        <div className="flex w-full flex-col items-center justify-center gap-2">
-            {/* Vidjet konteyneri */}
+        <div className="flex w-full items-center justify-center">
+            {/* Telegram vidjeti iframe bo'lgani uchun uni 100% kenglikda qilish qiyin, 
+                lekin markazda chiroyli turishi ta'minlandi. 
+            */}
             <div 
                 ref={telegramWrapperRef} 
-                className="min-h-[44px] flex items-center justify-center transition-all hover:opacity-90"
+                className="min-h-[48px] w-full flex justify-center items-center"
             />
             
-            {/* Agar vidjet yuklanmay qolsa yoki domain xatosi bo'lsa zaxira matni */}
             {!isLoaded && (
-                <div className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-100 bg-slate-50 animate-pulse">
-                    <div className="h-4 w-4 rounded-full bg-slate-200" />
-                    <div className="h-3 w-20 rounded bg-slate-200" />
-                </div>
+                <div className="h-12 w-full animate-pulse rounded-xl bg-slate-100" />
             )}
         </div>
     );
