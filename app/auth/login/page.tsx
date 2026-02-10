@@ -199,11 +199,11 @@ function LoginForm() {
                                 </div>
                                 <span>Telefon raqam orqali</span>
                             </button>
-
+                            
                             <div className="grid grid-cols-2 gap-3">
                                 <GoogleSignInButton />
-                                <TelegramSignInWidget />
                             </div>
+                            <TelegramSignInWidget />
                         </div>
                     </div>
                 </motion.div>
