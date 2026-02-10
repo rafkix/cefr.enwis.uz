@@ -40,7 +40,7 @@ export default function ListeningPage() {
     const router = useRouter()
     const [exams, setExams] = useState<ListeningExam[]>([])
     const [loading, setLoading] = useState(true)
-    const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium' | 'mock'>('all') // Mock tab qo'shildi
+    const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium'>('all')
     const [showUnlockModal, setShowUnlockModal] = useState(false)
     const [selectedTestId, setSelectedTestId] = useState<string | null>(null)
 
@@ -76,15 +76,16 @@ export default function ListeningPage() {
 
     const filteredTests = useMemo(() => {
         return exams.filter((test) => {
-            // Agar boshqa tablar ('all', 'free', 'premium') tanlangan bo'lsa, 
-            // mock testlarni umuman ko'rsatmaslik kerak
+            // 1. Agar test Mock bo'lsa, uni har qanday holatda o'tkazib yuboramiz
+            // (Chunki Mock testlar alohida sahifada yoki tabda bo'lishi kerak)
             if (test.isMock) return false;
 
-            // Endi oddiy filtrlash:
+            // 2. Tablar bo'yicha filtrlash
             if (activeTab === 'free') return test.isFree;
             if (activeTab === 'premium') return !test.isFree;
 
-            return true; // 'all' tanlanganda faqat oddiy (non-mock) testlar chiqadi
+            // 'all' tanlanganda (va u isMock bo'lmasa) true qaytaradi
+            return true;
         })
     }, [exams, activeTab])
 
@@ -150,13 +151,14 @@ export default function ListeningPage() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
+                        {/* Faqat 3 ta tab qoladi: All, Free, Premium */}
                         {(['all', 'free', 'premium'] as const).map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${activeTab === tab
-                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-100"
-                                    : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                                        ? "bg-purple-600 text-white shadow-lg shadow-purple-100"
+                                        : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
                                     }`}
                             >
                                 {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Mashqlar' : 'Premium Mashqlar'}
