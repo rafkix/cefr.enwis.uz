@@ -6,7 +6,7 @@ import {
     User, Camera, Save, X, Edit3, Loader2,
     Phone, ShieldCheck, CheckCircle2, AlertCircle,
     Smartphone, UserCircle2, Info, Send, Mail, Trash2,
-    ShieldAlert, Calendar, VenusMars, User2
+    ShieldAlert, Calendar, User2
 } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import {
@@ -171,7 +171,7 @@ export default function ProfilePage() {
 
                                     <div className="space-y-1 group">
                                         <div className="flex items-center gap-2 text-slate-400 mb-2 px-1">
-                                            <VenusMars size={14} className="group-hover:text-blue-500 transition-colors" />
+                                            <User2 size={14} className="group-hover:text-blue-500 transition-colors" />
                                             <span className="text-[10px] font-black uppercase tracking-widest">Jinsi</span>
                                         </div>
                                         {isEditing ? (
