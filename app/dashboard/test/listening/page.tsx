@@ -3,16 +3,16 @@
 import { useEffect, useState, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
-import { 
-    Headphones, 
-    Clock, 
-    FileText, 
-    Lock, 
-    ChevronRight, 
-    ChevronLeft, 
-    Loader2, 
-    Zap, 
-    Inbox, 
+import {
+    Headphones,
+    Clock,
+    FileText,
+    Lock,
+    ChevronRight,
+    ChevronLeft,
+    Loader2,
+    Zap,
+    Inbox,
     Filter,
     Activity,
     Award // Mock uchun yangi ikonka
@@ -50,7 +50,7 @@ export default function ListeningPage() {
                 setLoading(true)
                 const response: any = await getListeningExamsAPI()
                 const dataArray = Array.isArray(response) ? response : (response?.items || response?.data || [])
-                
+
                 // 2. Mapping Logic (API dan kelayotgan ma'lumotlarni to'g'irlash)
                 const formattedData: ListeningExam[] = dataArray.map((item: any) => ({
                     id: String(item.id),
@@ -76,16 +76,24 @@ export default function ListeningPage() {
 
     const filteredTests = useMemo(() => {
         return exams.filter((test) => {
+            // Agar 'mock' tabi tanlangan bo'lsa, faqat mocklarni ko'rsat
+            if (activeTab === 'mock') return test.isMock;
+
+            // Agar boshqa tablar ('all', 'free', 'premium') tanlangan bo'lsa, 
+            // mock testlarni umuman ko'rsatmaslik kerak
+            if (test.isMock) return false;
+
+            // Endi oddiy filtrlash:
             if (activeTab === 'free') return test.isFree;
             if (activeTab === 'premium') return !test.isFree;
-            if (activeTab === 'mock') return test.isMock; // Mock filter
-            return true;
+
+            return true; // 'all' tanlanganda faqat oddiy (non-mock) testlar chiqadi
         })
     }, [exams, activeTab])
 
     const handleTestAction = (testId: string, isFree: boolean, isActive: boolean) => {
         if (!testId) return;
-        
+
         // Agar xohlasangiz, nofaol testlarni bosishni taqiqlashingiz mumkin
         // if (!isActive) return;
 
@@ -99,9 +107,9 @@ export default function ListeningPage() {
 
     return (
         <div className="max-w-7xl mx-auto space-y-6 pb-10 px-2 sm:px-0">
-            
+
             {/* --- BACK BUTTON --- */}
-            <motion.button 
+            <motion.button
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 onClick={() => router.back()}
@@ -115,7 +123,7 @@ export default function ListeningPage() {
 
             {/* 1. TOP INFO & STATS BLOCK */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <motion.div 
+                <motion.div
                     initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                     className="md:col-span-2 p-8 rounded-[32px] bg-gradient-to-br from-purple-600 to-indigo-700 text-white relative overflow-hidden shadow-2xl shadow-purple-200"
                 >
@@ -124,7 +132,7 @@ export default function ListeningPage() {
                             <Zap size={16} className="fill-yellow-400 text-yellow-400" />
                             <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Listening Mastery</span>
                         </div>
-                        <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">Eshiting va tushunishni <br/>yangi bosqichga olib chiqing.</h2>
+                        <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">Eshiting va tushunishni <br />yangi bosqichga olib chiqing.</h2>
                         <p className="text-purple-100 text-sm font-medium max-w-md opacity-90 leading-relaxed italic">
                             Xalqaro standartlar asosida tayyorlangan audio materiallar orqali CEFR darajangizni oshiring.
                         </p>
@@ -148,11 +156,10 @@ export default function ListeningPage() {
                             <button
                                 key={tab}
                                 onClick={() => setActiveTab(tab as any)}
-                                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${
-                                    activeTab === tab 
-                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-100" 
-                                    : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
-                                }`}
+                                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${activeTab === tab
+                                        ? "bg-purple-600 text-white shadow-lg shadow-purple-100"
+                                        : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                                    }`}
                             >
                                 {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Modullar' : tab === 'mock' ? 'Mock Testlar' : 'Premium Testlar'}
                             </button>
@@ -185,7 +192,7 @@ export default function ListeningPage() {
                             {filteredTests.map((test, index) => {
                                 const isLocked = !test.isFree
                                 return (
-                                    <motion.div 
+                                    <motion.div
                                         key={test.id}
                                         layout
                                         initial={{ opacity: 0, y: 10 }}
@@ -200,14 +207,14 @@ export default function ListeningPage() {
                                         <div className="flex items-center gap-6 z-10 w-full sm:w-auto">
                                             <div className={`w-16 h-16 rounded-[24px] flex items-center justify-center transition-all duration-500 shadow-inner shrink-0 ${isLocked ? 'bg-slate-50 text-slate-300' : 'bg-purple-50 text-purple-600 group-hover:bg-purple-600 group-hover:text-white'}`}>
                                                 {/* Icon Logikasi: Qulflangan -> Lock, Mock -> Award, Standart -> Headphones */}
-                                                {isLocked ? <Lock size={26} /> : test.isMock ? <Award size={28}/> : <Headphones size={28} />}
+                                                {isLocked ? <Lock size={26} /> : test.isMock ? <Award size={28} /> : <Headphones size={28} />}
                                             </div>
                                             <div className="flex-1">
                                                 <div className="flex flex-wrap items-center gap-3 mb-2">
                                                     <h3 className="font-black text-slate-900 text-lg tracking-tight group-hover:text-purple-600 transition-colors uppercase">
                                                         {test.title}
                                                     </h3>
-                                                    
+
                                                     {/* BADGES: COMING SOON, DEMO, MOCK, FREE/PREMIUM */}
                                                     {!test.isActive && (
                                                         <span className="px-2 py-0.5 rounded-lg bg-slate-100 text-slate-500 text-[10px] font-black uppercase border border-slate-200">YAQINDA</span>
@@ -247,7 +254,7 @@ export default function ListeningPage() {
                         </AnimatePresence>
                     </div>
                 )}
-                
+
                 {!loading && filteredTests.length === 0 && (
                     <div className="text-center py-24 bg-white rounded-[40px] border-2 border-dashed border-slate-100">
                         <Inbox className="mx-auto text-slate-200 mb-6" size={40} />
@@ -257,11 +264,11 @@ export default function ListeningPage() {
             </div>
 
             {selectedTestId && (
-                <UnlockModal 
-                    open={showUnlockModal} 
-                    onClose={() => setShowUnlockModal(false)} 
-                    testId={selectedTestId} 
-                    testType="listening" 
+                <UnlockModal
+                    open={showUnlockModal}
+                    onClose={() => setShowUnlockModal(false)}
+                    testId={selectedTestId}
+                    testType="listening"
                 />
             )}
         </div>
