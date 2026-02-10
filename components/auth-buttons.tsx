@@ -11,14 +11,18 @@ import { jwtDecode } from 'jwt-decode';
  */
 export const SocialAuthButtons = () => {
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4 items-center">
-            {/* Google Wrapper */}
-            <div className="h-[44px] w-full">
+        /* grid-cols-1: Mobil qurilmalarda 1 ta ustun (ustma-ust)
+            md:grid-cols-2: Kompyuterda 2 ta ustun (yonma-yon)
+            gap-4: Tugmalar orasidagi masofa
+        */
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-6">
+            {/* Google qismi */}
+            <div className="w-full flex justify-center">
                 <GoogleSignInButton />
             </div>
-            
-            {/* Telegram Wrapper */}
-            <div className="h-[44px] w-full flex justify-center items-center border border-slate-200 rounded-xl bg-white overflow-hidden">
+
+            {/* Telegram qismi */}
+            <div className="w-full flex justify-center items-center h-[44px] bg-white border border-slate-200 rounded-xl overflow-hidden">
                 <TelegramSignInWidget />
             </div>
         </div>
@@ -60,8 +64,8 @@ export const GoogleSignInButton = () => {
                         router.push(nextPath);
                     } catch (error: any) {
                         // [object Object] xatosini oldini olish
-                        const errMsg = typeof error.response?.data?.detail === 'string' 
-                            ? error.response.data.detail 
+                        const errMsg = typeof error.response?.data?.detail === 'string'
+                            ? error.response.data.detail
                             : JSON.stringify(error.response?.data?.detail) || "Google xatosi";
                         alert(errMsg);
                     } finally {
@@ -112,7 +116,7 @@ export const TelegramSignInWidget = () => {
 
     useEffect(() => {
         const scriptId = "telegram-widget-script";
-        
+
         (window as any).onTelegramAuth = async (user: any) => {
             try {
                 await authService.telegramLogin(user);
@@ -120,8 +124,8 @@ export const TelegramSignInWidget = () => {
                 const nextPath = clientId ? `/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
                 router.push(nextPath);
             } catch (error: any) {
-                const errMsg = typeof error.response?.data?.detail === 'string' 
-                    ? error.response.data.detail 
+                const errMsg = typeof error.response?.data?.detail === 'string'
+                    ? error.response.data.detail
                     : JSON.stringify(error.response?.data?.detail) || "Telegram xatosi";
                 alert(errMsg);
             }
@@ -146,8 +150,8 @@ export const TelegramSignInWidget = () => {
 
     return (
         <div className="w-full h-[44px] flex items-center justify-center bg-slate-50 lg:bg-transparent rounded-xl">
-            <div 
-                ref={telegramWrapperRef} 
+            <div
+                ref={telegramWrapperRef}
                 className="w-full flex justify-center scale-95 origin-center"
             />
         </div>
