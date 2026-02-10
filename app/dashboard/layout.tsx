@@ -19,6 +19,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const [contacts, setContacts] = useState<any[]>([])
     const [contactsLoading, setContactsLoading] = useState(true)
 
+    // 1. Test ishlash jarayonini aniqlash (Header va Sidebar yashiriladigan sahifalar)
+    const isTestProcess = useMemo(() => {
+        // Test jarayoni ketayotgan aniq marshrutlar
+        return pathname.includes("/dashboard/process") || pathname.includes("/dashboard/test/start");
+    }, [pathname])
+
     const loadContacts = useCallback(async () => {
         try {
             setContactsLoading(true)
@@ -36,16 +42,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (user) loadContacts()
     }, [user, loadContacts])
 
-    // Tasdiqlanganlik holatini tekshirish
     const isVerified = useMemo(() => {
-        if (contactsLoading) return true; // Yuklash vaqtida xalaqit bermaslik
+        if (contactsLoading) return true;
         const hasPhone = contacts.some(c => c.contact_type === 'phone' && c.is_verified === true);
-        const hasEmail = contacts.some(c => c.contact_type === 'email' && c.is_verified === true);
         const hasSocial = contacts.some(c => ['google', 'telegram', 'social'].includes(c.contact_type));
-        return hasPhone || hasEmail || hasSocial;
+        return hasPhone || hasSocial;
     }, [contacts, contactsLoading])
 
-    // Qaysi sahifalar bloklanishi kerakligini aniqlash
     const isRestrictedPage = useMemo(() => {
         const restrictedPaths = ["/dashboard/exams", "/dashboard/test", "/dashboard/process"];
         return restrictedPaths.some(path => pathname.startsWith(path));
@@ -68,6 +71,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 <Loader2 className="w-10 h-10 animate-spin text-[#17776A]" />
             </div>
         )
+    }
+
+    // 2. Agar test jarayoni bo'lsa, faqat children'ni o'zini qaytaramiz (Full screen)
+    if (isTestProcess) {
+        return <div className="h-screen w-full bg-white overflow-y-auto">{children}</div>
     }
 
     return (
@@ -109,7 +117,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </div>
             </aside>
 
-            {/* MOBILE OVERLAY */}
+            {/* MOBILE OVERLAY & MENU (O'zgarishsiz qoldi) */}
             <AnimatePresence>
                 {isMobileMenuOpen && (
                     <>
@@ -165,7 +173,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                 </header>
 
-                {/* SCROLLABLE CONTENT */}
                 <main className="flex-1 overflow-y-auto bg-[#F8FAFC] custom-scrollbar">
                     <div className="max-w-6xl mx-auto p-4 lg:p-10 min-h-full flex flex-col">
                         <AnimatePresence mode="wait">
