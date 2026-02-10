@@ -10,7 +10,7 @@ import {
 import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/AuthContext"
-import { SocialAuthButtons } from "@/components/auth-buttons"
+import { GoogleSignInButton, TelegramSignInWidget } from "@/components/auth-buttons"
 
 // Reklamalar ma'lumotlari: Har biriga alohida rang va URL biriktirildi
 const ADS = [
@@ -200,8 +200,18 @@ function LoginForm() {
                                 <span>Telefon raqam orqali</span>
                             </button>
 
-                            <div className="grid grid-cols-2 gap-3">
-                                <SocialAuthButtons />
+                            <div className="flex flex-col gap-3 w-full mt-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Google qismi */}
+                                    <div className="w-full">
+                                        <GoogleSignInButton />
+                                    </div>
+
+                                    {/* Telegram qismi */}
+                                    <div className="w-full">
+                                        <TelegramSignInWidget />
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

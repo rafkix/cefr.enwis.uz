@@ -6,28 +6,6 @@ import { authService } from '@/lib/api/auth';
 import { useAuth } from '@/lib/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 
-/**
- * ASOSIY KOMPONENT
- */
-export const SocialAuthButtons = () => {
-    return (
-        /* grid-cols-1: Mobil qurilmalarda 1 ta ustun (ustma-ust)
-            md:grid-cols-2: Kompyuterda 2 ta ustun (yonma-yon)
-            gap-4: Tugmalar orasidagi masofa
-        */
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mt-6">
-            {/* Google qismi */}
-            <div className="w-full flex justify-center">
-                <GoogleSignInButton />
-            </div>
-
-            {/* Telegram qismi */}
-            <div className="w-full flex justify-center items-center h-[44px] bg-white border border-slate-200 rounded-xl overflow-hidden">
-                <TelegramSignInWidget />
-            </div>
-        </div>
-    );
-};
 
 /**
  * GOOGLE SIGN IN
@@ -38,13 +16,18 @@ export const GoogleSignInButton = () => {
     const searchParams = useSearchParams();
     const { refreshUser } = useAuth();
 
+    // OAuth2 parametrlarini olish (agar bo'lsa)
     const clientIdParam = searchParams.get("client_id");
     const redirectUri = searchParams.get("redirect_uri");
     const state = searchParams.get("state");
 
     const handleGoogleLogin = () => {
         const GOOGLE_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-        if (!GOOGLE_ID || !(window as any).google) return;
+        
+        if (!GOOGLE_ID || !(window as any).google) {
+            alert("Google xizmati yuklanmadi. Sahifani yangilang.");
+            return;
+        }
 
         setIsLoading(true);
         try {
@@ -59,14 +42,17 @@ export const GoogleSignInButton = () => {
                             name: decoded.name,
                             picture: decoded.picture
                         });
+                        
                         await refreshUser();
-                        const nextPath = clientIdParam ? `/auth/authorize?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
+                        
+                        // Yo'naltirish mantig'i
+                        const nextPath = clientIdParam 
+                            ? `/auth/authorize?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` 
+                            : '/dashboard';
+                        
                         router.push(nextPath);
                     } catch (error: any) {
-                        // [object Object] xatosini oldini olish
-                        const errMsg = typeof error.response?.data?.detail === 'string'
-                            ? error.response.data.detail
-                            : JSON.stringify(error.response?.data?.detail) || "Google xatosi";
+                        const errMsg = error.response?.data?.detail || "Google orqali kirishda xatolik";
                         alert(errMsg);
                     } finally {
                         setIsLoading(false);
@@ -76,6 +62,7 @@ export const GoogleSignInButton = () => {
             (window as any).google.accounts.id.prompt();
         } catch (err) {
             setIsLoading(false);
+            console.error(err);
         }
     };
 
@@ -83,7 +70,7 @@ export const GoogleSignInButton = () => {
         <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="flex h-[44px] w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+            className="flex h-[48px] w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-70"
         >
             {isLoading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
@@ -95,7 +82,7 @@ export const GoogleSignInButton = () => {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
             )}
-            <span className="truncate">Google</span>
+            <span>Google orqali kirish</span>
         </button>
     );
 };
@@ -105,7 +92,6 @@ export const GoogleSignInButton = () => {
  */
 export const TelegramSignInWidget = () => {
     const telegramWrapperRef = useRef<HTMLDivElement>(null);
-    const [isLoaded, setIsLoaded] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
     const { refreshUser } = useAuth();
@@ -115,24 +101,23 @@ export const TelegramSignInWidget = () => {
     const state = searchParams.get("state");
 
     useEffect(() => {
-        const scriptId = "telegram-widget-script";
-
+        // Global callback funksiyasi
         (window as any).onTelegramAuth = async (user: any) => {
             try {
                 await authService.telegramLogin(user);
                 await refreshUser();
-                const nextPath = clientId ? `/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
+                
+                const nextPath = clientId 
+                    ? `/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` 
+                    : '/dashboard';
+                
                 router.push(nextPath);
             } catch (error: any) {
-                const errMsg = typeof error.response?.data?.detail === 'string'
-                    ? error.response.data.detail
-                    : JSON.stringify(error.response?.data?.detail) || "Telegram xatosi";
-                alert(errMsg);
+                alert(error.response?.data?.detail || "Telegram login xatosi");
             }
         };
 
         const script = document.createElement("script");
-        script.id = scriptId;
         script.src = "https://telegram.org/js/telegram-widget.js?22";
         script.async = true;
         script.setAttribute("data-telegram-login", "EnwisAuthBot");
@@ -144,16 +129,29 @@ export const TelegramSignInWidget = () => {
         if (telegramWrapperRef.current) {
             telegramWrapperRef.current.innerHTML = '';
             telegramWrapperRef.current.appendChild(script);
-            setIsLoaded(true);
         }
-    }, [clientId]);
+    }, [clientId, redirectUri, state, refreshUser, router]);
 
     return (
-        <div className="w-full h-[44px] flex items-center justify-center bg-slate-50 lg:bg-transparent rounded-xl">
-            <div
-                ref={telegramWrapperRef}
-                className="w-full flex justify-center scale-95 origin-center"
-            />
+        <div className="w-full flex flex-col gap-2">
+            <div 
+                className="w-full h-[48px] flex items-center justify-center border border-slate-200 rounded-xl bg-white overflow-hidden transition-all hover:border-slate-300"
+            >
+                <div
+                    ref={telegramWrapperRef}
+                    className="telegram-widget-container flex justify-center items-center scale-[1.1] origin-center"
+                />
+            </div>
+            
+            {/* CSS Hack: Telegram iframe-ni chiroyli ko'rsatish uchun */}
+            <style jsx global>{`
+                .telegram-widget-container iframe {
+                    margin: 0 !important;
+                    display: block !important;
+                    vertical-align: middle !important;
+                    cursor: pointer !important;
+                }
+            `}</style>
         </div>
     );
 };

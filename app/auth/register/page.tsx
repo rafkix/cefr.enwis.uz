@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/lib/AuthContext"
 import { authService } from "@/lib/api/auth"
-import { SocialAuthButtons } from "@/components/auth-buttons"
+import { GoogleSignInButton, TelegramSignInWidget } from "@/components/auth-buttons"
 
 function RegisterForm() {
     const router = useRouter()
@@ -168,8 +168,18 @@ function RegisterForm() {
                         <div className="mt-6 flex flex-col gap-3">
 
                             {/* Google va Telegram Gridi */}
-                            <div className="grid grid-cols-2 gap-3">
-                                <SocialAuthButtons />
+                            <div className="flex flex-col gap-3 w-full mt-6">
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    {/* Google qismi */}
+                                    <div className="w-full">
+                                        <GoogleSignInButton />
+                                    </div>
+
+                                    {/* Telegram qismi */}
+                                    <div className="w-full">
+                                        <TelegramSignInWidget />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Kirish tugmasi (Gridning tagida, to'liq kenglikda) */}
