@@ -101,16 +101,11 @@ export const TelegramSignInWidget = () => {
     const state = searchParams.get("state");
 
     useEffect(() => {
-        // Global callback funksiyasi
         (window as any).onTelegramAuth = async (user: any) => {
             try {
                 await authService.telegramLogin(user);
                 await refreshUser();
-                
-                const nextPath = clientId 
-                    ? `/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` 
-                    : '/dashboard';
-                
+                const nextPath = clientId ? `/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
                 router.push(nextPath);
             } catch (error: any) {
                 alert(error.response?.data?.detail || "Telegram login xatosi");
@@ -121,10 +116,11 @@ export const TelegramSignInWidget = () => {
         script.src = "https://telegram.org/js/telegram-widget.js?22";
         script.async = true;
         script.setAttribute("data-telegram-login", "EnwisAuthBot");
-        script.setAttribute("data-size", "large");
+        script.setAttribute("data-size", "large"); 
         script.setAttribute("data-radius", "12");
         script.setAttribute("data-onauth", "onTelegramAuth(user)");
         script.setAttribute("data-request-access", "write");
+        script.setAttribute("data-userpic", "true"); // Profil rasmini aniq ko'rsatish
 
         if (telegramWrapperRef.current) {
             telegramWrapperRef.current.innerHTML = '';
@@ -133,23 +129,35 @@ export const TelegramSignInWidget = () => {
     }, [clientId, redirectUri, state, refreshUser, router]);
 
     return (
-        <div className="w-full flex flex-col gap-2">
+        <div className="w-full">
+            {/* 1. h-auto qilib o'zgartirdik, chunki profil rasmi chiqsa u 48px dan balandroq bo'lishi mumkin.
+                2. overflow-visible qildik, shunda profil rasm chetga chiqsa ham kesilmaydi.
+            */}
             <div 
-                className="w-full h-[48px] flex items-center justify-center border border-slate-200 rounded-xl bg-white overflow-hidden transition-all hover:border-slate-300"
+                className="w-full min-h-[48px] flex items-center justify-center border border-slate-200 rounded-xl bg-white transition-colors hover:border-slate-300 relative"
             >
                 <div
                     ref={telegramWrapperRef}
-                    className="telegram-widget-container flex justify-center items-center scale-[1.1] origin-center"
+                    className="telegram-widget-container flex justify-center items-center py-1"
+                    style={{ 
+                        transform: 'scale(0.95)', // Kichraytirishni kamaytirdik
+                        transformOrigin: 'center'
+                    }}
                 />
             </div>
             
-            {/* CSS Hack: Telegram iframe-ni chiroyli ko'rsatish uchun */}
             <style jsx global>{`
+                /* Iframe ichidagi elementlarni majburan markazlash va cheklovlarni olib tashlash */
                 .telegram-widget-container iframe {
                     margin: 0 !important;
                     display: block !important;
-                    vertical-align: middle !important;
-                    cursor: pointer !important;
+                    /* max-height cheklovini olib tashladik, bu profil rasmini kessa kerak edi */
+                    min-height: 40px !important; 
+                }
+                
+                /* Agar profil rasmi (rasmdagi o'ng tomondagi icon) juda katta bo'lsa */
+                #tg-me-frame {
+                    max-width: 100% !important;
                 }
             `}</style>
         </div>
