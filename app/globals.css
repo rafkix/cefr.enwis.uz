@@ -111,6 +111,20 @@
   animation: float 6s ease-in-out infinite;
 }
 
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+}
+
 /* Sahifa pastidagi <style> tegiga qo'shing */
 .prose code {
     background-color: #f1f5f9;
