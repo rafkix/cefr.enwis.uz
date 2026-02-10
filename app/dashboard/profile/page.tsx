@@ -100,7 +100,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen py-12 px-4 sm:px-6 font-sans bg-[#f8fafc]">
+        <div className="min-h-screen py-12 px-4 sm:px-6 font-sans">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
                 {/* --- CHAP TOMON: ASOSIY PROFIL --- */}
