@@ -7,22 +7,15 @@ import { useAuth } from '@/lib/AuthContext';
 import { jwtDecode } from 'jwt-decode';
 
 /**
- * ASOSIY KOMPONENT: Tugmalarni joylashuvi
+ * ASOSIY KOMPONENT
  */
 export const SocialAuthButtons = () => {
     return (
-        /* flex-col: Mobil qurilmalarda ustma-ust
-           lg:flex-row: Katta ekranlarda (desktop) yonma-yon
-           lg:items-start: Balandliklar har xil bo'lsa, tepadan tekislaydi
-        */
-        <div className="flex w-full flex-col lg:flex-row items-center gap-4 lg:gap-3">
-            {/* Google tugmasi */}
-            <div className="w-full lg:flex-1">
+        <div className="flex w-full flex-col lg:flex-row items-stretch lg:items-center gap-4 lg:gap-3 mt-4">
+            <div className="flex-1 w-full min-w-0">
                 <GoogleSignInButton />
             </div>
-            
-            {/* Telegram tugmasi */}
-            <div className="w-full lg:flex-1">
+            <div className="flex-1 w-full min-w-0 flex justify-center">
                 <TelegramSignInWidget />
             </div>
         </div>
@@ -42,44 +35,32 @@ export const GoogleSignInButton = () => {
     const redirectUri = searchParams.get("redirect_uri");
     const state = searchParams.get("state");
 
-    const getQueryString = () =>
-        clientIdParam ? `?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` : "";
-
     const handleGoogleLogin = () => {
         const GOOGLE_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-
-        if (!GOOGLE_ID) {
-            alert("Tizim xatosi: Google Client ID topilmadi.");
-            return;
-        }
-
-        if (!(window as any).google) {
-            alert("Google kutubxonasi yuklanmadi. Sahifani yangilang.");
-            return;
-        }
+        if (!GOOGLE_ID || !(window as any).google) return;
 
         setIsLoading(true);
-
         try {
             (window as any).google.accounts.id.initialize({
                 client_id: GOOGLE_ID,
                 callback: async (response: any) => {
                     try {
                         const decoded: any = jwtDecode(response.credential);
-                        const payload = {
+                        await authService.googleLogin({
                             google_id: decoded.sub,
                             email: decoded.email,
                             name: decoded.name,
                             picture: decoded.picture
-                        };
-
-                        await authService.googleLogin(payload);
+                        });
                         await refreshUser();
-                        
-                        const nextPath = clientIdParam ? `/auth/authorize${getQueryString()}` : '/dashboard';
+                        const nextPath = clientIdParam ? `/auth/authorize?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
                         router.push(nextPath);
                     } catch (error: any) {
-                        alert(error.response?.data?.detail || "Google orqali kirishda xatolik.");
+                        // [object Object] xatosini oldini olish
+                        const errMsg = typeof error.response?.data?.detail === 'string' 
+                            ? error.response.data.detail 
+                            : JSON.stringify(error.response?.data?.detail) || "Google xatosi";
+                        alert(errMsg);
                     } finally {
                         setIsLoading(false);
                     }
@@ -95,7 +76,7 @@ export const GoogleSignInButton = () => {
         <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white font-semibold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
+            className="flex h-[44px] w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98]"
         >
             {isLoading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
@@ -107,7 +88,7 @@ export const GoogleSignInButton = () => {
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                 </svg>
             )}
-            <span className="whitespace-nowrap">{isLoading ? 'Yuklanmoqda...' : 'Google'}</span>
+            <span className="truncate">Google</span>
         </button>
     );
 };
@@ -125,21 +106,21 @@ export const TelegramSignInWidget = () => {
     const clientId = searchParams.get("client_id");
     const redirectUri = searchParams.get("redirect_uri");
     const state = searchParams.get("state");
-    const getQueryString = () => clientId ? `?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : "";
 
     useEffect(() => {
         const scriptId = "telegram-widget-script";
-        const existingScript = document.getElementById(scriptId);
-        if (existingScript) existingScript.remove();
-
+        
         (window as any).onTelegramAuth = async (user: any) => {
             try {
                 await authService.telegramLogin(user);
                 await refreshUser();
-                const nextPath = clientId ? `/auth/authorize${getQueryString()}` : '/dashboard';
+                const nextPath = clientId ? `/auth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&state=${state}` : '/dashboard';
                 router.push(nextPath);
             } catch (error: any) {
-                alert(error.response?.data?.detail || "Telegram xatosi.");
+                const errMsg = typeof error.response?.data?.detail === 'string' 
+                    ? error.response.data.detail 
+                    : JSON.stringify(error.response?.data?.detail) || "Telegram xatosi";
+                alert(errMsg);
             }
         };
 
@@ -150,25 +131,22 @@ export const TelegramSignInWidget = () => {
         script.setAttribute("data-telegram-login", "EnwisAuthBot");
         script.setAttribute("data-size", "large");
         script.setAttribute("data-radius", "12");
-        script.setAttribute("data-request-access", "write");
         script.setAttribute("data-onauth", "onTelegramAuth(user)");
+        script.setAttribute("data-request-access", "write");
 
         if (telegramWrapperRef.current) {
             telegramWrapperRef.current.innerHTML = '';
             telegramWrapperRef.current.appendChild(script);
             setIsLoaded(true);
         }
-    }, [isLoaded, clientId]);
+    }, [clientId]);
 
     return (
-        <div className="flex w-full items-center justify-center">
+        <div className="w-full h-[44px] flex items-center justify-center bg-slate-50 lg:bg-transparent rounded-xl">
             <div 
                 ref={telegramWrapperRef} 
-                className="min-h-[48px] w-full flex justify-center items-center overflow-hidden"
+                className="w-full flex justify-center scale-95 origin-center"
             />
-            {!isLoaded && (
-                <div className="h-12 w-full animate-pulse rounded-xl bg-slate-100" />
-            )}
         </div>
     );
 };
