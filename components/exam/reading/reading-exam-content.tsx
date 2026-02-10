@@ -8,13 +8,13 @@ import type { ReadingExam } from "@/lib/types/reading"
 
 interface ReadingExamContentProps {
     examData: ReadingExam;
-    currentQuestion: number; // Database ID
+    currentQuestion: number;
     answered: Record<number, boolean>;
     answers: Record<number, string>;
     onAnswer: (questionId: number, value: string) => void;
     onSelectQuestion: (dbId: number) => void;
     fontSize?: number;
-    revMap: Record<number, number>; // Mapping lug'ati
+    revMap: Record<number, number>;
 }
 
 export default function ReadingExamContent({
@@ -33,7 +33,10 @@ export default function ReadingExamContent({
     const [isResizing, setIsResizing] = useState(false)
     const containerRef = useRef<HTMLDivElement>(null)
 
-    // 1. Savol o'zgarganda tegishli Partni avtomatik ochish
+    const currentPart = examData.parts[activePartIndex];
+    const currentHighlights = highlightsByPart[activePartIndex] || [];
+
+    // Savol o'zgarganda tegishli Partni avtomatik ochish
     useEffect(() => {
         if (!examData?.parts) return;
         const pIdx = examData.parts.findIndex(p =>
@@ -44,39 +47,20 @@ export default function ReadingExamContent({
         }
     }, [currentQuestion, examData.parts, activePartIndex])
 
-    const currentPart = examData.parts[activePartIndex];
-    const currentHighlights = highlightsByPart[activePartIndex] || [];
+    const handleAddHighlight = useCallback((newHl: any) => {
+        setHighlightsByPart(prev => ({
+            ...prev,
+            [activePartIndex]: [...(prev[activePartIndex] || []), newHl]
+        }));
+    }, [activePartIndex]);
 
-    // 2. Highlight mantiqi (Tuzatilgan: Global Offset bilan)
-    const handleHighlight = useCallback((e: React.MouseEvent, segmentOffset: number) => {
-        const selection = window.getSelection();
-        if (!selection || selection.isCollapsed || selection.toString().trim() === "") return;
+    const handleRemoveHighlight = useCallback((id: string) => {
+        setHighlightsByPart(prev => ({
+            ...prev,
+            [activePartIndex]: (prev[activePartIndex] || []).filter(h => h.id !== id)
+        }));
+    }, [activePartIndex]);
 
-        const range = selection.getRangeAt(0);
-        
-        // Tanlangan matn aynan passage ichidami?
-        const container = range.commonAncestorContainer.parentElement;
-        if (!container?.closest('.passage-segment')) return;
-
-        const hl = {
-            id: `hl-${activePartIndex}-${Date.now()}`,
-            text: selection.toString(),
-            color: activeColor,
-            // 🟢 MUHIM: Segment ichidagi nisbiy indexni globalga o'giramiz
-            startIndex: segmentOffset + range.startOffset 
-        };
-
-        if (activeColor !== "transparent") {
-            setHighlightsByPart(prev => ({
-                ...prev,
-                [activePartIndex]: [...(prev[activePartIndex] || []), hl]
-            }));
-        }
-        
-        selection.removeAllRanges(); // Ko'k tanlovni o'chirish
-    }, [activeColor, activePartIndex]);
-
-    // 3. Matn ichidagi bo'shliqlarni render qilish
     const renderPassage = () => {
         if (!currentPart?.passage) return null;
 
@@ -84,7 +68,6 @@ export default function ReadingExamContent({
         const gapFillQs = currentPart.questions.filter(q => q.type === "GAP_FILL");
         const segments = text.split(/_{3,}|__________/g);
 
-        // 🟢 Global pozitsiyani kuzatib borish
         let currentGlobalOffset = 0;
 
         return (
@@ -96,26 +79,19 @@ export default function ReadingExamContent({
                     const displayNum = qId ? revMap[qId] : "";
                     
                     const thisSegmentOffset = currentGlobalOffset;
-                    // Offsetni yangilash (matn uzunligi + input uchun taxminiy 10 belgilik joy)
+                    // Offsetni yangilash (+10 input uchun joy)
                     currentGlobalOffset += segment.length + 10; 
 
                     return (
                         <span key={i} className="inline">
-                            <span 
-                                className="passage-segment inline" 
-                                onMouseUp={(e) => handleHighlight(e, thisSegmentOffset)}
-                            >
-                                <HighlightText
-                                    key={`hl-${activePartIndex}-${i}-${thisSegmentOffset}`}
-                                    text={segment}
-                                    highlights={currentHighlights}
-                                    onRemoveHighlight={(id: any) => setHighlightsByPart(p => ({
-                                        ...p, 
-                                        [activePartIndex]: p[activePartIndex].filter(h => h.id !== id)
-                                    }))} 
-                                    offset={thisSegmentOffset} 
-                                />
-                            </span>
+                            <HighlightText
+                                text={segment}
+                                highlights={currentHighlights}
+                                onAddHighlight={handleAddHighlight}
+                                onRemoveHighlight={handleRemoveHighlight}
+                                offset={thisSegmentOffset}
+                                activeColor={activeColor}
+                            />
 
                             {i < segments.length - 1 && qId && (
                                 <input
@@ -137,7 +113,7 @@ export default function ReadingExamContent({
         )
     }
 
-    // Sidebar Resizer
+    // Sidebar Resizer logikasi
     useEffect(() => {
         const handleMouseMove = (e: MouseEvent) => {
             if (!isResizing || !containerRef.current) return;
@@ -176,7 +152,7 @@ export default function ReadingExamContent({
                                     : "text-slate-400 hover:text-slate-600"}`}
                         >
                             <Folder size={14} className={activePartIndex === idx ? "text-blue-500 fill-blue-50" : "text-slate-300"} />
-                            <span className="tracking-tighter uppercase font-black">{idx + 1}</span>
+                            <span className="tracking-tighter uppercase font-black">PART {idx + 1}</span>
                         </button>
                     ))}
                 </div>
@@ -190,10 +166,26 @@ export default function ReadingExamContent({
                             <h2 className="font-black text-blue-900 uppercase italic tracking-tighter" style={{ fontSize: `${fontSize + 6}px` }}>
                                 {currentPart.title}
                             </h2>
+                            {/* Marker Toolbar */}
                             <div className="flex gap-2 bg-slate-50 p-2 rounded-full border">
-                                <button onClick={() => setActiveColor("transparent")} className="p-1.5 rounded-full transition hover:bg-white text-slate-400"><Eraser size={16} /></button>
+                                <button 
+                                  onClick={() => setActiveColor("transparent")} 
+                                  className={`p-1.5 rounded-full transition ${activeColor === "transparent" ? "bg-blue-100 text-blue-600" : "text-slate-400 hover:bg-white"}`}
+                                  title="O'chirish rejimi"
+                                >
+                                  <Eraser size={16} />
+                                </button>
                                 {['#fef08a', '#bbf7d0', '#fecaca'].map(c => (
-                                    <button key={c} onClick={() => setActiveColor(c)} className="w-6 h-6 rounded-full border shadow-sm transition-transform active:scale-90" style={{ backgroundColor: c, outline: activeColor === c ? '2px solid #3b82f6' : 'none' }} />
+                                    <button 
+                                      key={c} 
+                                      onClick={() => setActiveColor(c)} 
+                                      className="w-6 h-6 rounded-full border shadow-sm transition-transform active:scale-90" 
+                                      style={{ 
+                                        backgroundColor: c, 
+                                        outline: activeColor === c ? '2px solid #3b82f6' : 'none',
+                                        outlineOffset: '2px'
+                                      }} 
+                                    />
                                 ))}
                             </div>
                         </div>
@@ -211,6 +203,7 @@ export default function ReadingExamContent({
                             const qId = Number(q.id);
                             const displayNum = revMap[qId] || q.question_number || q.id;
 
+                            // GAP_FILL passage ichida render qilinadi
                             if (q.type === "GAP_FILL") return null;
 
                             return (

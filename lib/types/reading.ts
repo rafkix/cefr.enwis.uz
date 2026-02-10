@@ -9,22 +9,22 @@ export enum QuestionType {
 }
 
 export interface Option {
-  label: string; // A, B, C...
-  value: string; // Variant matni
+  label: string; 
+  value: string; 
 }
 
 export interface Question {
-  id?: number;           // Backend'dan kelganda ID bo'ladi
+  id?: number;
   question_number?: number; 
   type: QuestionType;
   text: string;
   correct_answer: string;
-  word_limit?: number;   // Backend schemasiga moslandi
+  word_limit?: number; 
   options?: Option[];
 }
 
 export interface ReadingPart {
-  id?: number;           // Backend'dan kelganda ID bo'ladi
+  id?: number;
   title: string;
   description: string;
   passage: string;
@@ -32,32 +32,25 @@ export interface ReadingPart {
 }
 
 export interface ReadingExam {
-  isFree: any;
-  isDemo: any;
-  id: string;            // Slugs: 'reading-test-1'
+  id: string;
   title: string;
   cefr_level: string;
   duration_minutes: number;
   language: string;
-  type?: string;         // "READING"
+  isFree?: boolean;
+  isDemo?: boolean;
+  type?: string; 
   total_questions?: number;
   parts: ReadingPart[];
 }
 
 // --- SUBMISSION & RESULTS ---
 
-export interface ResultSubmission {
-  exam_id: string;
-  user_answers: Record<string, string>; // { "101": "A", "102": "true" }
-}
-
 export interface ResultSummary {
-  result_id: any;
-  summary: any;
   id: number;
-  exam_id: string;
+  exam_id?: string;
   raw_score: number;
-  standard_score: number;
+  standard_score?: number; // Optional: Readingda har doim ham kelmasligi mumkin
   cefr_level: string;
   percentage: number;
   created_at: string;
@@ -72,15 +65,9 @@ export interface QuestionReview {
 }
 
 export interface ReadingResultDetail {
-  summary: ResultSummary;
+  // Backend formatiga moslashuvchanlik:
+  summary: ResultSummary; 
   review: QuestionReview[];
 }
 
-// Yangilash (Update) uchun tip
-export interface ReadingExamUpdate {
-  title?: string;
-  cefr_level?: string;
-  duration_minutes?: number;
-  language?: string;
-  parts?: ReadingPart[];
-}
+export interface ReadingExamUpdate extends Partial<Omit<ReadingExam, 'id'>> {}

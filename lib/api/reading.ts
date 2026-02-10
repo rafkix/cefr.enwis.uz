@@ -51,17 +51,20 @@ export const getMyReadingResultAPI = (testId: string) => {
 }
 
 // 5. GET ALL MY RESULTS
+// 5. BARCHA NATIJALARNI OLISH (Ro'yxat uchun)
 export const getMyReadingResultsAPI = () => {
-  // Swagger'da endpoint: /my-results/all
-  // Eslatma: Swagger "string" qaytaradi deb ko'rsatilgan,
-  // lekin odatda bu yerda ResultSummary[] kutiladi.
-  return api.get<any>(`${BASE_URL}/my-results/all`)
+  // Swaggerda: /cefr/all/reading/my-results/all
+  // Bu yerda massiv qaytadi: [{id, raw_score, ...}, ...]
+  return api.get<ResultSummary[]>(`${BASE_URL}/my-results/all`)
 }
 
-// 6. GET RESULT BY ID
+// 6. NATIJA TAHLILINI OLISH (ID orqali bitta natija)
 export const getReadingResultDetailAPI = (resultId: number) => {
   if (!resultId) throw new Error('resultId is required')
-  // Swagger'da endpoint: /results/{result_id}
+  
+  // DIQQAT: Swaggerga qarab tekshiring: 
+  // Agar /results/ bo'lsa shunday qoldiring, 
+  // agar /my-results/ bo'lsa o'zgartiring.
   return api.get<ReadingResultDetail>(`${BASE_URL}/results/${resultId}`)
 }
 
