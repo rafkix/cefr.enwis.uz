@@ -134,7 +134,7 @@ export const TelegramSignInWidget = () => {
                 2. overflow-visible qildik, shunda profil rasm chetga chiqsa ham kesilmaydi.
             */}
             <div 
-                className="w-full min-h-[48px] flex items-center justify-center border border-slate-200 rounded-xl bg-white transition-colors hover:border-slate-300 relative"
+                className="w-full min-h-[48px] flex items-center justify-center rounded-xl bg-white transition-colors hover:border-slate-300 relative"
             >
                 <div
                     ref={telegramWrapperRef}
