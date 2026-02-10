@@ -76,9 +76,6 @@ export default function ListeningPage() {
 
     const filteredTests = useMemo(() => {
         return exams.filter((test) => {
-            // Agar 'mock' tabi tanlangan bo'lsa, faqat mocklarni ko'rsat
-            if (activeTab === 'mock') return test.isMock;
-
             // Agar boshqa tablar ('all', 'free', 'premium') tanlangan bo'lsa, 
             // mock testlarni umuman ko'rsatmaslik kerak
             if (test.isMock) return false;
@@ -90,6 +87,7 @@ export default function ListeningPage() {
             return true; // 'all' tanlanganda faqat oddiy (non-mock) testlar chiqadi
         })
     }, [exams, activeTab])
+
 
     const handleTestAction = (testId: string, isFree: boolean, isActive: boolean) => {
         if (!testId) return;
@@ -152,16 +150,16 @@ export default function ListeningPage() {
                         </div>
                     </div>
                     <div className="flex flex-col gap-2">
-                        {['all', 'free', 'premium', 'mock'].map((tab) => (
+                        {(['all', 'free', 'premium'] as const).map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => setActiveTab(tab as any)}
+                                onClick={() => setActiveTab(tab)}
                                 className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all text-left ${activeTab === tab
-                                        ? "bg-purple-600 text-white shadow-lg shadow-purple-100"
-                                        : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
+                                    ? "bg-purple-600 text-white shadow-lg shadow-purple-100"
+                                    : "text-slate-400 hover:bg-slate-50 border border-transparent hover:border-slate-100"
                                     }`}
                             >
-                                {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Modullar' : tab === 'mock' ? 'Mock Testlar' : 'Premium Testlar'}
+                                {tab === 'all' ? 'Barcha Testlar' : tab === 'free' ? 'Bepul Mashqlar' : 'Premium Mashqlar'}
                             </button>
                         ))}
                     </div>
