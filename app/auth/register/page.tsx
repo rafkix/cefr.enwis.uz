@@ -168,17 +168,9 @@ function RegisterForm() {
                         <div className="mt-6 flex flex-col gap-3">
 
                             {/* Google va Telegram Gridi */}
-                            <div className="flex flex-col gap-3 w-full mt-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {/* Google qismi */}
-                                    <div className="w-full">
-                                        <GoogleSignInButton />
-                                    </div>
-                                </div>
-                                {/* Telegram qismi */}
-                                <div className="w-full">
-                                    <TelegramSignInWidget />
-                                </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <GoogleSignInButton />
+                                <TelegramSignInWidget />
                             </div>
 
                             {/* Kirish tugmasi (Gridning tagida, to'liq kenglikda) */}

@@ -200,18 +200,9 @@ function LoginForm() {
                                 <span>Telefon raqam orqali</span>
                             </button>
 
-                            <div className="flex flex-col gap-3 w-full mt-6">
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    {/* Google qismi */}
-                                    <div className="w-full">
-                                        <GoogleSignInButton />
-                                    </div>
-
-                                    {/* Telegram qismi */}
-                                    <div className="w-full">
-                                        <TelegramSignInWidget />
-                                    </div>
-                                </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <GoogleSignInButton />
+                                <TelegramSignInWidget />
                             </div>
                         </div>
                     </div>
