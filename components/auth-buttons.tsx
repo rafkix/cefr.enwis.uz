@@ -70,7 +70,7 @@ export const GoogleSignInButton = () => {
         <button
             onClick={handleGoogleLogin}
             disabled={isLoading}
-            className="flex h-[48px] w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-70"
+            className="flex h-[48px] w-full items-center justify-center gap-3 rounded-xl bg-white px-4 text-[15px] font-bold text-slate-700 shadow-sm transition-all hover:bg-slate-50 active:scale-[0.98] disabled:opacity-70"
         >
             {isLoading ? (
                 <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-blue-600" />
