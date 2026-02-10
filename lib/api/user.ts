@@ -16,7 +16,7 @@ export const uploadAvatarAPI = (file: File) => {
 
 // Sessiyalar (Qurilmalar)
 export const getMySessionsAPI = () => api.get("/user/me/sessions");
-export const logoutDeviceAPI = (sessionId: string) => api.delete(`/user/me/sessions/${sessionId}`);
+export const terminateSessionAPI = (sessionId: string) => api.delete(`/user/me/sessions/${sessionId}`);
 
 // Telefon raqami
 export const requestPhoneUpdateAPI = (phone: string) => api.post("/user/me/phone/update-request", { new_phone: phone });
