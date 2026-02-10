@@ -9,7 +9,7 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
     const pathname = usePathname()
 
     // Header va Footer ko'rinmasligi kerak bo'lgan sahifalar ro'yxati
-    const noLayoutPages = ["/auth/phone", "/auth/register", "/auth/login", "/dashboard", "/public-offer", "/terms"]
+    const noLayoutPages = ["/auth/phone", "/auth/register", "/auth/login", "/dashboard", "/public-offer", "/terms", "/auth/forgot"]
 
     // Agar hozirgi sahifa noLayoutPages ichida bo'lsa (yoki dashboard bilan boshlansa)
     const isNoLayout = noLayoutPages.some(page => pathname.startsWith(page))
