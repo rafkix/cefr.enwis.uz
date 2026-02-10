@@ -174,11 +174,10 @@ function RegisterForm() {
                                     <div className="w-full">
                                         <GoogleSignInButton />
                                     </div>
-
-                                    {/* Telegram qismi */}
-                                    <div className="w-full">
-                                        <TelegramSignInWidget />
-                                    </div>
+                                </div>
+                                {/* Telegram qismi */}
+                                <div className="w-full">
+                                    <TelegramSignInWidget />
                                 </div>
                             </div>
 
