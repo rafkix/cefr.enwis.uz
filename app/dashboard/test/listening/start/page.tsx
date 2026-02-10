@@ -117,49 +117,72 @@ function ExamLogic() {
     // 2. FINISH LOGIC (MOCK & SINGLE)
     // ----------------------------------------------------
     const handleFinish = useCallback(async () => {
+        // 1. Validatsiya: Test ID bormi va hozir submit ketyaptimi?
         if (!testId || isSubmitting) return;
 
         setIsSubmitting(true);
-        
-        // Backend formatiga o'tkazish (Javoblar array formatida bo'lishi kerak bo'lishi mumkin)
-        const formattedAnswersArray = Object.entries(answersRef.current).map(([id, value]) => ({
-            question_id: Number(id),
-            answers: [String(value)]
-        }));
 
         try {
-            if (document.fullscreenElement) await document.exitFullscreen().catch(() => { });
+            // Fullscreen rejimini yopish
+            if (document.fullscreenElement) {
+                await document.exitFullscreen().catch(() => { });
+            }
 
             if (mode === "mock" && attemptId) {
-                // 🟢 MOCK SUBMIT
+                // --- MOCK TEST UCHUN SUBMIT ---
+                // Mock API odatda javoblarni array formatida kutadi
+                const formattedAnswersArray = Object.entries(answersRef.current).map(([num, val]) => ({
+                    question_number: num,
+                    answer: val
+                }));
+
                 await submitMockSkillAPI(
                     Number(attemptId),
                     "LISTENING",
                     0,
                     { answers: formattedAnswersArray }
                 );
-                
+
                 toast.success("Listening yakunlandi");
                 localStorage.removeItem(`listening-session-${testId}`);
                 router.push(`/dashboard/exams/process/${attemptId}?examId=${actualMockExamId}`);
             } else {
-                // 🔵 NORMAL SUBMIT
+                // --- NORMAL (SINGLE) TEST UCHUN SUBMIT ---
+                // Swaggerga mos payload tayyorlash
                 const payload = {
-                    exam_id: testId,
-                    user_answers: answersRef.current
+                    exam_id: testId, // Masalan: "listening-test-sample-1"
+                    user_answers: answersRef.current, // Format: {"1": "A", "2": "B"}
+                    exam_attempt_id: attemptId ? Number(attemptId) : null
                 };
+
+                console.log("🚀 Submitting Listening Payload:", payload);
+
                 const response = await submitListeningExamAPI(payload);
-                localStorage.removeItem(`listening-session-${testId}`);
-                router.push(`/dashboard/result/listening/view?id=${response.data.id || response.data.summary?.id}`);
+
+                // Backend javobidan ID ni olish (response.data ichida bo'lishi mumkin)
+                const resultId = response?.data?.id || response?.data?.summary?.id || response?.id;
+
+                if (resultId) {
+                    toast.success("Test muvaffaqiyatli topshirildi!");
+                    localStorage.removeItem(`listening-session-${testId}`);
+                    router.push(`/dashboard/result/listening/view?id=${resultId}`);
+                } else {
+                    throw new Error("Natija ID si topilmadi");
+                }
             }
+
             setStatus("finished");
         } catch (err: any) {
-            console.error("Submit error:", err);
-            toast.error(err.response?.data?.detail || "Natijani saqlashda xatolik yuz berdi.");
+            console.error("❌ Submit error details:", err);
+
+            // Xatolik xabarini foydalanuvchiga ko'rsatish
+            const errorMessage = err.response?.data?.detail || err.message || "Natijani saqlashda xatolik yuz berdi.";
+            toast.error(errorMessage);
+
             setIsSubmitting(false);
         }
     }, [testId, mode, attemptId, actualMockExamId, isSubmitting, router]);
-
+    
     // Timer & Session Storage Logic (Reading'dagidek qisqartirildi)
     useEffect(() => {
         if (!hasStarted || status !== "reading") return;
@@ -186,7 +209,7 @@ function ExamLogic() {
     // 3. RENDER LOGIC
     // ----------------------------------------------------
     if (loading) return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-blue-600" /></div>;
-    
+
     if (!hasStarted) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
@@ -196,7 +219,7 @@ function ExamLogic() {
                     </div>
                     <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">{test.title}</h1>
                     <p className="text-slate-500 mb-8 font-medium italic">Reading bo&apos;limini boshlashga tayyormisiz?</p>
-                    <button onClick={() => { setHasStarted(true); setStatus("reading"); setCountdown(10); }}  className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
+                    <button onClick={() => { setHasStarted(true); setStatus("reading"); setCountdown(10); }} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
                         Bo'limni boshlash
                     </button>
                 </div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation" // 👈 params o'rniga searchParams
+import { useSearchParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import {
     CheckCircle2, ChevronLeft, Award,
@@ -9,17 +9,17 @@ import {
     Target, AlertCircle
 } from "lucide-react"
 
-// API funksiyasini import qilish (buni o'zingizdagi manzilga to'g'rilang)
 import { getListeningResultDetailAPI } from "@/lib/api/listening"
 
-// --- TYPES ---
+// --- TYPES (API Response ga moslashtirildi) ---
 interface Summary {
+    id: number;
     exam_id: string;
-    created_at: string;
-    correct_answers: number;
-    total_questions: number;
+    raw_score: number; // 👈 API dagi 'raw_score' correct_answers o'rniga
     standard_score: number;
     cefr_level: string;
+    percentage: number;
+    created_at: string;
 }
 
 interface ReviewItem {
@@ -27,6 +27,7 @@ interface ReviewItem {
     is_correct: boolean;
     user_answer: string;
     correct_answer: string;
+    type: string;
 }
 
 interface ResultData {
@@ -36,7 +37,7 @@ interface ResultData {
 
 export default function ListeningResultPage() {
     const searchParams = useSearchParams()
-    const resultId = searchParams.get("id") // 👈 URL dan ID ni olamiz
+    const resultId = searchParams.get("id")
     const router = useRouter()
 
     const [data, setData] = useState<ResultData | null>(null)
@@ -47,12 +48,11 @@ export default function ListeningResultPage() {
         if (resultId) {
             getListeningResultDetailAPI(Number(resultId))
                 .then(res => {
-                    // API dan kelgan ma'lumotni tekshirish
-                    if (res.data) {
+                    // Backend 'summary' va 'review' ni to'g'ridan-to'g'ri qaytaryapti
+                    if (res && res.summary) {
+                        setData(res as ResultData)
+                    } else if (res.data && res.data.summary) {
                         setData(res.data)
-                    } else if (res.summary) {
-                        // Ba'zan backend to'g'ridan-to'g'ri data ichisiz qaytarishi mumkin
-                        setData(res as unknown as ResultData)
                     } else {
                         setError(true)
                     }
@@ -63,11 +63,10 @@ export default function ListeningResultPage() {
                 })
                 .finally(() => setLoading(false))
         } else {
-            setLoading(false) // ID yo'q bo'lsa ham yuklashni to'xtatamiz
+            setLoading(false)
         }
     }, [resultId])
 
-    // 1. ID yo'q bo'lsa (URL noto'g'ri)
     if (!resultId) return (
         <div className="h-[60vh] flex flex-col items-center justify-center text-center p-6">
             <AlertCircle className="w-12 h-12 text-slate-300 mb-4" />
@@ -76,7 +75,6 @@ export default function ListeningResultPage() {
         </div>
     )
 
-    // 2. Yuklanish holati
     if (loading) return (
         <div className="h-[60vh] flex flex-col items-center justify-center">
             <Loader2 className="w-10 h-10 animate-spin text-purple-600 mb-4" />
@@ -84,7 +82,6 @@ export default function ListeningResultPage() {
         </div>
     )
 
-    // 3. Xatolik yoki Ma'lumot yo'qligi
     if (error || !data) return (
         <div className="h-[60vh] flex flex-col items-center justify-center text-center p-6">
             <div className="bg-rose-50 p-8 rounded-[32px] border border-rose-100 max-w-md">
@@ -99,9 +96,11 @@ export default function ListeningResultPage() {
 
     const { summary, review } = data;
 
+    // Multilevel-bm.pdf hujjati asosida jami savollar sonini 35 deb olamiz (yoki API dan kelsa shuni qo'yamiz)
+    const totalQuestions = review?.length || 35;
+
     return (
         <div className="max-w-4xl mx-auto pb-20 px-4 pt-8 animate-in fade-in duration-700">
-            {/* Orqaga tugmasi */}
             <Link href="/dashboard/test/listening" className="inline-flex items-center gap-2 text-slate-400 hover:text-purple-600 mb-8 font-bold transition-colors group text-xs uppercase tracking-widest">
                 <div className="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center group-hover:border-purple-200 group-hover:bg-purple-50 transition-all">
                     <ChevronLeft size={16} className="group-hover:-translate-x-0.5 transition-transform" />
@@ -109,10 +108,8 @@ export default function ListeningResultPage() {
                 Natijalarga qaytish
             </Link>
 
-            {/* HEADER CARD */}
             <div className="bg-white rounded-[40px] border border-slate-100 shadow-2xl shadow-slate-200/50 overflow-hidden mb-10">
                 <div className="bg-gradient-to-br from-purple-600 to-indigo-800 p-8 sm:p-10 text-white relative overflow-hidden">
-                    {/* Orqa fon bezagi */}
                     <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
 
                     <div className="flex flex-col md:flex-row justify-between items-center gap-8 relative z-10">
@@ -124,13 +121,13 @@ export default function ListeningResultPage() {
                                 </span>
                             </div>
                             <h1 className="text-3xl sm:text-4xl font-black tracking-tight mb-2 uppercase italic">Listening Report</h1>
-                            <p className="text-purple-200 font-medium italic text-sm">Test ID: <span className="font-mono opacity-70">{summary.exam_id}</span></p>
+                            <p className="text-purple-200 font-medium italic text-sm">Exam ID: <span className="font-mono opacity-70">{summary.exam_id}</span></p>
                         </div>
 
                         <div className="flex items-center gap-4 bg-white/10 p-6 rounded-[32px] backdrop-blur-md border border-white/20 shadow-lg">
                             <div className="text-center px-4 border-r border-white/20">
                                 <p className="text-[10px] font-black uppercase opacity-70 mb-1 text-purple-100 tracking-wider">To'g'ri</p>
-                                <p className="text-3xl font-black">{summary.correct_answers}</p>
+                                <p className="text-3xl font-black">{summary.raw_score}</p>
                             </div>
                             <div className="text-center px-4">
                                 <p className="text-[10px] font-black uppercase opacity-70 mb-1 text-purple-100 tracking-wider">CEFR Ball</p>
@@ -141,18 +138,17 @@ export default function ListeningResultPage() {
                 </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-slate-100 border-b border-slate-100 bg-white">
-                    <StatItem icon={<Hash size={18} />} label="Savollar" value={`${summary.total_questions}`} />
-                    <StatItem icon={<CheckCircle2 size={18} className="text-emerald-500" />} label="To'g'ri" value={`${summary.correct_answers}`} />
+                    <StatItem icon={<Hash size={18} />} label="Savollar" value={totalQuestions} />
+                    <StatItem icon={<CheckCircle2 size={18} className="text-emerald-500" />} label="To'g'ri" value={summary.raw_score} />
                     <StatItem
                         icon={<BarChart3 size={18} className="text-blue-500" />}
                         label="Samaradorlik"
-                        value={summary.total_questions > 0 ? `${Math.round((summary.correct_answers / summary.total_questions) * 100)}%` : "0%"}
+                        value={`${summary.percentage}%`}
                     />
                     <StatItem icon={<Award size={18} className="text-purple-500" />} label="Daraja" value={summary.cefr_level || "—"} />
                 </div>
             </div>
 
-            {/* JAVOBLAR GRIDI */}
             <div className="bg-white rounded-[35px] border border-slate-100 p-8 shadow-xl shadow-slate-200/40">
                 <div className="flex items-center justify-between mb-8">
                     <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 uppercase tracking-tight">
@@ -172,18 +168,18 @@ export default function ListeningResultPage() {
                         <div key={index} className="group relative">
                             <div className={`w-full aspect-square rounded-2xl flex items-center justify-center font-black text-sm transition-all border shadow-sm cursor-default
                                 ${item.is_correct
-                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-500 hover:text-white hover:shadow-emerald-200'
-                                    : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-500 hover:text-white hover:shadow-rose-200'}`}>
+                                    ? 'bg-emerald-50 text-emerald-600 border-emerald-100 hover:bg-emerald-500 hover:text-white'
+                                    : 'bg-rose-50 text-rose-600 border-rose-100 hover:bg-rose-500 hover:text-white'}`}>
                                 {item.question_number}
                             </div>
 
-                            {/* Custom Tooltip */}
-                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-4 bg-slate-900 text-white rounded-[20px] text-[11px] opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 z-30 shadow-2xl scale-95 group-hover:scale-100 translate-y-2 group-hover:translate-y-0">
+                            {/* Tooltip */}
+                            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 w-48 p-4 bg-slate-900 text-white rounded-[20px] text-[11px] opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-300 z-30 shadow-2xl scale-95 group-hover:scale-100">
                                 <p className="opacity-60 uppercase font-black mb-2 border-b border-white/10 pb-1">Savol {item.question_number}</p>
                                 <div className="space-y-1.5">
                                     <p className="font-bold flex flex-col">
                                         <span className="text-[9px] opacity-50 uppercase tracking-wider">Sizning javob:</span>
-                                        <span className={item.is_correct ? "text-emerald-400 text-sm" : "text-rose-400 text-sm line-through decoration-rose-500/50"}>
+                                        <span className={item.is_correct ? "text-emerald-400 text-sm" : "text-rose-400 text-sm line-through"}>
                                             {item.user_answer || "(Belgilanmagan)"}
                                         </span>
                                     </p>
