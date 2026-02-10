@@ -52,46 +52,74 @@ export default function ExamPage() {
         setIsSubmitting(true);
         isExamFinished.current = true;
 
-        // searchParams dan haqiqiy Mock Exam ID sini olamiz
-        // Agar bu yo'q bo'lsa, URL dan examId ni ham olish kerak bo'ladi
+        // URL parametrlarini olish
         const actualMockExamId = searchParams.get("examId");
+        const attemptIdFromUrl = searchParams.get("attemptId");
 
+        // 1. Javoblarni Backend kutgan formatga o'tkazamiz
+        // Swagger: { "answers": [ { "question_id": 0, "answers": ["string"] } ] }
         const finalAnswers = { ...answersRef.current };
         const formattedAnswersArray = Object.entries(finalAnswers).map(([dbId, value]) => ({
             question_id: Number(dbId),
+            // Javob har doim massiv ichida string bo'lishi kerak
             answers: Array.isArray(value) ? value.map(String) : [String(value)]
         }));
 
         try {
-            if (mode === "mock" && attemptId) {
-                console.log("Submitting as Mock. Attempt ID:", attemptId);
-
+            if (mode === "mock" && attemptIdFromUrl) {
+                // 🟢 MOCK REJIM
+                console.log("Submitting as Mock...");
                 await submitMockSkillAPI(
-                    Number(attemptId),
+                    Number(attemptIdFromUrl),
                     "READING",
                     0,
                     { answers: formattedAnswersArray }
                 );
 
                 toast.success("Reading yakunlandi");
-
-                // LocalStorage ni tozalash
                 localStorage.removeItem(`reading-${testId}-started`);
+                router.push(`/dashboard/exams/process/${attemptIdFromUrl}?examId=${actualMockExamId || testId}`);
 
-                // 🛑 ASOSIY TUZATISH SHU YERDA:
-                // examId uchun testId emas, actualMockExamId (Mock Exam ID) uzatilishi shart
-                router.push(`/dashboard/exams/process/${attemptId}?examId=${actualMockExamId}`);
             } else {
-                // Oddiy topshirish mantiqi...
+                // 🔵 ODDIY REJIM (Practice)
+                // Swagger dagi namunangizga ko'ra aynan shu format kerak:
+                const submissionData = {
+                    answers: formattedAnswersArray,
+                    exam_attempt_id: null // Practice bo'lgani uchun null yoki yubormaslik mumkin
+                };
+
+                console.log("🚀 Backend kutayotgan Payload yuborilmoqda:", submissionData);
+
+                const response = await submitReadingExamAPI(String(testId), submissionData);
+
+                toast.success("Test yakunlandi");
+
+                // LocalStorage tozalash
+                localStorage.removeItem(`reading-${testId}-started`);
+                localStorage.removeItem(`reading-${testId}-answers`);
+                localStorage.removeItem(`reading-${testId}-time`);
+
+                // Natija sahifasiga yo'naltirish
+                // response.data ichidan id ni tekshiring (backend qaytarayotgan modelga ko'ra)
+                const resultId = response.data.id || response.data.summary?.id;
+                router.push(`/dashboard/result/reading/view?id=${resultId}`);
             }
         } catch (err: any) {
-            console.error("FULL ERROR DETAILS:", err.response?.data);
-            toast.error("Xatolik: " + (err.response?.data?.detail || "Noma'lum xato"));
-            setIsSubmitting(false); // Xato bo'lsa qayta urinish uchun
+            console.error("❌ BACKEND ERROR:", err.response?.data);
+
+            // Xatoni tahlil qilish
+            const detail = err.response?.data?.detail;
+            if (Array.isArray(detail)) {
+                toast.error(`Format xatosi: ${detail[0]?.msg || "Backend ma'lumotni rad etdi"}`);
+            } else {
+                toast.error("Natijani saqlashda xatolik yuz berdi");
+            }
+
+            setIsSubmitting(false);
             isExamFinished.current = false;
         }
-    }, [testId, mode, attemptId, isSubmitting, router, searchParams]);
-
+    }, [testId, mode, isSubmitting, router, searchParams]);
+    
     // --- 📥 DATA FETCHING ---
     useEffect(() => {
         if (!testId) return;
