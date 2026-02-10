@@ -11,11 +11,14 @@ import { jwtDecode } from 'jwt-decode';
  */
 export const SocialAuthButtons = () => {
     return (
-        <div className="flex w-full flex-col lg:flex-row items-stretch lg:items-center gap-4 lg:gap-3 mt-4">
-            <div className="flex-1 w-full min-w-0">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full mt-4 items-center">
+            {/* Google Wrapper */}
+            <div className="h-[44px] w-full">
                 <GoogleSignInButton />
             </div>
-            <div className="flex-1 w-full min-w-0 flex justify-center">
+            
+            {/* Telegram Wrapper */}
+            <div className="h-[44px] w-full flex justify-center items-center border border-slate-200 rounded-xl bg-white overflow-hidden">
                 <TelegramSignInWidget />
             </div>
         </div>
