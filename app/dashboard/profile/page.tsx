@@ -39,6 +39,7 @@ export default function ProfilePage() {
     const [newPhone, setNewPhone] = useState("")
     const [isSendingOTP, setIsSendingOTP] = useState(false)
 
+    // Memoized values
     const isGoogleUser = useMemo(() => user?.provider === 'google.com', [user]);
     const phoneContact = useMemo(() => contacts.find(c => c.contact_type === 'phone'), [contacts]);
     const emailContact = useMemo(() => contacts.find(c => c.contact_type === 'email'), [contacts]);
@@ -72,48 +73,44 @@ export default function ProfilePage() {
         }
     }, [user, loadData])
 
-    const getTelegramLink = () => {
-        const purePhone = newPhone.replace(/\D/g, "");
-        if (isGoogleUser) return `https://t.me/EnwisAuthBot?start=${purePhone}/${user?.id}`;
+    // Telegram link generator
+    const getTelegramLink = (phoneVal: string) => {
+        const purePhone = phoneVal.replace(/\D/g, "");
+        // Agar google foydalanuvchisi bo'lsa yoki yangi raqam qo'shayotgan bo'lsa start parametrini yuboramiz
+        if (isGoogleUser || !phoneContact) {
+            return `https://t.me/EnwisAuthBot?start=${purePhone}_${user?.id}`;
+        }
         return `https://t.me/EnwisAuthBot?start=verify_phone`;
     };
 
     const handleStartVerification = async () => {
-        const purePhone = newPhone.replace(/\D/g, "");
+        // Agar raqam kontaktda bo'lsa o'shani oladi, bo'lmasa inputdagini
+        const phoneToVerify = phoneContact ? phoneContact.value : newPhone.replace(/\D/g, "");
 
-        // 1. Validatsiya
-        if (!phoneContact && purePhone.length < 12) {
+        if (!phoneContact && phoneToVerify.length < 12) {
             return toast.error("Iltimos, telefon raqamingizni to'liq kiriting");
         }
 
-        const phoneToVerify = phoneContact ? phoneContact.value : purePhone;
         setIsSendingOTP(true);
 
         try {
-            // API so'rovini yuboramiz
             await addContactStart({
                 type: 'phone',
                 value: phoneToVerify
             });
 
-            // OTP modalini ko'rsatamiz
             setShowOTPModal(true);
             toast.info("Tasdiqlash kodi Telegram botga yuborildi");
 
-            // BRAUZER BLOKIROVKASINI OLDINI OLISH: 
-            // Foydalanuvchi interaksiyasidan keyin darhol botni ochamiz
-            const botLink = getTelegramLink();
-
-            // Agar window.open ishlamasa, foydalanuvchiga qo'lda ochish uchun havola beramiz
+            // Botni ochish
+            const botLink = getTelegramLink(phoneToVerify);
             const newWindow = window.open(botLink, '_blank');
-            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
-                toast.warning("Brauzer botni ochishni blokladi. Iltimos, popup oynalarga ruxsat bering.");
+            if (!newWindow) {
+                toast.warning("Brauzer botni ochishni blokladi. Iltimos botga o'tib kodni oling.");
             }
-
         } catch (err: any) {
-            console.error("Xatolik:", err);
-            const errorMsg = err.response?.data?.detail || err.response?.data?.message || "Xatolik yuz berdi";
-            toast.error(errorMsg);
+            const msg = err.response?.data?.detail || "Xatolik yuz berdi";
+            toast.error(msg);
         } finally {
             setIsSendingOTP(false);
         }
@@ -123,9 +120,10 @@ export default function ProfilePage() {
         if (otpCode.length < 6) return toast.error("6 xonali kodni kiriting");
         setLoading(true);
         try {
+            const currentPhone = phoneContact ? phoneContact.value : newPhone.replace(/\D/g, "");
             await addContactVerify({
                 type: 'phone',
-                value: phoneContact ? phoneContact.value : newPhone.replace(/\D/g, ""),
+                value: currentPhone,
                 code: otpCode
             });
             await refreshUser();
@@ -133,7 +131,11 @@ export default function ProfilePage() {
             setShowOTPModal(false);
             setOtpCode("");
             toast.success("Telefon raqami tasdiqlandi!");
-        } catch { toast.error("Kod noto'g'ri yoki eskirgan") } finally { setLoading(false) }
+        } catch { 
+            toast.error("Kod noto'g'ri yoki eskirgan");
+        } finally { 
+            setLoading(false);
+        }
     }
 
     const handleUpdateProfile = async () => {
@@ -143,7 +145,7 @@ export default function ProfilePage() {
             await refreshUser();
             setIsEditing(false);
             toast.success("Profil yangilandi");
-        } catch { toast.error("Xatolik: Saqlab bo'lmadi") } finally { setLoading(false) }
+        } catch { toast.error("Saqlab bo'lmadi") } finally { setLoading(false) }
     }
 
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -155,7 +157,7 @@ export default function ProfilePage() {
             await uploadAvatar(file);
             await refreshUser();
             toast.success("Profil rasmi yangilandi");
-        } catch { toast.error("Rasmni yuklashda xatolik") } finally { setLoading(false) }
+        } catch { toast.error("Xatolik yuz berdi") } finally { setLoading(false) }
     }
 
     return (
@@ -251,7 +253,9 @@ export default function ProfilePage() {
                                         <div className={`p-3 rounded-xl shadow-sm ${phoneContact?.is_verified ? 'bg-white text-emerald-500' : 'bg-white text-amber-500'}`}><Phone size={20} /></div>
                                         <div className="flex-1">
                                             <p className="text-[9px] font-black text-slate-400 uppercase">Telefon raqam</p>
-                                            {phoneContact ? <p className="text-sm font-bold text-slate-700">{phoneContact.value}</p> : (
+                                            {phoneContact ? (
+                                                <p className="text-sm font-bold text-slate-700">{phoneContact.value}</p>
+                                            ) : (
                                                 <IMaskInput mask="+{998} (00) 000-00-00" value={newPhone} unmask={true} onAccept={(v) => setNewPhone(v)} placeholder="+998 (__) ___-__-__" className="bg-transparent text-sm font-bold outline-none w-full text-slate-700" />
                                             )}
                                         </div>
@@ -260,7 +264,8 @@ export default function ProfilePage() {
                                 </div>
                                 {!phoneContact?.is_verified && (
                                     <button onClick={handleStartVerification} disabled={isSendingOTP} className="w-full py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-                                        {isSendingOTP ? <Loader2 className="animate-spin" size={14} /> : <SmartphoneNfc size={14} />} Botda tasdiqlash
+                                        {isSendingOTP ? <Loader2 className="animate-spin" size={14} /> : <SmartphoneNfc size={14} />} 
+                                        {phoneContact ? "Tasdiqlashni yakunlash" : "Botda tasdiqlash"}
                                     </button>
                                 )}
                             </div>
@@ -284,7 +289,6 @@ export default function ProfilePage() {
                         </p>
                     </div>
 
-                    {/* SESSIONS BLOCK WITH SCROLL */}
                     <div className="bg-white rounded-[40px] border border-slate-200 p-6 shadow-sm flex flex-col h-[400px]">
                         <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
                             <Lock size={14} className="text-blue-500" /> Faol sessiyalar
