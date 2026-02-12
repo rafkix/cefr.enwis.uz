@@ -21,55 +21,35 @@ export default function ProfilePage() {
     const { user, refreshUser, logout } = useAuth()
     const fileInputRef = useRef<HTMLInputElement>(null)
     
-    // States
     const [isEditing, setIsEditing] = useState(false)
     const [loading, setLoading] = useState(false)
     const [uploading, setUploading] = useState(false)
     const [sessions, setSessions] = useState<UserSession[]>([])
     const [contacts, setContacts] = useState<UserContact[]>([])
     const [checking, setChecking] = useState(false)
-    const [phoneInput, setPhoneInput] = useState("")
+    const [phoneInput, setPhoneInput] = useState("+998")
     const [isAddingPhone, setIsAddingPhone] = useState(false)
 
     const [formData, setFormData] = useState<UpdateProfilePayload>({
         full_name: "", bio: "", birth_date: "", gender: 'male'
     })
 
-    // Memoized Data
     const phoneContact = useMemo(() => contacts.find(c => c.contact_type === 'phone'), [contacts]);
     const emailContact = useMemo(() => contacts.find(c => c.contact_type === "email"), [contacts]);
     const latestSessions = useMemo(() => sessions.slice(0, 3), [sessions]);
 
+    // --- YANGILANGAN BOT LINKI MANTIGI ---
     const telegramBotLink = useMemo(() => {
-        const userId = user?.id || "unknown";
-        if (!phoneContact?.value) {
-            const cleanPhone = phoneInput.replace(/\+/g, "");
-            return `https://t.me/EnwisAuthBot?start=${cleanPhone}_${userId}`;
+        // Agar raqam bazada bo'lsa (Google/Telegramdan kirmagan yoki kiritib bo'lingan holat)
+        if (phoneContact?.value) {
+            return "https://t.me/EnwisAuthBot?start=verify_phone";
         }
-        return "https://t.me/EnwisAuthBot?start=verify_phone";
-    }, [phoneContact, user, phoneInput]);
+        // Agar yangi raqam biriktirilayotgan bo'lsa
+        const userId = user?.id || "";
+        const cleanPhone = phoneInput.replace(/\D/g, "");
+        return `https://t.me/EnwisAuthBot?start=${cleanPhone}_${userId}`;
+    }, [user, phoneContact, phoneInput]);
 
-    // Helpers
-    const calculateAge = useCallback((birthDate: string | undefined) => {
-        if (!birthDate) return "—";
-        const birth = new Date(birthDate);
-        const today = new Date();
-        let age = today.getFullYear() - birth.getFullYear();
-        const m = today.getMonth() - birth.getMonth();
-        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
-        return age < 0 ? 0 : age;
-    }, []);
-
-    const formatDate = (dateStr: string | undefined) => {
-        if (!dateStr) return "Kiritilmagan";
-        try {
-            return new Date(dateStr).toLocaleDateString('uz-UZ', {
-                day: 'numeric', month: 'long', year: 'numeric'
-            });
-        } catch { return "Xato sana"; }
-    };
-
-    // Actions
     const loadData = useCallback(async () => {
         try {
             const [sessRes, contRes] = await Promise.all([getMySessions(), getMyContacts()]);
@@ -92,21 +72,30 @@ export default function ProfilePage() {
         }
     }, [user, loadData]);
 
-    const handleAddPhone = async () => {
+    const handleSavePhone = async () => {
         const cleanPhone = phoneInput.replace(/\s/g, "");
-        if (!cleanPhone.startsWith("+998") || cleanPhone.length !== 13) {
-            toast.error("Raqamni +998XXXXXXXXX formatida kiriting");
+        if (cleanPhone.length < 9) {
+            toast.error("Raqamni to'g'ri kiriting");
             return;
         }
+
         setLoading(true);
         try {
-            await updateProfile({ ...formData, phone: cleanPhone } as any);
+            const payload: any = {
+                full_name: formData.full_name,
+                phone: cleanPhone
+            };
+            if (formData.bio) payload.bio = formData.bio;
+            if (formData.birth_date) payload.birth_date = formData.birth_date;
+            if (formData.gender) payload.gender = formData.gender;
+
+            await updateProfile(payload);
             await refreshUser();
             await loadData();
             setIsAddingPhone(false);
-            toast.success("Raqam saqlandi!");
-        } catch {
-            toast.error("Raqamni saqlashda xatolik");
+            toast.success("Raqam saqlandi. Endi bot orqali tasdiqlang.");
+        } catch (err) {
+            toast.error("Raqamni saqlashda xatolik yuz berdi");
         } finally {
             setLoading(false);
         }
@@ -126,10 +115,6 @@ export default function ProfilePage() {
     const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error("Rasm hajmi 5MB dan oshmasligi kerak");
-            return;
-        }
         setUploading(true);
         try {
             await uploadAvatar(file);
@@ -159,12 +144,12 @@ export default function ProfilePage() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0b] py-12 px-4 selection:bg-blue-500/30">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0b] py-12 px-4">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
 
-                {/* LEFT COLUMN */}
+                {/* LEFT SIDE: AVATAR & STATS */}
                 <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
-                    <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5 text-center relative overflow-hidden">
+                    <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5 text-center relative">
                         <div className="relative inline-block mb-6">
                             <div className="w-32 h-32 rounded-[40px] overflow-hidden ring-4 ring-blue-500/5 shadow-2xl bg-slate-100 dark:bg-white/5">
                                 {user?.profile?.avatar_url ? (
@@ -182,105 +167,88 @@ export default function ProfilePage() {
                                     </div>
                                 )}
                             </div>
-                            <button 
-                                onClick={() => fileInputRef.current?.click()} 
-                                className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-3 rounded-2xl shadow-lg hover:scale-110 active:scale-90 transition-all"
-                            >
+                            <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-3 rounded-2xl shadow-lg hover:scale-110 transition-transform">
                                 <Camera size={18} />
                             </button>
                             <input type="file" ref={fileInputRef} className="hidden" onChange={handleAvatarUpload} accept="image/*" />
                         </div>
                         
-                        <h1 className="text-2xl font-black dark:text-white leading-tight break-words">
+                        <h1 className="text-2xl font-black dark:text-white leading-tight mb-6">
                             {user?.profile?.full_name || "Ism kiritilmagan"}
                         </h1>
-                        <p className="text-blue-500 font-bold text-sm mb-6">@{user?.profile?.username || "username"}</p>
 
                         <div className="flex gap-2">
-                            <button 
-                                onClick={() => setIsEditing(true)} 
-                                className="flex-1 bg-slate-50 dark:bg-white/5 dark:text-white py-4 rounded-2xl font-black text-[10px] tracking-widest border dark:border-white/5 hover:bg-white dark:hover:bg-white/10 transition-all uppercase flex items-center justify-center gap-2"
-                            >
-                                <Settings2 size={16} /> Tahrirlash
+                            <button onClick={() => setIsEditing(true)} className="flex-1 bg-slate-50 dark:bg-white/5 dark:text-white py-4 rounded-2xl font-black text-[10px] tracking-widest border dark:border-white/5 flex items-center justify-center gap-2 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors">
+                                <Settings2 size={16} /> TAHRIRLASH
                             </button>
-                            <button 
-                                onClick={logout} 
-                                className="p-4 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl border border-red-100 dark:border-red-500/20 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
-                            >
+                            <button onClick={logout} className="p-4 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl border border-red-100 dark:border-red-500/20 hover:bg-red-100 transition-colors">
                                 <LogOut size={20} />
                             </button>
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <StatCard label="Yosh" value={calculateAge(user?.profile?.birth_date)} />
-                        <StatCard label="Jins" value={user?.profile?.gender === 'male' ? 'Erkak' : 'Ayol'} />
-                    </div>
-
                     <div className="bg-white dark:bg-[#151516] rounded-[32px] p-6 border dark:border-white/5 shadow-sm">
                         <div className="flex items-center gap-3 mb-4 text-blue-500">
                             <ShieldAlert size={20} />
-                            <p className="font-black text-xs uppercase tracking-widest">Hisob holati</p>
+                            <p className="font-black text-xs uppercase tracking-widest">Xavfsizlik</p>
                         </div>
                         <div className="space-y-3">
-                            <StatusRow 
-                                label="Tasdiqlangan" 
-                                icon={<BadgeCheck className={phoneContact?.is_verified ? "text-green-500" : "text-slate-300"} size={16} />} 
-                            />
-                            <StatusRow 
-                                label="Ikki bosqichli" 
-                                icon={<div className={`w-2.5 h-2.5 rounded-full ${phoneContact?.is_verified ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-slate-300"}`} />} 
-                            />
+                            <StatusRow label="Tasdiqlangan" icon={<BadgeCheck className={phoneContact?.is_verified ? "text-green-500" : "text-slate-300"} size={16} />} />
+                            <StatusRow label="Telegram ulanishi" icon={<div className={`w-2.5 h-2.5 rounded-full ${phoneContact?.is_verified ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.5)]" : "bg-slate-300"}`} />} />
                         </div>
                     </div>
                 </div>
 
-                {/* RIGHT COLUMN */}
+                {/* RIGHT SIDE: INFO & CONTACTS */}
                 <div className="lg:col-span-8 space-y-6">
                     <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5">
                         <h3 className="text-lg font-black dark:text-white mb-8 flex items-center gap-2">
-                            <Info size={22} className="text-blue-500" /> Shaxsiy ma'lumotlar
+                            <Info size={22} className="text-blue-500" /> Profil ma'lumotlari
                         </h3>
                         
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <InfoItem
                                 icon={<Phone className="text-green-500" />}
-                                label="Telefon"
-                                value={isAddingPhone ? "" : (phoneContact?.value || "Ulanmagan")}
+                                label="Telefon raqami"
+                                value={phoneContact?.value || "Kiritilmagan"}
                                 verified={phoneContact?.is_verified}
                                 action={
                                     <div className="ml-auto">
+                                        {/* 1. Raqam yo'q bo'lsa */}
                                         {!phoneContact && !isAddingPhone && (
                                             <button 
-                                                onClick={() => setIsAddingPhone(true)} 
-                                                className="text-[10px] font-black text-white bg-blue-500 px-3 py-2 rounded-xl uppercase hover:bg-blue-600 transition-colors"
+                                                onClick={() => setIsAddingPhone(true)}
+                                                className="text-[10px] font-black text-white bg-blue-600 px-4 py-2 rounded-xl hover:scale-105 transition-transform uppercase"
                                             >
-                                                Kiritish
+                                                Biriktirish
                                             </button>
                                         )}
 
+                                        {/* 2. Raqam kiritish inputi */}
                                         {!phoneContact && isAddingPhone && (
                                             <div className="flex items-center gap-1 bg-slate-100 dark:bg-white/10 p-1 rounded-xl border dark:border-white/10">
                                                 <input
                                                     autoFocus
                                                     value={phoneInput}
-                                                    placeholder="+998"
                                                     onChange={e => setPhoneInput(e.target.value)}
-                                                    className="bg-transparent border-none outline-none text-[11px] font-bold dark:text-white px-2 w-28"
+                                                    className="bg-transparent border-none outline-none text-[12px] font-black dark:text-white px-2 w-28"
                                                 />
-                                                <button onClick={handleAddPhone} className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600"><Check size={14} /></button>
-                                                <button onClick={() => setIsAddingPhone(false)} className="p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600"><X size={14} /></button>
+                                                <button onClick={handleSavePhone} className="p-1.5 bg-green-500 text-white rounded-lg hover:bg-green-600">
+                                                    {loading ? <Loader2 className="animate-spin" size={14}/> : <Check size={14} />}
+                                                </button>
+                                                <button onClick={() => setIsAddingPhone(false)} className="p-1.5 bg-red-500 text-white rounded-lg"><X size={14} /></button>
                                             </div>
                                         )}
 
+                                        {/* 3. Raqam bor lekin tasdiqlanmagan (Siz so'ragan asosiy qism) */}
                                         {phoneContact && !phoneContact.is_verified && (
                                             <a
                                                 href={telegramBotLink}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                className="text-[10px] font-black text-white bg-[#0088cc] px-3 py-2 rounded-xl uppercase flex items-center gap-2 hover:brightness-110 transition-all"
+                                                className="text-[10px] font-black text-white bg-[#0088cc] px-4 py-2 rounded-xl flex items-center gap-2 hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-blue-500/20"
                                             >
-                                                <SendHorizontal size={12} /> Tasdiqlash
+                                                <SendHorizontal size={14} /> BOTGA O'TISH
                                             </a>
                                         )}
                                     </div>
@@ -288,20 +256,20 @@ export default function ProfilePage() {
                             />
 
                             <InfoItem icon={<Mail className="text-orange-500" />} label="Email" value={emailContact?.value || "—"} verified={true} />
-                            <InfoItem icon={<Clock className="text-blue-400" />} label="Ro'yxatdan o'tilgan" value={formatDate(user?.created_at)} />
-                            <InfoItem icon={<Calendar className="text-purple-500" />} label="Tug'ilgan sana" value={`${formatDate(user?.profile?.birth_date)} (${calculateAge(user?.profile?.birth_date)})`} />
-                            <InfoItem icon={<Heart className="text-pink-500" />} label="BIO" value={user?.profile?.bio || "Bio ma'lumoti mavjud emas"} isFullWidth />
+                            <InfoItem icon={<Clock className="text-blue-400" />} label="Ro'yxatdan o'tilgan" value={user?.created_at ? new Date(user.created_at).toLocaleDateString() : "—"} />
+                            <InfoItem icon={<Heart className="text-pink-500" />} label="BIO" value={user?.profile?.bio || "Bio ma'lumoti yo'q"} isFullWidth />
                         </div>
 
+                        {/* Tasdiqlashdan keyin yangilash tugmasi */}
                         {phoneContact && !phoneContact.is_verified && (
                             <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-500/5 rounded-[24px] border border-blue-100 dark:border-blue-500/10 flex items-center justify-between gap-4">
-                                <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400">Bot orqali tasdiqlab bo'ldingizmi?</p>
+                                <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 italic">Botda tasdiqlashni yakunladingizmi?</p>
                                 <button
                                     onClick={handleCheckStatus}
                                     disabled={checking}
-                                    className="px-6 py-2 bg-white dark:bg-white/10 rounded-xl text-[10px] font-black text-blue-500 border border-blue-200 dark:border-blue-500/20 uppercase hover:bg-blue-50 dark:hover:bg-white/20 transition-all disabled:opacity-50"
+                                    className="px-6 py-2 bg-white dark:bg-white/10 rounded-xl text-[10px] font-black text-blue-500 border border-blue-200 hover:bg-blue-500 hover:text-white transition-all"
                                 >
-                                    {checking ? <Loader2 className="animate-spin" size={14} /> : "Tekshirish"}
+                                    {checking ? <Loader2 className="animate-spin" size={14} /> : "STATUSNI YANGILASH"}
                                 </button>
                             </div>
                         )}
@@ -309,44 +277,28 @@ export default function ProfilePage() {
 
                     {/* SESSIONS */}
                     <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-black dark:text-white flex items-center gap-2">
-                                <SmartphoneNfc size={22} className="text-blue-500" /> Oxirgi sessiyalar
-                            </h3>
-                            <span className="text-[10px] font-black bg-slate-100 dark:bg-white/5 px-3 py-1 rounded-full text-slate-500 uppercase tracking-tighter">
-                                Faol qurilmalar
-                            </span>
-                        </div>
+                        <h3 className="text-lg font-black dark:text-white mb-6 flex items-center gap-2">
+                            <SmartphoneNfc size={22} className="text-blue-500" /> Oxirgi sessiyalar
+                        </h3>
                         <div className="space-y-3">
-                            {latestSessions.length > 0 ? latestSessions.map((s) => (
-                                <div key={s.id} className="flex items-center justify-between p-5 rounded-[28px] bg-slate-50 dark:bg-white/5 border dark:border-white/5 group transition-all hover:border-blue-500/20">
+                            {latestSessions.map((s) => (
+                                <div key={s.id} className="flex items-center justify-between p-5 rounded-[28px] bg-slate-50 dark:bg-white/5 border dark:border-white/5 group transition-all">
                                     <div className="flex items-center gap-4">
-                                        <div className={`p-4 rounded-2xl transition-colors ${s.is_current ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-white/10 text-slate-400'}`}>
+                                        <div className={`p-4 rounded-2xl ${s.is_current ? 'bg-blue-500 text-white' : 'bg-white dark:bg-white/10 text-slate-400'}`}>
                                             {s.user_agent.toLowerCase().includes('mobile') ? <Smartphone size={20} /> : <Globe size={20} />}
                                         </div>
-                                        <div className="min-w-0">
-                                            <div className="flex items-center gap-2">
-                                                <p className="font-bold dark:text-white text-sm">{s.ip_address}</p>
-                                                {s.is_current && <span className="text-[8px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse">ONLINE</span>}
-                                            </div>
+                                        <div>
+                                            <p className="font-bold dark:text-white text-sm">{s.ip_address} {s.is_current && <span className="ml-2 text-[8px] bg-green-500 text-white px-2 py-0.5 rounded-full uppercase tracking-tighter">Hozirgi</span>}</p>
                                             <p className="text-[11px] text-slate-400 font-medium truncate max-w-[150px] md:max-w-xs">{s.user_agent.split('(')[0]}</p>
                                         </div>
                                     </div>
                                     {!s.is_current && (
-                                        <button 
-                                            onClick={() => handleTerminate(s.id)} 
-                                            className="p-3 text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all md:opacity-0 md:group-hover:opacity-100"
-                                            title="Sessiyani yakunlash"
-                                        >
+                                        <button onClick={() => handleTerminate(s.id)} className="p-3 text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all opacity-0 group-hover:opacity-100">
                                             <Trash2 size={18} />
                                         </button>
                                     )}
                                 </div>
-                            )) : (
-                                <div className="text-center py-8 bg-slate-50 dark:bg-white/5 rounded-[28px] border-2 border-dashed border-slate-200 dark:border-white/5">
-                                    <p className="text-slate-400 text-sm font-medium">Sessiyalar topilmadi</p>
-                                </div>
-                            )}
+                            ))}
                         </div>
                     </div>
                 </div>
@@ -356,61 +308,32 @@ export default function ProfilePage() {
             <AnimatePresence>
                 {isEditing && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                        <motion.div 
-                            initial={{ opacity: 0, y: 20, scale: 0.95 }} 
-                            animate={{ opacity: 1, y: 0, scale: 1 }} 
-                            exit={{ opacity: 0, y: 20, scale: 0.95 }} 
-                            className="bg-white dark:bg-[#1c1c1d] w-full max-w-xl rounded-[40px] p-8 md:p-10 relative shadow-2xl border dark:border-white/10"
-                        >
-                            <button onClick={() => setIsEditing(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-white/5 rounded-full dark:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-colors"><X size={20} /></button>
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-[#1c1c1d] w-full max-w-xl rounded-[40px] p-8 relative border dark:border-white/10 shadow-2xl">
+                            <button onClick={() => setIsEditing(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-white/5 rounded-full dark:text-white hover:rotate-90 transition-transform"><X size={20} /></button>
+                            <h2 className="text-2xl font-black dark:text-white mb-8 uppercase tracking-tight">Profilni tahrirlash</h2>
                             
-                            <h2 className="text-2xl font-black dark:text-white mb-8">Profilni tahrirlash</h2>
-                            
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="col-span-2 space-y-2">
+                            <div className="space-y-6">
+                                <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">To'liq ism-sharif</label>
-                                    <input 
-                                        value={formData.full_name} 
-                                        onChange={e => setFormData({ ...formData, full_name: e.target.value })} 
-                                        className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500/50 dark:text-white font-bold transition-all border border-transparent focus:border-blue-500" 
-                                    />
+                                    <input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none border border-transparent focus:border-blue-500 dark:text-white font-bold transition-all" />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Jins</label>
-                                    <select 
-                                        value={formData.gender} 
-                                        onChange={e => setFormData({ ...formData, gender: e.target.value as any })} 
-                                        className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold transition-all border border-transparent focus:border-blue-500 appearance-none"
-                                    >
-                                        <option value="male">Erkak</option>
-                                        <option value="female">Ayol</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Tug'ilgan sana</label>
-                                    <input 
-                                        type="date" 
-                                        value={formData.birth_date} 
-                                        onChange={e => setFormData({ ...formData, birth_date: e.target.value })} 
-                                        className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold transition-all border border-transparent focus:border-blue-500" 
-                                    />
-                                </div>
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Bio</label>
-                                    <textarea 
-                                        value={formData.bio} 
-                                        onChange={e => setFormData({ ...formData, bio: e.target.value })} 
-                                        className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500/50 dark:text-white font-medium min-h-[100px] transition-all border border-transparent focus:border-blue-500 resize-none" 
-                                    />
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Jins</label>
+                                        <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value as any })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl dark:text-white font-bold appearance-none outline-none border border-transparent focus:border-blue-500 transition-all">
+                                            <option value="male">Erkak</option>
+                                            <option value="female">Ayol</option>
+                                        </select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Tug'ilgan sana</label>
+                                        <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl dark:text-white font-bold outline-none border border-transparent focus:border-blue-500 transition-all" />
+                                    </div>
                                 </div>
                             </div>
                             
-                            <button 
-                                onClick={handleUpdateProfile} 
-                                disabled={loading} 
-                                className="w-full mt-8 py-5 bg-blue-500 text-white rounded-[24px] font-black shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center"
-                            >
-                                {loading ? <Loader2 className="animate-spin" /> : "SAQLASH"}
+                            <button onClick={handleUpdateProfile} disabled={loading} className="w-full mt-8 py-5 bg-blue-500 text-white rounded-[24px] font-black shadow-xl disabled:opacity-50 hover:brightness-110 active:scale-[0.98] transition-all">
+                                {loading ? <Loader2 className="animate-spin mx-auto" /> : "SAQLASH"}
                             </button>
                         </motion.div>
                     </div>
@@ -420,16 +343,8 @@ export default function ProfilePage() {
     )
 }
 
-// --- HELPER COMPONENTS ---
-
-const StatCard = ({ label, value }: { label: string, value: any }) => (
-    <div className="bg-white dark:bg-[#151516] p-6 rounded-[32px] border dark:border-white/5 text-center shadow-sm hover:shadow-md transition-all group">
-        <p className="text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest group-hover:text-blue-500 transition-colors">{label}</p>
-        <p className="text-2xl font-black dark:text-white">{value}</p>
-    </div>
-);
-
-const StatusRow = ({ label, icon }: { label: string, icon: any }) => (
+// --- SMALL COMPONENTS ---
+const StatusRow = ({ label, icon }: any) => (
     <div className="flex items-center justify-between text-[13px] font-bold dark:text-slate-300">
         <span className="opacity-70">{label}</span>
         {icon}
@@ -438,12 +353,12 @@ const StatusRow = ({ label, icon }: { label: string, icon: any }) => (
 
 function InfoItem({ icon, label, value, verified, isFullWidth, action }: any) {
     return (
-        <div className={`p-5 rounded-[30px] bg-white dark:bg-white/5 border dark:border-white/5 flex items-center gap-4 ${isFullWidth ? 'md:col-span-2' : ''} shadow-sm transition-all hover:bg-slate-50 dark:hover:bg-white/[0.07]`}>
-            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-white/10 flex items-center justify-center shrink-0 shadow-inner group-hover:scale-110 transition-transform">{icon}</div>
+        <div className={`p-5 rounded-[30px] bg-white dark:bg-white/5 border dark:border-white/5 flex items-center gap-4 ${isFullWidth ? 'md:col-span-2' : ''} shadow-sm transition-all hover:border-blue-500/20`}>
+            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-white/10 flex items-center justify-center shrink-0">{icon}</div>
             <div className="min-w-0 flex-1">
                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
                 <div className="flex items-center gap-1.5 overflow-hidden">
-                    <p className={`font-bold text-[13px] truncate ${value === "Ulanmagan" || value === "—" ? "text-slate-400" : "dark:text-white"}`}>{value}</p>
+                    <p className={`font-bold text-[13px] truncate ${value === "Kiritilmagan" ? "text-slate-400 italic" : "dark:text-white"}`}>{value}</p>
                     {verified && <ShieldCheck size={14} className="text-blue-500 shrink-0" />}
                 </div>
             </div>
