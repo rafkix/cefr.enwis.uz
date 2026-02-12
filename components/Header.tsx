@@ -105,7 +105,7 @@ export function Header() {
                             </Link>
                         ))}
                         <button 
-                            onClick={() => router.push("/auth/phone")}
+                            onClick={() => router.push("/auth/login")}
                             className="mt-4 w-full bg-[#17776A] text-white py-4 rounded-xl font-bold text-lg"
                         >
                             Tizimga kirish
