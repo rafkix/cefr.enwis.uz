@@ -1,19 +1,19 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 import {
     Camera, Loader2, Phone, ShieldCheck,
     Smartphone, UserCircle2, Mail, Trash2,
     Calendar, User2, Settings2,
-    Check, X, ShieldAlert, SmartphoneNfc,
+    Check, ShieldAlert, SmartphoneNfc,
     Globe, Lock, LogOut
 } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import {
     updateProfile, uploadAvatar, getMySessions,
     getMyContacts, terminateSession,
-    addContactStart, addContactVerify
+    addContactStart
 } from "@/lib/api/user"
 import { UserSession, UserContact, UpdateProfilePayload } from "@/lib/types/user"
 import { formatDistanceToNow } from "date-fns"
@@ -34,10 +34,8 @@ export default function ProfilePage() {
         full_name: "", bio: "", birth_date: "", gender: 'male'
     })
 
-    const [showOTPModal, setShowOTPModal] = useState(false)
-    const [otpCode, setOtpCode] = useState("")
     const [newPhone, setNewPhone] = useState("")
-    const [isSendingOTP, setIsSendingOTP] = useState(false)
+    const [isSendingToBot, setIsSendingToBot] = useState(false)
 
     // Memoized values
     const isGoogleUser = useMemo(() => user?.provider === 'google.com', [user]);
@@ -76,65 +74,37 @@ export default function ProfilePage() {
     // Telegram link generator
     const getTelegramLink = (phoneVal: string) => {
         const purePhone = phoneVal.replace(/\D/g, "");
-        // Agar google foydalanuvchisi bo'lsa yoki yangi raqam qo'shayotgan bo'lsa start parametrini yuboramiz
         if (isGoogleUser || !phoneContact) {
             return `https://t.me/EnwisAuthBot?start=${purePhone}_${user?.id}`;
         }
         return `https://t.me/EnwisAuthBot?start=verify_phone`;
     };
 
-    const handleStartVerification = async () => {
-        // Agar raqam kontaktda bo'lsa o'shani oladi, bo'lmasa inputdagini
+    const handleBotRedirect = async () => {
         const phoneToVerify = phoneContact ? phoneContact.value : newPhone.replace(/\D/g, "");
 
         if (!phoneContact && phoneToVerify.length < 12) {
             return toast.error("Iltimos, telefon raqamingizni to'liq kiriting");
         }
 
-        setIsSendingOTP(true);
+        setIsSendingToBot(true);
 
         try {
+            // API ga xabar berish (ixtiyoriy, agar backend kutsa)
             await addContactStart({
                 type: 'phone',
                 value: phoneToVerify
             });
 
-            setShowOTPModal(true);
-            toast.info("Tasdiqlash kodi Telegram botga yuborildi");
-
-            // Botni ochish
+            // To'g'ridan-to'g'ri botga yuborish
             const botLink = getTelegramLink(phoneToVerify);
-            const newWindow = window.open(botLink, '_blank');
-            if (!newWindow) {
-                toast.warning("Brauzer botni ochishni blokladi. Iltimos botga o'tib kodni oling.");
-            }
+            window.open(botLink, '_blank');
+            toast.info("Tasdiqlash uchun Telegram botga o'ting");
         } catch (err: any) {
             const msg = err.response?.data?.detail || "Xatolik yuz berdi";
             toast.error(msg);
         } finally {
-            setIsSendingOTP(false);
-        }
-    }
-
-    const handleVerifyOTP = async () => {
-        if (otpCode.length < 6) return toast.error("6 xonali kodni kiriting");
-        setLoading(true);
-        try {
-            const currentPhone = phoneContact ? phoneContact.value : newPhone.replace(/\D/g, "");
-            await addContactVerify({
-                type: 'phone',
-                value: currentPhone,
-                code: otpCode
-            });
-            await refreshUser();
-            await loadData();
-            setShowOTPModal(false);
-            setOtpCode("");
-            toast.success("Telefon raqami tasdiqlandi!");
-        } catch { 
-            toast.error("Kod noto'g'ri yoki eskirgan");
-        } finally { 
-            setLoading(false);
+            setIsSendingToBot(false);
         }
     }
 
@@ -263,9 +233,9 @@ export default function ProfilePage() {
                                     {phoneContact?.is_verified && <ShieldCheck className="text-emerald-500" size={18} />}
                                 </div>
                                 {!phoneContact?.is_verified && (
-                                    <button onClick={handleStartVerification} disabled={isSendingOTP} className="w-full py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-                                        {isSendingOTP ? <Loader2 className="animate-spin" size={14} /> : <SmartphoneNfc size={14} />} 
-                                        {phoneContact ? "Tasdiqlashni yakunlash" : "Botda tasdiqlash"}
+                                    <button onClick={handleBotRedirect} disabled={isSendingToBot} className="w-full py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                        {isSendingToBot ? <Loader2 className="animate-spin" size={14} /> : <SmartphoneNfc size={14} />} 
+                                        {phoneContact ? "Bot orqali tasdiqlash" : "Botda davom ettirish"}
                                     </button>
                                 )}
                             </div>
@@ -285,7 +255,7 @@ export default function ProfilePage() {
                             <motion.div initial={{ width: 0 }} animate={{ width: `${completion}%` }} className={`h-full rounded-full ${completion === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium">
-                            {completion < 100 ? "Profilingizni to'liq to'ldirib, himoyani 100% ga yetkazing." : "Tabriklaymiz! Profilingiz to'liq himoyalangan."}
+                            {completion < 100 ? "Profilingizni bot orqali tasdiqlab, himoyani 100% ga yetkazing." : "Tabriklaymiz! Profilingiz to'liq himoyalangan."}
                         </p>
                     </div>
 
@@ -325,26 +295,6 @@ export default function ProfilePage() {
                     </button>
                 </div>
             </div>
-
-            {/* OTP MODAL */}
-            <AnimatePresence>
-                {showOTPModal && (
-                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="bg-white rounded-[40px] p-8 sm:p-10 max-w-sm w-full text-center shadow-2xl relative">
-                            <button onClick={() => setShowOTPModal(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600"><X size={20} /></button>
-                            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6"><SmartphoneNfc size={40} /></div>
-                            <h3 className="text-2xl font-black text-slate-900 mb-2">Botdagi kodni kiriting</h3>
-                            <input type="text" maxLength={6} value={otpCode} onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))} className="w-full text-center text-4xl font-black tracking-[10px] p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:border-blue-500 outline-none mb-8" placeholder="000000" />
-                            <div className="flex gap-4">
-                                <button onClick={() => setShowOTPModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase">Yopish</button>
-                                <button onClick={handleVerifyOTP} disabled={loading || otpCode.length < 6} className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg hover:bg-blue-700">
-                                    {loading ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Tasdiqlash"}
-                                </button>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
