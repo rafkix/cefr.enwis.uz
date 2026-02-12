@@ -1,309 +1,205 @@
-    // "use client"
+"use client"
 
-    // import { useState, useEffect, useRef } from "react"
-    // import { useRouter, useParams } from "next/navigation"
-    // import { Loader2, Sparkles, Clock, CheckCircle2, UserCircle } from "lucide-react"
-    // // import { writingSets, type EvaluationResult } from "@/lib/exams/writing/data"
-    // import { WritingEvaluationModal } from "@/components/writing-evaluation-modal"
+import { useState, useEffect, useRef } from "react"
+import { Camera, BookOpen, PenTool } from "lucide-react"
+import ExamHeader from "@/components/exam/exam-header"
 
-    // export default function WritingTestPage() {
-    //     const router = useRouter()
-    //     const { testId } = useParams<{ testId: string }>()
+export default function WritingTestPage() {
+    const taskOrder = ["1.1", "1.2", "2"]
+    const [responses, setResponses] = useState<Record<string, string>>({ "1.1": "", "1.2": "", "2": "" })
+    const [fontSizes, setFontSizes] = useState<Record<string, number>>({ "1.1": 18, "1.2": 18, "2": 18 })
+    const [visibleTask, setVisibleTask] = useState("1.1")
+    const [activeTab, setActiveTab] = useState<"question" | "answer">("answer")
 
-    //     // --- DATA ---
-    //     // const test = writingSets.find((t) => t.id === testId)
+    // Yozish paytida navigatsiyani yashirish uchun holat
+    const [isTyping, setIsTyping] = useState(false)
 
-    //     // --- STATE ---
-    //     const [activePart, setActivePart] = useState<string>(test?.tasks[0]?.part || "")
-    //     const [responses, setResponses] = useState<Record<string, string>>({})
-    //     const [timeRemaining, setTimeRemaining] = useState(3600)
-    //     const [fontSize, setFontSize] = useState(16)
+    const taskRefs: Record<string, React.RefObject<HTMLDivElement | null>> = {
+        "1.1": useRef<HTMLDivElement | null>(null),
+        "1.2": useRef<HTMLDivElement | null>(null),
+        "2": useRef<HTMLDivElement | null>(null),
+    }
 
-    //     // --- REFS ---
-    //     const promptRefs = useRef<Record<string, HTMLDivElement | null>>({})
-    //     const inputRefs = useRef<Record<string, HTMLDivElement | null>>({})
-    //     const videoRef = useRef<HTMLVideoElement>(null)
+    const containerRef = useRef<HTMLDivElement>(null)
 
-    //     // --- FLAGS ---
-    //     const [isCameraOn, setIsCameraOn] = useState(false)
-    //     const [isEvaluating, setIsEvaluating] = useState(false)
-    //     const [evaluation, setEvaluation] = useState<EvaluationResult | null>(null)
-    //     const [showEvaluation, setShowEvaluation] = useState(false)
-    //     const [isSubmitting, setIsSubmitting] = useState(false)
+    useEffect(() => {
+        const handleScroll = () => {
+            if (window.innerWidth < 1024) return
+            const scrollPos = containerRef.current?.scrollTop || 0
+            for (const id of taskOrder) {
+                const ref = taskRefs[id]
+                if (ref.current && Math.abs(ref.current.offsetTop - scrollPos - 30) < 200) {
+                    setVisibleTask(id)
+                }
+            }
+        }
+        const container = containerRef.current
+        container?.addEventListener("scroll", handleScroll)
+        return () => container?.removeEventListener("scroll", handleScroll)
+    }, [])
 
-    //     // --- TIMER & CAMERA ---
-    //     useEffect(() => {
-    //         const i = setInterval(() => setTimeRemaining((t) => Math.max(t - 1, 0)), 1000)
-    //         async function startCam() {
-    //             try {
-    //                 const stream = await navigator.mediaDevices.getUserMedia({ video: true })
-    //                 if (videoRef.current) {
-    //                     videoRef.current.srcObject = stream
-    //                     setIsCameraOn(true)
-    //                 }
-    //             } catch (e) { console.error(e) }
-    //         }
-    //         startCam()
-    //         return () => clearInterval(i)
-    //     }, [])
+    const scrollToTask = (task: string) => {
+        setActiveTab("answer")
+        setTimeout(() => {
+            taskRefs[task].current?.scrollIntoView({ behavior: "smooth" })
+            setVisibleTask(task)
+        }, 100)
+    }
 
-    //     const formatTime = (s: number) => {
-    //         const m = Math.floor(s / 60).toString().padStart(2, "0")
-    //         const sec = (s % 60).toString().padStart(2, "0")
-    //         return `${m}:${sec}`
-    //     }
+    const changeFontSize = (task: string, delta: number) => {
+        setFontSizes(prev => ({ ...prev, [task]: Math.min(Math.max(prev[task] + delta, 12), 32) }))
+    }
 
-    //     // --- ACTIONS ---
-    //     const handleNavClick = (part: string) => {
-    //         setActivePart(part)
-    //         // Ikkala tomonni ham scroll qilamiz
-    //         promptRefs.current[part]?.scrollIntoView({ behavior: "smooth", block: "center" })
-    //         inputRefs.current[part]?.scrollIntoView({ behavior: "smooth", block: "center" })
-    //     }
-
-    //     const handleZoomIn = () => setFontSize(p => Math.min(p + 1, 24))
-    //     const handleZoomOut = () => setFontSize(p => Math.max(p - 1, 14))
-
-    //     const handleCheckAI = async (part: string) => {
-    //         const currentTask = test?.tasks.find(t => t.part === part)
-    //         if (!currentTask) return
-    //         const text = responses[part] || ""
-    //         if (text.length < 5) return alert("Matn juda qisqa.")
-
-    //         setIsEvaluating(true)
-    //         try {
-    //             const res = await fetch("/api/evaluate-writing", {
-    //                 method: "POST",
-    //                 headers: { "Content-Type": "application/json" },
-    //                 body: JSON.stringify({
-    //                     taskPart: part,
-    //                     taskPrompt: `${currentTask.instruction}\n\n${currentTask.prompt}`,
-    //                     userAnswer: text
-    //                 })
-    //             })
-    //             const data = await res.json()
-    //             setEvaluation(data)
-    //             setShowEvaluation(true)
-    //         } finally {
-    //             setIsEvaluating(false)
-    //         }
-    //     }
-
-    //     const handleSubmit = async () => {
-    //         if (!confirm("Testni yakunlaysizmi?")) return
-    //         setIsSubmitting(true)
-    //         setTimeout(() => {
-    //             setIsSubmitting(false)
-    //             router.push(`/test/writing/${testId}/result`)
-    //         }, 1000)
-    //     }
-
-    //     if (!test) return <div>Loading...</div>
-
-    //     return (
-    //         <div className="flex flex-col h-screen bg-[#F5F7FA] font-sans text-slate-800 overflow-hidden select-none">
-
-    //             {/* ================= HEADER 1-QAVAT (Sarlavha & User) ================= */}
-    //             <div className="flex-none h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 z-40">
-    //                 {/* Chap: Logo */}
-    //                 <div className="flex items-center gap-3">
-    //                     <div className="bg-[#00BFFF] w-2 h-8 rounded-r"></div>
-    //                     <h1 className="text-2xl font-extrabold text-gray-700 tracking-wide uppercase">Yozish Qismi</h1>
-    //                 </div>
-
-    //                 {/* O'ng: User */}
-    //                 <div className="flex items-center gap-3">
-    //                     <div className="text-right hidden sm:block">
-    //                         <p className="text-sm font-bold text-gray-800">Abdullayev Abdulla</p>
-    //                         <p className="text-xs text-gray-500">ID: 2409821</p>
-    //                     </div>
-    //                     <div className="bg-gray-100 p-2 rounded-full text-gray-600 border border-gray-300">
-    //                         <UserCircle size={24} />
-    //                     </div>
-    //                 </div>
-    //             </div>
-
-    //             {/* ================= MAIN CONTENT ================= */}
-    //             <div className="flex flex-1 overflow-hidden">
-
-    //                 {/* --- CHAP: INPUTLAR (45%) --- */}
-    //                 <div className="w-[45%] h-full overflow-y-auto bg-white border-r border-gray-300 p-5 scroll-smooth">
-    //                     <div className="flex flex-col gap-8 pb-32">
-    //                         {test.tasks.map((task) => {
-    //                             const isActive = activePart === task.part
-    //                             return (
-    //                                 <div
-    //                                     key={task.part}
-    //                                     ref={(el) => { inputRefs.current[task.part] = el }}
-    //                                     onClick={() => handleNavClick(task.part)}
-    //                                     className={`flex flex-col bg-white border transition-all duration-300 rounded-sm
-    //                                 ${isActive ? 'border-[#00BFFF] shadow-md ring-2 ring-blue-50' : 'border-gray-300 hover:border-gray-400'}`}
-    //                                 >
-    //                                     <div className={`px-4 py-2.5 flex justify-between items-center border-b
-    //                                 ${isActive ? 'bg-[#00BFFF] text-white' : 'bg-gray-100 text-gray-600'}`}>
-    //                                         <span className="font-bold text-lg">Task {task.part}</span>
-    //                                         {isActive && (
-    //                                             <button
-    //                                                 onClick={(e) => { e.stopPropagation(); handleCheckAI(task.part); }}
-    //                                                 className="bg-white/20 hover:bg-white/30 text-white text-xs font-bold px-2 py-1 rounded flex items-center gap-1"
-    //                                             >
-    //                                                 {isEvaluating ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-    //                                                 AI
-    //                                             </button>
-    //                                         )}
-    //                                     </div>
-    //                                     <textarea
-    //                                         className="w-full min-h-[220px] p-4 resize-y outline-none text-gray-800 text-base leading-relaxed rounded-b-sm"
-    //                                         style={{ fontSize: `${fontSize}px` }}
-    //                                         value={responses[task.part] || ""}
-    //                                         onChange={(e) => setResponses({ ...responses, [task.part]: e.target.value })}
-    //                                         placeholder="Javobingizni shu yerga yozing..."
-    //                                     />
-    //                                     <div className="bg-gray-50 px-3 py-1 text-right text-xs font-bold text-gray-500 border-t">
-    //                                         Words: {(responses[task.part] || "").split(/\s+/).filter(Boolean).length} / {task.minWords}
-    //                                     </div>
-    //                                 </div>
-    //                             )
-    //                         })}
-    //                     </div>
-    //                 </div>
-
-    //                 {/* --- O'NG: MATN VA SAVOLLAR (TOZALANGAN) --- */}
-    //                 <div className="flex-1 h-full overflow-y-auto bg-white relative scroll-smooth">
-    //                     <div className="p-10 pb-40 max-w-3xl mx-auto" style={{ fontSize: `${fontSize}px` }}>
-
-    //                         {/* Context (Umumiy matn) - Hech qanday ramka va yozuvsiz */}
-    //                         {test.sharedContext && (
-    //                             <div className="mb-10 text-gray-800 leading-loose italic">
-    //                                 {test.sharedContext}
-    //                             </div>
-    //                         )}
-
-    //                         {/* Tasks List - Chiziqlar olib tashlandi */}
-    //                         {test.tasks.map((task) => {
-    //                             return (
-    //                                 <div
-    //                                     key={task.part}
-    //                                     ref={(el) => { promptRefs.current[task.part] = el }}
-    //                                     className="mb-16 scroll-mt-32" // Har bir task orasida joy
-    //                                 >
-    //                                     {/* Task Nomi (Masalan: Task 1.1) */}
-    //                                     <h3 className="font-bold mb-4 text-xl text-[#00BFFF]">
-    //                                         Task {task.part}
-    //                                     </h3>
-
-    //                                     {/* Yo'riqnoma */}
-    //                                     <p className="font-bold text-gray-900 mb-3">
-    //                                         {task.instruction}
-    //                                     </p>
-
-    //                                     {/* Savol matni */}
-    //                                     <div className="text-gray-800 leading-relaxed whitespace-pre-wrap">
-    //                                         {task.prompt}
-    //                                     </div>
-
-    //                                     {/* So'z limiti */}
-    //                                     {task.minWords && (
-    //                                         <p className="mt-2 text-sm text-gray-500 font-bold">
-    //                                             Min: {task.minWords} words
-    //                                         </p>
-    //                                     )}
-    //                                 </div>
-    //                             )
-    //                         })}
-    //                     </div>
-    //                 </div>
-
-    //                 {/* Chap va O'ng o'rtasida joylashgan vertikal liniya */}
-    //                 <div className="w-[80px] h-full bg-[#E9ECEF] border-x border-gray-300 flex flex-col items-center justify-center gap-4 shadow-inner z-20">
-
-    //                     {/* Dinamik Tugmalar (Kvadrat shaklda) */}
-    //                     {test.tasks.map((task, index) => (
-    //                         <div key={task.part} className="flex flex-col items-center w-full">
-    //                             <button
-    //                                 onClick={() => handleNavClick(task.part)}
-    //                                 className={`
-    //                     w-14 h-14 flex items-center justify-center font-bold text-sm rounded-md shadow-sm transition-all duration-200
-    //                     ${activePart === task.part
-    //                                         ? 'bg-[#00BFFF] text-white border-2 border-[#00BFFF] scale-110 shadow-lg'
-    //                                         : 'bg-white text-gray-600 border-2 border-gray-300 hover:border-[#00BFFF] hover:text-[#00BFFF]'}
-    //                 `}
-    //                             >
-    //                                 {task.part}
-    //                             </button>
-    //                         </div>
-    //                     ))}
-
-    //                 </div>
-
-    //             </div>
-
-    //             {/* ================= VEB-KAMERA ================= */}
-    //             <div className="fixed bottom-4 right-4 w-52 h-40 bg-black rounded shadow-2xl border-2 border-white overflow-hidden z-50 cursor-move">
-    //                 <video
-    //                     ref={videoRef}
-    //                     autoPlay
-    //                     muted
-    //                     className="w-full h-full object-cover transform scale-x-[-1]"
-    //                 />
-    //                 <div className="absolute top-2 left-2 flex items-center gap-1.5 bg-black/60 px-2 py-0.5 rounded-full backdrop-blur-sm">
-    //                     <div className={`w-2 h-2 rounded-full ${isCameraOn ? 'bg-red-500 animate-pulse' : 'bg-gray-500'}`}></div>
-    //                     <span className="text-[9px] font-bold text-white tracking-wider">REC</span>
-    //                 </div>
-    //             </div>
-
-    //             <WritingEvaluationModal
-    //                 open={showEvaluation}
-    //                 onOpenChange={setShowEvaluation}
-    //                 evaluation={evaluation}
-    //                 taskPart={activePart}
-    //             />
-    //         </div>
-    //     )
-    // }
-
-    "use client"
-
-import { useRouter } from "next/navigation"
-import { Construction, ArrowLeft, PenTool } from "lucide-react"
-
-export default function WritingMaintenancePage() {
-    const router = useRouter()
+    const getWordCount = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 p-6 text-center">
-            
-            {/* Icon qismi */}
-            <div className="relative mb-8">
-                <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center animate-pulse">
-                    <Construction size={48} className="text-blue-600" />
-                </div>
-                <div className="absolute -bottom-2 -right-2 w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-md border border-slate-100">
-                    <PenTool size={20} className="text-slate-400" />
-                </div>
+        <div className="flex flex-col h-screen bg-[#F3F4F6] font-sans overflow-hidden">
+            <ExamHeader currentSection="writing" />
+
+            {/* MOBILE TAB BAR - Yozayotganda yashirinadi */}
+            <div className={`lg:hidden flex bg-white border-b border-gray-200 shrink-0 transition-all duration-300 ${isTyping ? "h-0 overflow-hidden opacity-0" : "h-auto opacity-100"}`}>
+                <button
+                    onClick={() => setActiveTab("question")}
+                    className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-all ${activeTab === "question" ? "text-blue-600 border-b-4 border-blue-600 bg-blue-50" : "text-gray-400"}`}
+                >
+                    <BookOpen size={18} /> Question
+                </button>
+                <button
+                    onClick={() => setActiveTab("answer")}
+                    className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-all ${activeTab === "answer" ? "text-[#22D3EE] border-b-4 border-[#22D3EE] bg-cyan-50" : "text-gray-400"}`}
+                >
+                    <PenTool size={18} /> Javob
+                </button>
             </div>
 
-            {/* Matn qismi */}
-            <h1 className="text-3xl md:text-4xl font-black text-slate-800 mb-4 uppercase tracking-tight">
-                Tez Kunda!
-            </h1>
-            <p className="text-slate-500 max-w-md mx-auto mb-8 font-medium leading-relaxed">
-                Writing (Yozish) moduli ustida hozirda texnik ishlar olib borilmoqda. 
-                Tez orada to'liq funksional holda taqdim etiladi.
-            </p>
+            <main className="flex flex-1 overflow-hidden relative">
 
-            {/* Tugma */}
-            <button 
-                onClick={() => router.back()}
-                className="flex items-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold hover:bg-blue-600 transition-all active:scale-95 shadow-xl shadow-slate-200"
-            >
-                <ArrowLeft size={20} />
-                Orqaga qaytish
-            </button>
-            
-            <p className="mt-12 text-xs font-bold text-slate-300 uppercase tracking-widest">
-                Enwis Development Team
-            </p>
+                {/* --- JAVOBLAR SECTION --- */}
+                <section
+                    ref={containerRef}
+                    className={`
+                        w-full lg:w-1/2 h-full overflow-y-auto p-4 lg:p-10 custom-scrollbar scroll-smooth
+                        ${activeTab === "answer" ? "block" : "hidden lg:block"}
+                    `}
+                >
+                    <div className="space-y-12 pb-80">
+                        {taskOrder.map((taskId) => (
+                            <div
+                                key={taskId}
+                                id={`task-${taskId}`} // Navigatsiya ishlashi uchun ID muhim
+                                ref={taskRefs[taskId]}
+                                className="rounded-3xl border-2 border-[#22D3EE] overflow-hidden shadow-lg flex flex-col resize-y min-h-[350px] bg-white group"
+                                style={{ height: taskId === "2" ? "550px" : "450px" }}
+                            >
+                                {/* Task Header */}
+                                <div className="bg-[#22D3EE] p-5 flex justify-between items-center text-white shrink-0">
+                                    <span className="font-black text-2xl italic uppercase tracking-tighter">Task {taskId}</span>
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex items-center bg-white/20 rounded-xl p-1 border border-white/30">
+                                            <button onClick={() => changeFontSize(taskId, -2)} className="px-3 hover:bg-white/20 rounded-lg font-bold transition-colors">-a</button>
+                                            <div className="w-[1px] h-4 bg-white/40 mx-1" />
+                                            <button onClick={() => changeFontSize(taskId, 2)} className="px-3 hover:bg-white/20 rounded-lg font-bold transition-colors">A+</button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Textarea */}
+                                <div className="flex-1 min-h-0">
+                                    <textarea
+                                        style={{ fontSize: `${fontSizes[taskId]}px` }}
+                                        onFocus={() => setIsTyping(true)}
+                                        onBlur={() => setIsTyping(false)}
+                                        className="w-full h-full p-8 outline-none leading-relaxed text-gray-700 font-medium transition-all bg-transparent custom-scrollbar resize-none"
+                                        placeholder={`Task ${taskId} uchun javobingizni shu yerga yozing...`}
+                                        value={responses[taskId]}
+                                        onChange={(e) => setResponses({ ...responses, [taskId]: e.target.value })}
+                                    />
+                                </div>
+
+                                {/* Word Counter */}
+                                <div className={`p-4 bg-slate-50 text-right font-black text-sm border-t shrink-0 ${getWordCount(responses[taskId]) === 0 ? 'text-red-400' : 'text-[#22D3EE]'}`}>
+                                    {getWordCount(responses[taskId])} TA SO'Z
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* --- SAVOLLAR SECTION --- */}
+                <section className={`
+                    w-full lg:w-1/2 h-full overflow-y-auto p-6 lg:p-12 bg-[#F3F4F6] border-l border-gray-200 relative custom-scrollbar
+                    ${activeTab === "question" ? "block" : "hidden lg:block"}
+                `}>
+                    <div className="max-w-5xl mx-auto bg-white rounded-[20px] shadow-sm border border-gray-100 p-12 space-y-10 mb-20">
+                        {/* Part 1 */}
+                        <div className="text-center space-y-4">
+                            <h3 className="text-3xl font-black uppercase">Part 1</h3>
+                        </div>
+                        <p className="font-bold leading-tight text-xl">You are a member of a fitness club. You received an email from the manager of the club.</p>
+                        <div className="text-lg leading-relaxed text-slate-600">
+                            Dear Member, <br /><br />
+                            I am sorry to inform you that the fitness center is closing for a month from next Monday.
+                            The building needs some repairs and we also plan to install some new equipment.
+                            What else do you think should be changed? As the center will not be operating for a month,
+                            what kind of alternative activities should we organize in the meantime? We appreciate your opinion very much. <br /><br />
+                            The Manager.
+                        </div>
+
+                        <div className="space-y-6">
+                            <div>
+                                <h4 className="font-black text-xl text-slate-800">Task 1.1</h4>
+                                <p className="italic text-lg">Write a letter to your friend, who is also a member of the club. Write about your feelings and what you think the club management should do about the situation. Write about 50 words.</p>
+                            </div>
+                            <div>
+                                <h4 className="font-black text-xl text-slate-800">Task 1.2</h4>
+                                <p className="italic text-lg">Write a letter to the manager. Write about your feelings and what you think the club management should do about the situation. Write about 120-150 words.</p>
+                            </div>
+                        </div>
+
+                        <div className="pt-10 border-t">
+                            <h3 className="text-3xl font-black uppercase text-center mb-6">Part 2</h3>
+                            <p className="text-lg leading-relaxed">
+                                You are participating in an online discussion for language learners. <br />
+                                The question is: <b>“Is it better to live in a big city or a small town?”</b> <br />
+                                Post your response, giving reasons and examples. <br />
+                                Write 180-200 words.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Yozayotganda (isTyping) navigatsiya tugmalari butunlay yashiriladi */}
+                <section className="w-1/16">
+                    <div className={`fixed lg:absolute right-6 top-1/2 -translate-y-1/2 lg:flex flex-col gap-5 z-50 transition-all duration-300
+                    ${isTyping ? "max-lg:opacity-0 max-lg:pointer-events-none" : "flex opacity-100"}
+                `}>
+                        {taskOrder.map((id) => (
+                            <button
+                                key={id}
+                                onClick={() => scrollToTask(id)}
+                                className={`w-15 h-15 rounded-[20px] font-black shadow-lg transition-all flex flex-col items-center justify-center text-center leading-[1.1] tracking-tighter border-4 
+                                ${visibleTask === id
+                                        ? "bg-blue-600 text-white scale-110 border-blue-200 shadow-blue-300"
+                                        : "bg-blue-100 text-blue-400 border-transparent hover:bg-blue-200"
+                                    }`}
+                            >
+                                <span className={visibleTask === id ? "text-xl" : "text-lg"}>{id}</span>
+                                {visibleTask === id && <span className="text-[10px] uppercase font-black mt-1">task</span>}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* CAMERA */}
+                    <div className="hidden lg:flex absolute bottom-6 right-8 w-48 h-28 bg-[#22D3EE] rounded-2xl border-4 border-white shadow-2xl items-center justify-center overflow-hidden">
+                        <Camera className="text-white opacity-20" size={50} />
+                        <div className="absolute bottom-2 left-4 flex items-center gap-2">
+                            <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+                            <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">camera</span>
+                        </div>
+                    </div>
+                </section>
+
+            </main>
         </div>
     )
 }

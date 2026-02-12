@@ -1,7 +1,8 @@
 "use client"
 
-import React from "react"
-import { Map, Type, ListChecks, HelpCircle } from "lucide-react"
+import React, { useLayoutEffect, useRef, useState } from "react"
+import { Map, Type, ListChecks, HelpCircle, Check, X, ChevronDown } from "lucide-react"
+import { createPortal } from "react-dom"
 
 // Tipni kengaytiramiz (35 ta savol va 6 tur uchun)
 type ListeningQuestionType =
@@ -92,24 +93,121 @@ export function TextEntryRenderer({ answer, onInputChange, fontSize = 16, placeh
     )
 }
 
-// 3. MATCHING (Part 3 - Moslashtirish)
-export function MatchingRenderer({ question, answer, onAnswer, fontSize = 16 }: any) {
+
+export function MatchingDropdown({ q, qId, answer, onAnswer, onSelect, isActive }: any) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [menuStyle, setMenuStyle] = useState<React.CSSProperties>({});
+    const buttonRef = useRef<HTMLButtonElement>(null);
+
+    const updatePosition = () => {
+        if (!buttonRef.current || !isOpen) return;
+        const rect = buttonRef.current.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+        const menuHeight = 250; // Taxminiy max-balandlik
+        const opensUpwards = viewportHeight - rect.bottom < menuHeight;
+
+        setMenuStyle({
+            position: "fixed",
+            left: `${rect.left}px`,
+            width: `${rect.width}px`,
+            top: opensUpwards ? "auto" : `${rect.bottom + 4}px`,
+            bottom: opensUpwards ? `${viewportHeight - rect.top + 4}px` : "auto",
+            zIndex: 9999,
+        });
+    };
+
+    useLayoutEffect(() => {
+        if (isOpen) {
+            updatePosition();
+            window.addEventListener("scroll", updatePosition, { capture: true });
+        }
+        return () => window.removeEventListener("scroll", updatePosition, { capture: true });
+    }, [isOpen]);
+
+    const selectedOption = q.options?.find((opt: any) => opt.value === answer);
+
     return (
-        <div className="relative">
-            <select
-                value={answer}
-                onChange={(e) => onAnswer(e.target.value)}
-                className="w-full px-3 py-3 rounded-xl border-2 border-gray-100 bg-white focus:border-blue-500 outline-none appearance-none font-bold text-gray-700 cursor-pointer transition-all"
-                style={{ fontSize: `${fontSize - 2}px` }}
-            >
-                <option value="">-- Variantni tanlang --</option>
-                {question.options?.map((opt: any) => (
-                    <option key={opt.label} value={opt.label}>{opt.label}: {opt.value}</option>
-                ))}
-            </select>
-            <ListChecks className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+        <div
+            onClick={() => onSelect(Number(q.questionNumber))}
+            className={`p-6 rounded-[24px] border-2 transition-all bg-white flex flex-col justify-between h-full relative
+                ${isActive ? "border-blue-500 ring-4 ring-blue-500/5 shadow-md" : "border-slate-100 hover:border-slate-200"}`}
+        >
+            <div className="flex items-center gap-3 mb-5">
+                <span className={`w-8 h-8 rounded-full flex items-center justify-center text-[11px] font-black
+                    ${answer ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-400"}`}>
+                    {q.questionNumber}
+                </span>
+                <h3 className="font-bold text-slate-800 text-sm md:text-base">
+                    {q.question || `Speaker ${q.questionNumber}`}
+                </h3>
+            </div>
+
+            <div className="relative">
+                <button
+                    ref={buttonRef}
+                    onClick={(e) => { e.stopPropagation(); setIsOpen(!isOpen); }}
+                    className={`w-full flex items-center justify-between gap-3 p-3.5 rounded-xl border-2 transition-all text-left
+                        ${answer ? "border-blue-200 bg-blue-50/30" : "border-slate-100 bg-slate-50"}`}
+                >
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        {selectedOption ? (
+                            <>
+                                <span className="shrink-0 w-5 h-5 flex items-center justify-center rounded bg-blue-600 text-white text-[10px] font-bold">
+                                    {selectedOption.value}
+                                </span>
+                                <span className="font-semibold text-slate-800 truncate text-sm">
+                                    {selectedOption.label}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-slate-400 text-sm font-medium">Select Paragraph...</span>
+                        )}
+                    </div>
+                    <ChevronDown size={16} className={`text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {answer && (
+                    <button
+                        onClick={(e) => { e.stopPropagation(); onAnswer(qId, ""); }}
+                        className="absolute -top-2 -right-2 w-5 h-5 bg-white border border-slate-200 rounded-full flex items-center justify-center text-red-500 shadow-sm"
+                    >
+                        <X size={10} strokeWidth={3} />
+                    </button>
+                )}
+            </div>
+
+            {isOpen && createPortal(
+                <div
+                    className="bg-white border border-slate-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-100"
+                    style={menuStyle}
+                >
+                    <div className="overflow-y-auto max-h-[250px] p-1.5 custom-scrollbar">
+                        {q.options?.map((opt: any) => (
+                            <div
+                                key={opt.value}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    onAnswer(qId, opt.value);
+                                    setIsOpen(false);
+                                }}
+                                className={`flex items-start gap-3 p-2.5 rounded-lg cursor-pointer transition-colors
+                                    ${answer === opt.value ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                            >
+                                <span className={`shrink-0 w-5 h-5 mt-0.5 flex items-center justify-center rounded border text-[10px] font-black
+                                    ${answer === opt.value ? "bg-blue-600 text-white border-blue-600" : "bg-white text-slate-400 border-slate-200"}`}>
+                                    {opt.value}
+                                </span>
+                                <span className={`text-sm leading-tight ${answer === opt.value ? "font-bold text-blue-700" : "font-medium text-slate-600"}`}>
+                                    {opt.label}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>,
+                document.body
+            )}
         </div>
-    )
+    );
 }
 
 // 4. MAP / DIAGRAM LABELING (Part 4 - Xarita)
@@ -152,7 +250,7 @@ export default function ListeningQuestionRenderer({
             return <TextEntryRenderer {...props} placeholder="Note completion..." />
 
         case "MATCHING":
-            return <MatchingRenderer {...props} />
+            return <MatchingDropdown {...props} />
 
         case "MAP_DIAGRAM":
             return <MapLabelingRenderer {...props} />

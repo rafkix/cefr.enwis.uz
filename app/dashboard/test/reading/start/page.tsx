@@ -102,7 +102,7 @@ export default function ExamPage() {
                 // Natija sahifasiga yo'naltirish
                 // response.data ichidan id ni tekshiring (backend qaytarayotgan modelga ko'ra)
                 const resultId = response.data.id || response.data.summary?.id;
-                router.push(`/dashboard/result/reading/view?id=${resultId}`);
+                router.push(`/dashboard/results/reading/view?id=${resultId}`);
             }
         } catch (err: any) {
             console.error("❌ BACKEND ERROR:", err.response?.data);

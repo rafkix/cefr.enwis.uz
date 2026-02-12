@@ -23,7 +23,7 @@ export const GoogleSignInButton = () => {
 
     const handleGoogleLogin = () => {
         const GOOGLE_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-        
+
         if (!GOOGLE_ID || !(window as any).google) {
             alert("Google xizmati yuklanmadi. Sahifani yangilang.");
             return;
@@ -42,14 +42,14 @@ export const GoogleSignInButton = () => {
                             name: decoded.name,
                             picture: decoded.picture
                         });
-                        
+
                         await refreshUser();
-                        
+
                         // Yo'naltirish mantig'i
-                        const nextPath = clientIdParam 
-                            ? `/auth/authorize?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}` 
+                        const nextPath = clientIdParam
+                            ? `/auth/authorize?client_id=${clientIdParam}&redirect_uri=${redirectUri}&state=${state}`
                             : '/dashboard';
-                        
+
                         router.push(nextPath);
                     } catch (error: any) {
                         const errMsg = error.response?.data?.detail || "Google orqali kirishda xatolik";
@@ -116,7 +116,7 @@ export const TelegramSignInWidget = () => {
         script.src = "https://telegram.org/js/telegram-widget.js?22";
         script.async = true;
         script.setAttribute("data-telegram-login", "EnwisAuthBot");
-        script.setAttribute("data-size", "large"); 
+        script.setAttribute("data-size", "large");
         script.setAttribute("data-radius", "12");
         script.setAttribute("data-onauth", "onTelegramAuth(user)");
         script.setAttribute("data-request-access", "write");
@@ -128,38 +128,29 @@ export const TelegramSignInWidget = () => {
         }
     }, [clientId, redirectUri, state, refreshUser, router]);
 
+    // TelegramSignInWidget ichidagi return qismini shunday yangilang:
     return (
         <div className="w-full">
-            {/* 1. h-auto qilib o'zgartirdik, chunki profil rasmi chiqsa u 48px dan balandroq bo'lishi mumkin.
-                2. overflow-visible qildik, shunda profil rasm chetga chiqsa ham kesilmaydi.
-            */}
-            <div 
-                className="w-full min-h-[48px] flex items-center justify-center rounded-xl bg-white transition-colors hover:border-slate-300 relative"
+            <div
+                className="w-full h-[48px] flex items-center justify-center rounded-xl bg-white border border-transparent transition-all hover:border-slate-200 relative overflow-hidden shadow-sm"
             >
                 <div
                     ref={telegramWrapperRef}
-                    className="telegram-widget-container flex justify-center items-center py-1"
-                    style={{ 
-                        transform: 'scale(0.95)', // Kichraytirishni kamaytirdik
+                    className="telegram-widget-container flex justify-center items-center"
+                    style={{
+                        transform: 'scale(0.9)', // Bir oz kichraytirish sig'ishini ta'minlaydi
                         transformOrigin: 'center'
                     }}
                 />
             </div>
-            
+
             <style jsx global>{`
-                /* Iframe ichidagi elementlarni majburan markazlash va cheklovlarni olib tashlash */
-                .telegram-widget-container iframe {
-                    margin: 0 !important;
-                    display: block !important;
-                    /* max-height cheklovini olib tashladik, bu profil rasmini kessa kerak edi */
-                    min-height: 40px !important; 
-                }
-                
-                /* Agar profil rasmi (rasmdagi o'ng tomondagi icon) juda katta bo'lsa */
-                #tg-me-frame {
-                    max-width: 100% !important;
-                }
-            `}</style>
+            .telegram-widget-container iframe {
+                margin: 0 !important;
+                display: block !important;
+                min-height: 40px !important; 
+            }
+        `}</style>
         </div>
     );
 };

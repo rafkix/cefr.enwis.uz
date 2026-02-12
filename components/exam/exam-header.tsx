@@ -3,61 +3,39 @@
 import { useEffect, useState } from "react"
 import {
     Clock,
-    User,
-    BookOpen,
-    Headphones,
-    PenTool,
-    Mic,
-    Loader2
+    BookCheck,
+    Loader2,
+    BookOpen
 } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { authService } from "@/lib/api/auth" // API funksiyangiz
+import { authService } from "@/lib/api/auth"
 
 type SectionType = "reading" | "listening" | "writing" | "speaking" | "process"
 
 interface ExamHeaderProps {
     initialSeconds?: number
     currentSection: SectionType
+    onFinish?: () => void
 }
 
 const SECTION_CONFIG = {
-    reading: {
-        label: "O'qish qismi",
-        icon: BookOpen,
-        color: "bg-blue-600",
-    },
-    listening: {
-        label: "Tinglash qismi",
-        icon: Headphones,
-        color: "bg-indigo-600",
-    },
-    writing: {
-        label: "Yozish qismi",
-        icon: PenTool,
-        color: "bg-orange-600",
-    },
-    speaking: {
-        label: "Gapirish qismi",
-        icon: Mic,
-        color: "bg-red-600",
-    },
-    process: {
-        label: "Jarayaon",
-        icon: Mic,
-        color: "bg-green-600",
-    }
+    // Ikonkalar uchun PNG yo'llarini to'g'rilab chiqing
+    reading: { label: "O'qish tushunish qismi", icon: BookOpen },
+    listening: { label: "Tinglash tushunish qismi", icon: "/listening.png" },
+    writing: { label: "Yozish qismi", icon: "/writing.png" }, // /wrting xatosi tuzatildi
+    speaking: { label: "Gapirish qismi", icon: "/speaking.png" },
+    process: { label: "Imthon Jarayon", icon: BookCheck } // Bu Lucide komponenti bo'lib qolaveradi
 }
 
 export default function ExamHeader({
     initialSeconds = 3600,
     currentSection = "reading",
+    onFinish,
 }: ExamHeaderProps) {
     const [timeRemaining, setTimeRemaining] = useState(initialSeconds)
     const [userData, setUserData] = useState<{ full_name: string; avatar_url?: string } | null>(null)
     const [loadingUser, setLoadingUser] = useState(true)
 
-    // 1. Foydalanuvchi ma'lumotlarini olish
     useEffect(() => {
         const fetchUser = async () => {
             try {
@@ -72,7 +50,6 @@ export default function ExamHeader({
         fetchUser()
     }, [])
 
-    // 2. Timer logikasi
     useEffect(() => {
         if (timeRemaining <= 0) return
         const timer = setInterval(() => {
@@ -88,9 +65,9 @@ export default function ExamHeader({
     }
 
     const activeConfig = SECTION_CONFIG[currentSection]
-    const ActiveIcon = activeConfig.icon
+    // Ikonka turini aniqlaymiz
+    const IconContent = activeConfig.icon
 
-    // Ismning birinchi harflarini olish (Avatar fallback uchun)
     const getInitials = (name: string) => {
         return name?.split(" ").map(n => n[0]).join("").toUpperCase() || "U"
     }
@@ -99,36 +76,34 @@ export default function ExamHeader({
         <header className="sticky top-0 z-30 w-full border-b bg-white/80 backdrop-blur-md shadow-sm">
             <div className="flex items-center justify-between px-4 py-3 md:px-8">
 
-                {/* CHAP TOMON: BO'LIM NOMI */}
+                {/* CHAP TOMON: BO'LIM NOMI VA IKONKA */}
                 <div className="flex items-center gap-3">
-                    <Badge
-                        className={`${activeConfig.color} flex items-center gap-2 px-3 py-1.5 text-xs md:text-sm font-bold text-white border-none shadow-md`}
-                    >
-                        <ActiveIcon className="h-4 w-4" />
+                    <div className="flex items-center justify-center  text-[#17776A]">
+                        {typeof IconContent === 'string' ? (
+                            <img 
+                                src={IconContent} 
+                                alt="section icon" 
+                                className="h-12 w-12" 
+                            />
+                        ) : (
+                            // @ts-ignore - Lucide icon component
+                            <IconContent className="h-10 w-10" />
+                        )}
+                    </div>
+                    <p className="hidden text-xs font-black uppercase tracking-widest text-gray-500 sm:inline-block leading-none">
                         {activeConfig.label}
-                    </Badge>
-                    <div className="hidden h-6 w-px bg-gray-200 sm:block" />
-                    <span className="hidden text-xs font-black uppercase tracking-widest text-gray-400 sm:inline-block">
-                        Exam Session
-                    </span>
+                    </p>
                 </div>
 
-                {/* O'RTA: TIMER
-                <div className={`flex items-center gap-2 px-4 py-2 rounded-2xl transition-colors ${timeRemaining < 300 ? 'bg-red-50 text-red-600 animate-pulse' : 'bg-slate-50 text-slate-700'}`}>
-                    <Clock size={18} className={timeRemaining < 300 ? 'text-red-500' : 'text-slate-400'} />
-                    <span className="text-lg font-black tabular-nums tracking-tight">
-                        {formatTime(timeRemaining)}
-                    </span>
-                </div> */}
 
-                {/* O'NG TOMON: FOYDALANUVCHI PROFILI */}
-                <div className="flex items-center gap-4">
+                {/* O'NG TOMON: PROFIL */}
+                <div className="flex items-center gap-3">
                     <div className="hidden text-right sm:block">
                         {loadingUser ? (
-                            <div className="h-4 w-32 bg-slate-100 animate-pulse rounded" />
+                            <div className="h-4 w-24 bg-slate-100 animate-pulse rounded" />
                         ) : (
                             <>
-                                <p className="text-sm font-black text-slate-900 leading-none mb-1">
+                                <p className="text-sm font-black text-slate-900 leading-none mb-1 truncate max-w-[150px]">
                                     {userData?.full_name || "Foydalanuvchi"}
                                 </p>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Candidate</p>
@@ -138,8 +113,8 @@ export default function ExamHeader({
 
                     <Avatar className="h-10 w-10 border-2 border-white shadow-sm ring-1 ring-slate-100">
                         <AvatarImage src={userData?.avatar_url} />
-                        <AvatarFallback className="bg-[#17776A] text-white font-bold text-xs">
-                            {loadingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : getInitials(userData?.full_name || "User")}
+                        <AvatarFallback className="bg-[#17776A] text-white font-bold text-xs uppercase">
+                            {loadingUser ? <Loader2 className="h-4 w-4 animate-spin" /> : getInitials(userData?.full_name || "U")}
                         </AvatarFallback>
                     </Avatar>
                 </div>

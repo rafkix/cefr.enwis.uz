@@ -105,7 +105,7 @@ export default function ListeningPage() {
     }
 
     return (
-        <div className="max-w-7xl mx-auto space-y-6 pb-10 px-2 sm:px-0">
+        <div className="max-w-7xl mx-auto space-y-6 pb-10 px-4 sm:px-6 pt-6 font-sans text-slate-900">
 
             {/* --- BACK BUTTON --- */}
             <motion.button
@@ -129,7 +129,7 @@ export default function ListeningPage() {
                     <div className="relative z-10">
                         <div className="flex items-center gap-2 mb-4 bg-white/10 w-fit px-3 py-1 rounded-full backdrop-blur-md">
                             <Zap size={16} className="fill-yellow-400 text-yellow-400" />
-                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Listening Mastery</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest opacity-80">Tinglash Tushunish Qismi</span>
                         </div>
                         <h2 className="text-3xl font-black mb-4 tracking-tight leading-tight">Eshiting va tushunishni <br />yangi bosqichga olib chiqing.</h2>
                         <p className="text-purple-100 text-sm font-medium max-w-md opacity-90 leading-relaxed italic">

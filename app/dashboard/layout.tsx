@@ -20,7 +20,7 @@ export default function DashboardLayout({
     const { user, loading: authLoading, logout, refreshUser } = useAuth()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-    const isExamPage = pathname.includes("/test/listening/") || pathname.includes("/test/reading/")
+    const isExamPage = pathname.includes("/test/listening") || pathname.includes("/test/reading") || pathname.includes("/test/writing")
 
     // Seans muddatini tekshirish
     useEffect(() => {
@@ -58,7 +58,7 @@ export default function DashboardLayout({
     const menuItems = [
         { name: "Imtihon", href: "/dashboard/exams", icon: BookCheck },
         { name: "Amaliyot", href: "/dashboard/test", icon: LayoutGrid },
-        { name: "Natijalar", href: "/dashboard/result", icon: FileText },
+        { name: "Natijalar", href: "/dashboard/results", icon: FileText },
         { name: "Profil", href: "/dashboard/profile", icon: User },
     ]
 

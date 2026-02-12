@@ -200,7 +200,8 @@ function LoginForm() {
                                 <span>Telefon raqam orqali</span>
                             </button>
 
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Google va Telegram Gridi - Responsive holatda */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                 <GoogleSignInButton />
                                 <TelegramSignInWidget />
                             </div>

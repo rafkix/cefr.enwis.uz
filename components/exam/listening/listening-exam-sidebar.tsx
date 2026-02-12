@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Type, Headphones, Video, CheckCircle2, ChevronUp, X } from "lucide-react"
+import { Type, Headphones, Video, CheckCircle2, ChevronUp, X, Clock, Menu } from "lucide-react"
 
 interface SidebarProps {
     currentQuestion: number;
@@ -33,10 +33,10 @@ export default function ListeningExamSidebar({
 
     const currentSection = sections[activePartIndex] || sections[0];
 
-    // --- REUSABLE COMPONENTS ---
+    // --- REUSABLE COMPONENTS (DESKTOP VA MOBIL UCHUN BIR XIL) ---
 
     const SettingsContent = () => (
-        <>
+        <div className="space-y-3">
             <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-4 shrink-0">
                 <div className="flex items-center justify-between">
                     <button onClick={onDecreaseFontSize} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm border border-slate-200 hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-90 font-bold text-slate-600">A-</button>
@@ -44,26 +44,24 @@ export default function ListeningExamSidebar({
                     <button onClick={onIncreaseFontSize} className="w-8 h-8 flex items-center justify-center bg-white rounded-md shadow-sm border border-slate-200 hover:bg-blue-50 hover:text-blue-600 transition-all active:scale-90 font-bold text-slate-600">A+</button>
                 </div>
             </div>
-            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-4 shrink-0">
-                <div className="pt-3 border-t space-y-2">
-                    <div className="flex items-center justify-between">
-                        <span className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-1.5"><Headphones size={14} className="text-slate-400" /> Tovush</span>
-                        <span className="text-[10px] font-bold text-blue-600">{volume}%</span>
-                    </div>
-                    <input type="range" min="0" max="100" value={volume} onChange={(e) => onVolumeChange(Number(e.target.value))} className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600" />
+            <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2 shrink-0">
+                <div className="flex items-center justify-between">
+                    <span className="text-[9px] font-black text-slate-500 uppercase flex items-center gap-1.5"><Headphones size={14} className="text-slate-400" /> Tovush</span>
+                    <span className="text-[10px] font-bold text-blue-600">{volume}%</span>
                 </div>
+                <input type="range" min="0" max="100" value={volume} onChange={(e) => onVolumeChange(Number(e.target.value))} className="w-full h-1.5 bg-slate-100 rounded-full appearance-none cursor-pointer accent-blue-600" />
             </div>
-        </>
+        </div>
     );
 
     const QuestionsContent = () => (
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col shrink-0 min-h-0 flex-1">
+        <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col shrink-0 min-h-0 flex-1 overflow-hidden">
             <div className="px-3 pt-3 pb-2 border-b flex items-center justify-between bg-slate-50/50 rounded-t-xl sticky top-0 z-10">
                 <span className="text-[10px] font-black text-slate-600 uppercase italic">Savollar</span>
                 <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md border border-blue-100">{currentSection.label}</span>
             </div>
             <div className="p-[10px] overflow-y-auto custom-scrollbar">
-                <div className="grid grid-cols-6 gap-2">
+                <div className="grid grid-cols-6 lg:grid-cols-6 gap-2">
                     {Array.from({ length: currentSection.range[1] - currentSection.range[0] + 1 }, (_, i) => currentSection.range[0] + i).map((q) => (
                         <button key={q} onClick={() => { onSelectQuestion(q); setIsMobileOpen(false); }} className={`w-8 h-8 rounded-full text-[10px] font-bold border flex items-center justify-center transition-all relative ${q === currentQuestion ? "bg-blue-600 text-white border-blue-600 shadow-lg scale-110" : answered[q] ? "bg-emerald-500 text-white border-emerald-500 shadow-sm" : "bg-slate-50 text-slate-400 hover:bg-white"}`}>
                             {q}
@@ -80,7 +78,7 @@ export default function ListeningExamSidebar({
     return (
         <>
             {/* =====================================================================================
-                1. DESKTOP SIDEBAR
+                1. DESKTOP SIDEBAR (ASL HOLATIDA SAQLANDI)
                ===================================================================================== */}
             <div className="hidden lg:flex w-72 h-screen bg-[#F1F5F9] border-l border-slate-200 flex-col p-3 gap-3 shrink-0 overflow-hidden select-none shadow-lg z-40">
                 
@@ -109,10 +107,6 @@ export default function ListeningExamSidebar({
                     <QuestionsContent />
                 </div>
 
-                {/* 🔥 TUZATILDI: 
-                    1. shrink-5 -> shrink-0 (Siqilib qolmasligi uchun)
-                    2. mt-auto (Har doim pastda turishi uchun)
-                */}
                 <div className="space-y-1">
                     <div className="bg-slate-900 aspect-video rounded-xl overflow-hidden relative border-2 border-white shadow-md">
                         <div className="absolute top-2 right-2 flex items-center gap-1.5 bg-black/40 px-2 py-1 rounded-full backdrop-blur-md border border-white/10">
@@ -121,60 +115,67 @@ export default function ListeningExamSidebar({
                         </div>
                         <div className="w-full h-full flex items-center justify-center"><Video className="text-slate-700" size={32} /></div>
                     </div>
-
-                    <div className="pb-2 text-center opacity-40">
-                        <span className="text-[7px] font-black text-slate-500 uppercase tracking-[0.2em] italic">Kuzatuv ostida</span>
-                    </div>
                 </div>
             </div>
 
             {/* =====================================================================================
-                2. MOBILE BOTTOM BAR
+                2. MOBILE FLOATING PANEL (READING STILIDA)
                ===================================================================================== */}
-            <div className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white border-t border-slate-200 z-[50] flex items-center px-4 justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.1)] pb-safe">
-                {status === "playing" && (
-                    <div className="absolute top-0 left-0 w-full h-1 bg-slate-100">
-                        <div className="h-full bg-blue-500 transition-all duration-300 ease-linear" style={{ width: `${progress}%` }}></div>
+            {!isMobileOpen && (
+                <div className="lg:hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] flex items-center gap-3 bg-white/90 backdrop-blur-xl border border-slate-200 shadow-[0_8px_30px_rgb(0,0,0,0.12)] px-4 py-2 rounded-full animate-in fade-in slide-in-from-bottom-4">
+                    <div className="flex items-center gap-2 px-3 border-r border-slate-200 pr-4">
+                        <Clock size={16} className="text-blue-600" />
+                        <span className="font-mono font-black text-slate-700 tabular-nums">{timeLeft}</span>
                     </div>
-                )}
-                <div className="flex flex-col">
-                    <span className="text-[8px] font-bold text-slate-400 uppercase">Vaqt</span>
-                    <span className={`text-lg font-mono font-black ${status === "playing" ? "text-blue-600" : "text-slate-800"}`}>
-                        {timeLeft}
-                    </span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button onClick={() => setIsMobileOpen(true)} className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-[11px] active:bg-slate-200 transition-colors border border-slate-200">
-                        Savollar <ChevronUp size={14} />
-                    </button>
-                    <button onClick={onFinish} className="px-4 py-2 bg-blue-600 text-white rounded-xl font-bold text-[11px] shadow-lg shadow-blue-200 active:scale-95 transition-all">
-                        Yakunlash
+                    <button
+                        onClick={() => setIsMobileOpen(true)}
+                        className="w-10 h-10 bg-blue-600 text-white rounded-full flex items-center justify-center shadow-lg shadow-blue-200 active:scale-90 transition-transform"
+                    >
+                        <Menu size={20} />
                     </button>
                 </div>
-            </div>
+            )}
 
             {/* =====================================================================================
                 3. MOBILE BOTTOM SHEET
                ===================================================================================== */}
             {isMobileOpen && (
-                <div className="lg:hidden fixed inset-0 z-[60] flex flex-col justify-end animate-in fade-in duration-200">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)}></div>
-                    <div className="relative bg-[#F1F5F9] w-full rounded-t-[32px] overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-300 shadow-2xl">
-                        <div className="bg-white p-4 border-b flex items-center justify-between shrink-0">
-                            <span className="text-sm font-black text-slate-800 uppercase italic">Boshqaruv Paneli</span>
-                            <button onClick={() => setIsMobileOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 active:scale-90 transition-all">
-                                <X size={18} />
-                            </button>
+                <div className="lg:hidden fixed inset-0 z-[100] flex flex-col justify-end animate-in fade-in duration-300">
+                    <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onClick={() => setIsMobileOpen(false)}></div>
+                    <div className="relative bg-[#F1F5F9] w-full rounded-t-[32px] overflow-hidden flex flex-col max-h-[85vh] animate-in slide-in-from-bottom duration-500 ease-out shadow-2xl">
+                        
+                        {/* Handle & Header */}
+                        <div className="bg-white p-3 border-b flex flex-col items-center shrink-0">
+                            <div className="w-12 h-1.5 bg-slate-300 rounded-full mb-3"></div>
+                            <div className="w-full flex items-center justify-between px-3">
+                                <span className="text-sm font-black text-slate-800 uppercase italic tracking-wider">Boshqaruv Paneli</span>
+                                <button onClick={() => setIsMobileOpen(false)} className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 active:scale-90 transition-all">
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
-                        <div className="p-4 overflow-y-auto flex flex-col gap-4 pb-8">
+
+                        {/* Content */}
+                        <div className="p-5 overflow-y-auto flex flex-col gap-5 pb-10">
+                            <div className="bg-white p-4 rounded-2xl border border-slate-200 flex flex-col items-center">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase mb-1">Qolgan vaqt</span>
+                                <span className="text-2xl font-mono font-black text-blue-600">{timeLeft}</span>
+                                {status === "playing" && (
+                                    <div className="w-full mt-3 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                                        <div className="h-full bg-blue-500" style={{ width: `${progress}%` }}></div>
+                                    </div>
+                                )}
+                            </div>
+
                             <SettingsContent />
-                            <div className="h-64 flex flex-col">
+
+                            <div className="h-72 flex flex-col">
                                 <QuestionsContent />
                             </div>
-                            <div className="flex items-center justify-center gap-2 p-3 bg-slate-200 rounded-xl opacity-60 mt-2">
-                                <Video size={16} className="text-slate-600" />
-                                <span className="text-[10px] font-bold text-slate-600">Proctoring faol (Kamera ishlamoqda)</span>
-                            </div>
+
+                            <button onClick={onFinish} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl shadow-lg active:scale-95 transition-all uppercase tracking-widest text-xs">
+                                Testni Yakunlash
+                            </button>
                         </div>
                     </div>
                 </div>

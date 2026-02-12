@@ -213,7 +213,7 @@ export default function ResultPage() {
                                                                 <span className="text-sm font-bold">{item.cefr_level}</span>
                                                             </div>
                                                             <Link
-                                                                href={`/dashboard/result/${item.section.toLowerCase()}/view?id=${item.id}`}
+                                                                href={`/dashboard/results/${item.section.toLowerCase()}/view?id=${item.id}`}
                                                                 className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all"
                                                             >
                                                                 <ArrowUpRight size={20} />

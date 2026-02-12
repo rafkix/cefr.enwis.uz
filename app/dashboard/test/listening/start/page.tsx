@@ -165,7 +165,7 @@ function ExamLogic() {
                 if (resultId) {
                     toast.success("Test muvaffaqiyatli topshirildi!");
                     localStorage.removeItem(`listening-session-${testId}`);
-                    router.push(`/dashboard/result/listening/view?id=${resultId}`);
+                    router.push(`/dashboard/results/listening/view?id=${resultId}`);
                 } else {
                     throw new Error("Natija ID si topilmadi");
                 }

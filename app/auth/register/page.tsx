@@ -167,8 +167,8 @@ function RegisterForm() {
                         {/* Ijtimoiy tarmoqlar va Kirish bloki */}
                         <div className="mt-6 flex flex-col gap-3">
 
-                            {/* Google va Telegram Gridi */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* Google va Telegram Gridi - Responsive holatda */}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
                                 <GoogleSignInButton />
                                 <TelegramSignInWidget />
                             </div>
