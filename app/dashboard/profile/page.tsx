@@ -94,7 +94,7 @@ export default function ProfilePage() {
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        
+
         if (file.size > 2 * 1024 * 1024) {
             return toast.error("Rasm hajmi 2MB dan oshmasligi kerak");
         }
@@ -145,7 +145,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="min-h-screen py-6 sm:py-10 bg-[#F8FAFC]">
+        <div className="min-h-screen py-6 sm:py-10">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 px-4">
 
                 {/* CHAP TOMON: ASOSIY MA'LUMOTLAR */}
@@ -169,7 +169,9 @@ export default function ProfilePage() {
                                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Settings2 /></div>
                                 <div>
                                     <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Shaxsiy profil</h1>
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tizimdagi ID: {user?.id?.slice(0, 8)}...</p>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        Tizimdagi ID: {String(user?.id).slice(0, 8)}...
+                                    </p>
                                 </div>
                             </div>
                             <button
@@ -376,7 +378,7 @@ export default function ProfilePage() {
                     </div>
 
                     {/* LOGOUT */}
-                    <button 
+                    <button
                         onClick={() => logout()}
                         className="w-full p-6 bg-red-50 text-red-600 rounded-[35px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-100 transition-all border border-red-100 shadow-sm shadow-red-50"
                     >
