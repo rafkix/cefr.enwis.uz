@@ -106,7 +106,7 @@ export default function ProfilePage() {
 
         setIsSendingOTP(true);
         try {
-            await addContactStart({ contact_type: 'phone', value: phoneToVerify });
+            await addContactStart({ type: 'phone', value: phoneToVerify });
             setShowOTPModal(true);
             toast.info("Tasdiqlash kodi Telegram botga yuborildi");
         } catch (err: any) {
@@ -120,7 +120,7 @@ export default function ProfilePage() {
         setLoading(true);
         try {
             await addContactVerify({
-                contact_type: 'phone',
+                type: 'phone',
                 value: phoneContact ? phoneContact.value : newPhone,
                 code: otpCode
             });
