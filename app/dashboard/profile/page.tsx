@@ -6,7 +6,8 @@ import {
     Camera, Edit3, Loader2, Phone, ShieldCheck,
     Smartphone, UserCircle2, Mail, Trash2,
     Calendar, User2, Settings2,
-    Check, X, ShieldAlert, SmartphoneNfc
+    Check, X, ShieldAlert, SmartphoneNfc,
+    ExternalLink, MessageSquare, AlertCircle
 } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import {
@@ -22,23 +23,23 @@ import { toast } from "sonner"
 export default function ProfilePage() {
     const { user, refreshUser } = useAuth()
     const fileInputRef = useRef<HTMLInputElement>(null)
-    
-    // Asosiy ma'lumotlar state-lari
+
+    // States
     const [isEditing, setIsEditing] = useState(false)
     const [loading, setLoading] = useState(false)
     const [sessions, setSessions] = useState<UserSession[]>([])
     const [contacts, setContacts] = useState<UserContact[]>([])
-    const [formData, setFormData] = useState<UpdateProfilePayload>({ 
+    const [formData, setFormData] = useState<UpdateProfilePayload>({
         full_name: "", bio: "", birth_date: "", gender: 'male'
     })
 
-    // Telefon va OTP state-lari
+    // Telefon va OTP States
     const [showOTPModal, setShowOTPModal] = useState(false)
     const [otpCode, setOtpCode] = useState("")
     const [newPhone, setNewPhone] = useState("")
     const [isSendingOTP, setIsSendingOTP] = useState(false)
 
-    // Kontaktlar ichidan raqamni ajratib olish
+    // Kontaktlarni ajratish
     const phoneContact = useMemo(() => contacts.find(c => c.contact_type === 'phone'), [contacts]);
     const emailContact = useMemo(() => contacts.find(c => c.contact_type === 'email'), [contacts]);
 
@@ -74,7 +75,6 @@ export default function ProfilePage() {
 
     // --- FUNKSIYALAR ---
 
-    // 1. Profilni yangilash
     const handleUpdateProfile = async () => {
         setLoading(true);
         try {
@@ -85,7 +85,6 @@ export default function ProfilePage() {
         } catch { toast.error("Xatolik yuz berdi") } finally { setLoading(false) }
     }
 
-    // 2. Rasm yuklash
     const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -97,56 +96,64 @@ export default function ProfilePage() {
         } catch { toast.error("Yuklashda xato") } finally { setLoading(false) }
     }
 
-    // 3. Telefon qo'shish va OTP yuborish (Step 1)
-    const handleAddPhone = async () => {
-        if (!newPhone || newPhone.length < 9) return toast.error("Raqamni to'liq kiriting");
+    // Raqamni tasdiqlash/qo'shish boshlash (Botga xabar yuborish)
+    const handleStartVerification = async () => {
+        const phoneToVerify = phoneContact ? phoneContact.value : newPhone;
+
+        if (!phoneToVerify || phoneToVerify.length < 9) {
+            return toast.error("Iltimos, telefon raqamingizni kiriting");
+        }
+
         setIsSendingOTP(true);
         try {
-            await addContactStart({ contact_type: 'phone', value: newPhone });
+            await addContactStart({ contact_type: 'phone', value: phoneToVerify });
             setShowOTPModal(true);
-            toast.info("Tasdiqlash kodi yuborildi");
+            toast.info("Tasdiqlash kodi Telegram botga yuborildi");
         } catch (err: any) {
-            toast.error(err.response?.data?.message || "Raqam qo'shib bo'lmadi");
+            toast.error(err.response?.data?.message || "Xatolik yuz berdi");
         } finally { setIsSendingOTP(false) }
     }
 
-    // 4. OTP Kodni tasdiqlash (Step 2)
+    // Botdan olingan kodni tekshirish
     const handleVerifyOTP = async () => {
         if (otpCode.length < 4) return toast.error("Kodni kiriting");
         setLoading(true);
         try {
-            await addContactVerify({ 
-                contact_type: 'phone', 
-                value: newPhone || phoneContact?.value || "", 
-                code: otpCode 
+            await addContactVerify({
+                contact_type: 'phone',
+                value: phoneContact ? phoneContact.value : newPhone,
+                code: otpCode
             });
             await refreshUser();
             await loadData();
             setShowOTPModal(false);
-            toast.success("Telefon raqami tasdiqlandi!");
-        } catch { toast.error("Tasdiqlash kodi noto'g'ri") } finally { setLoading(false) }
+            setOtpCode("");
+            toast.success("Telefon raqami muvaffaqiyatli tasdiqlandi!");
+        } catch { toast.error("Kod noto'g'ri yoki muddati o'tgan") } finally { setLoading(false) }
     }
 
     return (
-        <div className="min-h-screen py-6 sm:py-10">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
-                
-                {/* ASOSIY MA'LUMOTLAR */}
+        <div className="min-h-screen py-6 sm:py-10 bg-[#F8FAFC]">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 px-4">
+
+                {/* CHAP TOMON: PROFIL VA ALOQA */}
                 <div className="lg:col-span-8 space-y-6">
+
+                    {/* ASOSIY PROFIL KARTASI */}
                     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[40px] border border-slate-200 p-6 sm:p-10 shadow-sm relative overflow-hidden">
                         <div className="flex justify-between items-start mb-8 relative z-10">
                             <div className="flex items-center gap-4">
                                 <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Settings2 /></div>
                                 <div>
-                                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Profil sozlamalari</h1>
+                                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Profil ma'lumotlari</h1>
                                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {user?.id}</p>
                                 </div>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
-                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider"
+                                className={`px-5 py-2.5 rounded-xl font-bold text-[10px] uppercase tracking-wider transition-all ${isEditing ? 'bg-red-50 text-red-600' : 'bg-slate-900 text-white'}`}
                             >
-                                {isEditing ? "Yopish" : "Tahrirlash"}
+                                {isEditing ? "Bekor qilish" : "Tahrirlash"}
                             </button>
                         </div>
 
@@ -159,8 +166,8 @@ export default function ProfilePage() {
                                         <div className="w-full h-full flex items-center justify-center text-slate-300"><UserCircle2 size={100} /></div>
                                     )}
                                 </div>
-                                <button 
-                                    onClick={() => fileInputRef.current?.click()} 
+                                <button
+                                    onClick={() => fileInputRef.current?.click()}
                                     className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg border-4 border-white hover:scale-110 transition-transform"
                                 >
                                     <Camera size={18} />
@@ -170,12 +177,12 @@ export default function ProfilePage() {
 
                             <div className="flex-1 space-y-6">
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">F.I.SH</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">To'liq ism (F.I.SH)</label>
                                     {isEditing ? (
-                                        <input 
-                                            value={formData.full_name} 
-                                            onChange={e => setFormData({...formData, full_name: e.target.value})}
-                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 outline-none focus:border-blue-500"
+                                        <input
+                                            value={formData.full_name}
+                                            onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 outline-none focus:border-blue-500 transition-all"
                                         />
                                     ) : (
                                         <h2 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">{user?.profile?.full_name || "Kiritilmagan"}</h2>
@@ -184,17 +191,17 @@ export default function ProfilePage() {
 
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-2 mb-2"><Calendar size={12}/> Tug'ilgan sana</span>
+                                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-2 mb-2"><Calendar size={12} /> Tug'ilgan sana</span>
                                         {isEditing ? (
-                                            <input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} className="bg-transparent font-bold outline-none w-full" />
+                                            <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} className="bg-transparent font-bold outline-none w-full" />
                                         ) : (
                                             <p className="text-sm font-bold text-slate-700">{user?.profile?.birth_date || "—"}</p>
                                         )}
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-2 mb-2"><User2 size={12}/> Jinsi</span>
+                                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-2 mb-2"><User2 size={12} /> Jinsi</span>
                                         {isEditing ? (
-                                            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as any})} className="bg-transparent font-bold outline-none w-full">
+                                            <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value as any })} className="bg-transparent font-bold outline-none w-full">
                                                 <option value="male">Erkak</option>
                                                 <option value="female">Ayol</option>
                                             </select>
@@ -207,47 +214,50 @@ export default function ProfilePage() {
                         </div>
 
                         {isEditing && (
-                            <button 
-                                onClick={handleUpdateProfile} 
+                            <button
+                                onClick={handleUpdateProfile}
                                 disabled={loading}
-                                className="w-full mt-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                                className="w-full mt-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-blue-700 transition-all"
                             >
-                                {loading ? <Loader2 className="animate-spin" size={16}/> : <Check size={16}/>} Saqlash
+                                {loading ? <Loader2 className="animate-spin" size={16} /> : <Check size={16} />} Saqlash
                             </button>
                         )}
                     </motion.div>
 
-                    {/* ALOQA BO'LIMI (Raqam tasdiqlash shu yerda) */}
+                    {/* ALOQA VA TASDIQLASH BO'LIMI */}
                     <div className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm">
-                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Aloqa va Xavfsizlik</h3>
+                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                            <ShieldCheck size={14} className="text-blue-500" /> Aloqa va Xavfsizlik
+                        </h3>
+
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Email - Faqat ko'rish */}
+                            {/* Email */}
                             <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 bg-white rounded-xl text-orange-500 shadow-sm"><Mail size={20} /></div>
                                     <div>
-                                        <p className="text-[9px] font-black text-slate-400 uppercase">Email</p>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase">Email manzili</p>
                                         <p className="text-sm font-bold text-slate-700">{emailContact?.value || user?.email}</p>
                                     </div>
                                 </div>
                                 <ShieldCheck className="text-emerald-500" size={18} />
                             </div>
 
-                            {/* Telefon - Tasdiqlash mantiqi bilan */}
+                            {/* Telefon raqam (Bot orqali tasdiqlash mantiqi) */}
                             <div className={`p-5 rounded-3xl border transition-all ${phoneContact?.is_verified ? 'bg-slate-50 border-slate-100' : 'bg-red-50/50 border-red-100'}`}>
                                 <div className="flex items-center justify-between mb-4">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-3 rounded-xl shadow-sm ${phoneContact?.is_verified ? 'bg-white text-green-500' : 'bg-white text-red-500'}`}><Phone size={20} /></div>
-                                        <div>
+                                        <div className="flex-1">
                                             <p className="text-[9px] font-black text-slate-400 uppercase">Telefon raqam</p>
                                             {phoneContact ? (
                                                 <p className="text-sm font-bold text-slate-700">{phoneContact.value}</p>
                                             ) : (
-                                                <input 
-                                                    value={newPhone} 
+                                                <input
+                                                    value={newPhone}
                                                     onChange={e => setNewPhone(e.target.value)}
                                                     placeholder="+998901234567"
-                                                    className="bg-transparent text-sm font-bold outline-none w-full"
+                                                    className="bg-transparent text-sm font-bold outline-none w-full placeholder:text-slate-300"
                                                 />
                                             )}
                                         </div>
@@ -256,22 +266,33 @@ export default function ProfilePage() {
                                 </div>
 
                                 {!phoneContact?.is_verified && (
-                                    <button 
-                                        onClick={handleAddPhone}
-                                        disabled={isSendingOTP}
-                                        className="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
-                                    >
-                                        {isSendingOTP ? <Loader2 className="animate-spin" size={14}/> : <SmartphoneNfc size={14}/>}
-                                        {phoneContact ? "Raqamni tasdiqlash" : "Raqamni qo'shish"}
-                                    </button>
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handleStartVerification}
+                                            disabled={isSendingOTP}
+                                            className="w-full py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-slate-800 transition-all"
+                                        >
+                                            {isSendingOTP ? <Loader2 className="animate-spin" size={14} /> : <MessageSquare size={14} />}
+                                            Botdan kod olish
+                                        </button>
+                                        <a
+                                            href="https://t.me/EnwisAuthBot"
+                                            target="_blank"
+                                            className="flex items-center justify-center gap-2 text-[9px] font-black text-blue-600 uppercase hover:underline"
+                                        >
+                                            <ExternalLink size={12} /> @EnwisAuthBot ga o'tish
+                                        </a>
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* SIDEBAR: PROGRESS VA SESSYALAR */}
+                {/* O'NG TOMON: SIDEBAR */}
                 <div className="lg:col-span-4 space-y-6">
+
+                    {/* PROGRESS CARD */}
                     <div className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden shadow-xl">
                         <div className="relative z-10">
                             <div className="flex items-center gap-2 mb-6 text-blue-400">
@@ -280,33 +301,43 @@ export default function ProfilePage() {
                             </div>
                             <div className="text-5xl font-black mb-3">{completion}%</div>
                             <div className="w-full bg-slate-800 h-2.5 rounded-full mb-6 overflow-hidden">
-                                <motion.div 
-                                    initial={{ width: 0 }} 
+                                <motion.div
+                                    initial={{ width: 0 }}
                                     animate={{ width: `${completion}%` }}
                                     className="h-full bg-blue-500 rounded-full"
                                 />
                             </div>
                             <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
-                                {completion < 100 
-                                    ? "Imtihonlarga ruxsat olish uchun barcha ma'lumotlarni to'ldiring va raqamingizni tasdiqlang." 
-                                    : "Barcha ma'lumotlar to'liq. Siz imtihon topshirishga tayyorsiz!"}
+                                {completion < 100
+                                    ? "Imtihonlarga ruxsat olish uchun barcha ma'lumotlarni to'ldiring va raqamingizni tasdiqlang."
+                                    : "Profilingiz mukammal holatda. Siz barcha imkoniyatlardan foydalanishingiz mumkin!"}
                             </p>
                         </div>
+                        {/* Background dekor */}
+                        <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-blue-500/10 rounded-full blur-3xl"></div>
                     </div>
 
+                    {/* SESSIONS CARD */}
                     <div className="bg-white rounded-[40px] border border-slate-200 p-6 shadow-sm">
-                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Oxirgi faollik</h3>
+                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Sessiyalar boshqaruvi</h3>
                         <div className="space-y-4">
                             {sessions.slice(0, 3).map(s => (
-                                <div key={s.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl group">
-                                    <div className="p-2.5 bg-white rounded-xl text-slate-400 shadow-sm"><Smartphone size={16}/></div>
+                                <div key={s.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl group border border-transparent hover:border-slate-200 transition-all">
+                                    <div className="p-2.5 bg-white rounded-xl text-slate-400 shadow-sm"><Smartphone size={16} /></div>
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-[10px] font-black text-slate-900 uppercase truncate">{s.user_agent.split(' ')[0]}</p>
-                                        <p className="text-[9px] text-slate-400 font-bold">{formatDistanceToNow(new Date(s.updated_at), { addSuffix: true, locale: uz })}</p>
+                                        <p className="text-[10px] font-black text-slate-900 uppercase truncate">
+                                            {s.user_agent.includes('Chrome') ? 'Desktop' : 'Mobile Device'}
+                                        </p>
+                                        <p className="text-[9px] text-slate-400 font-bold italic">
+                                            {formatDistanceToNow(new Date(s.updated_at), { addSuffix: true, locale: uz })}
+                                        </p>
                                     </div>
                                     {!s.is_current && (
-                                        <button onClick={() => terminateSession(s.id).then(() => loadData())} className="text-slate-300 hover:text-red-500 p-1">
-                                            <Trash2 size={14}/>
+                                        <button
+                                            onClick={() => terminateSession(s.id).then(() => loadData())}
+                                            className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-lg transition-all"
+                                        >
+                                            <Trash2 size={14} />
                                         </button>
                                     )}
                                 </div>
@@ -316,32 +347,51 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* OTP MODAL */}
+            {/* OTP MODAL (Botdan olingan kodni kiritish) */}
             <AnimatePresence>
                 {showOTPModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-[40px] p-8 sm:p-10 max-w-sm w-full text-center shadow-2xl">
-                            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner"><SmartphoneNfc size={40}/></div>
-                            <h3 className="text-2xl font-black text-slate-900 mb-2">Tasdiqlash kodi</h3>
-                            <p className="text-xs text-slate-500 mb-8 font-medium">Siz kiritgan raqamga 6 xonali kod yuborildi.</p>
-                            
-                            <input 
-                                type="text" 
+                        <motion.div
+                            initial={{ scale: 0.9, y: 20 }}
+                            animate={{ scale: 1, y: 0 }}
+                            exit={{ scale: 0.9, y: 20 }}
+                            className="bg-white rounded-[40px] p-8 sm:p-10 max-w-sm w-full text-center shadow-2xl relative"
+                        >
+                            <button onClick={() => setShowOTPModal(false)} className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-600">
+                                <X size={20} />
+                            </button>
+
+                            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner">
+                                <SmartphoneNfc size={40} />
+                            </div>
+
+                            <h3 className="text-2xl font-black text-slate-900 mb-2">Botdagi kodni kiriting</h3>
+                            <p className="text-[11px] text-slate-500 mb-8 font-medium px-4">
+                                <a href="https://t.me/EnwisAuthBot" target="_blank" className="text-blue-600 font-bold">@EnwisAuthBot</a> sizga 6 xonali tasdiqlash kodini yubordi.
+                            </p>
+
+                            <input
+                                type="text"
                                 maxLength={6}
                                 value={otpCode}
-                                onChange={(e) => setOtpCode(e.target.value)}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
                                 className="w-full text-center text-4xl font-black tracking-[10px] p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:border-blue-500 outline-none mb-8 transition-colors"
                                 placeholder="000000"
                             />
-                            
+
                             <div className="flex gap-4">
-                                <button onClick={() => setShowOTPModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase">Bekor qilish</button>
-                                <button 
-                                    onClick={handleVerifyOTP} 
-                                    disabled={loading}
-                                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100"
+                                <button
+                                    onClick={() => setShowOTPModal(false)}
+                                    className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase hover:bg-slate-200"
                                 >
-                                    {loading ? <Loader2 className="animate-spin mx-auto" size={16}/> : "Tasdiqlash"}
+                                    Yopish
+                                </button>
+                                <button
+                                    onClick={handleVerifyOTP}
+                                    disabled={loading}
+                                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50"
+                                >
+                                    {loading ? <Loader2 className="animate-spin mx-auto" size={16} /> : "Tasdiqlash"}
                                 </button>
                             </div>
                         </motion.div>
