@@ -73,10 +73,16 @@ export function Header() {
                     {/* ACTIONS */}
                     <div className="flex items-center gap-4">
                         <button 
-                            onClick={() => router.push("/auth/register")}
+                            onClick={() => router.push("/auth/login")}
                             className="hidden md:flex group items-center gap-2 bg-[#17776A] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-[#17776A]/20 hover:bg-[#125d53] transition-all active:scale-95"
                         >
                             Kirish <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                        </button>
+                        <button 
+                            onClick={() => router.push("/auth/register")}
+                            className="hidden md:flex group items-center gap-2 bg-[#17776A] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-[#17776A]/20 hover:bg-[#125d53] transition-all active:scale-95"
+                        >
+                            Ro'yxatdan o'tish <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                         </button>
 
                         {/* Mobile Menu Button */}
