@@ -4,19 +4,18 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     Camera, Edit3, Loader2, Phone, ShieldCheck,
-    Smartphone, UserCircle2, Info, Mail, Trash2,
-    Calendar, User2, Fingerprint, Settings2,
-    Check, X, Globe, Hash, ShieldAlert, SmartphoneNfc
+    Smartphone, UserCircle2, Mail, Trash2,
+    Calendar, User2, Settings2,
+    Check, X, ShieldAlert, SmartphoneNfc
 } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
 import {
     updateProfile, uploadAvatar, getMySessions,
     getMyContacts, terminateSession,
-    // Diqqat: Bu funksiyalar backend API-da bo'lishi kerak
-    // sendPhoneOTP, verifyPhoneOTP 
+    addContactStart, addContactVerify
 } from "@/lib/api/user"
 import { UserSession, UserContact, UpdateProfilePayload } from "@/lib/types/user"
-import { formatDistanceToNow, format } from "date-fns"
+import { formatDistanceToNow } from "date-fns"
 import { uz } from "date-fns/locale"
 import { toast } from "sonner"
 
@@ -24,31 +23,34 @@ export default function ProfilePage() {
     const { user, refreshUser } = useAuth()
     const fileInputRef = useRef<HTMLInputElement>(null)
     
-    // Asosiy holatlar
+    // Asosiy ma'lumotlar state-lari
     const [isEditing, setIsEditing] = useState(false)
     const [loading, setLoading] = useState(false)
-    const [uploading, setUploading] = useState(false)
     const [sessions, setSessions] = useState<UserSession[]>([])
     const [contacts, setContacts] = useState<UserContact[]>([])
-    
-    // Telefon va OTP holatlari
-    const [showOTPModal, setShowOTPModal] = useState(false)
-    const [otpCode, setOtpCode] = useState("")
-    const [phoneInput, setPhoneInput] = useState("")
-    const [isVerifying, setIsVerifying] = useState(false)
-
     const [formData, setFormData] = useState<UpdateProfilePayload>({ 
         full_name: "", bio: "", birth_date: "", gender: 'male'
     })
 
-    const API_URL = useMemo(() => (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, ''), []);
+    // Telefon va OTP state-lari
+    const [showOTPModal, setShowOTPModal] = useState(false)
+    const [otpCode, setOtpCode] = useState("")
+    const [newPhone, setNewPhone] = useState("")
+    const [isSendingOTP, setIsSendingOTP] = useState(false)
 
-    // Oxirgi 2 ta sessiya
-    const recentSessions = useMemo(() => {
-        return [...sessions]
-            .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-            .slice(0, 2);
-    }, [sessions]);
+    // Kontaktlar ichidan raqamni ajratib olish
+    const phoneContact = useMemo(() => contacts.find(c => c.contact_type === 'phone'), [contacts]);
+    const emailContact = useMemo(() => contacts.find(c => c.contact_type === 'email'), [contacts]);
+
+    // Profil to'liqligi (%)
+    const completion = useMemo(() => {
+        let score = 0;
+        if (user?.profile?.full_name) score += 25;
+        if (user?.profile?.avatar_url) score += 25;
+        if (user?.profile?.birth_date) score += 25;
+        if (phoneContact?.is_verified) score += 25;
+        return score;
+    }, [user, phoneContact]);
 
     const loadData = useCallback(async () => {
         try {
@@ -72,148 +74,195 @@ export default function ProfilePage() {
 
     // --- FUNKSIYALAR ---
 
-    // 1. Profilni saqlash
-    const handleSave = async () => {
+    // 1. Profilni yangilash
+    const handleUpdateProfile = async () => {
         setLoading(true);
         try {
             await updateProfile(formData);
             await refreshUser();
             setIsEditing(false);
-            toast.success("Profil yangilandi");
-        } catch { toast.error("Xatolik") } finally { setLoading(false) }
+            toast.success("Ma'lumotlar saqlandi");
+        } catch { toast.error("Xatolik yuz berdi") } finally { setLoading(false) }
     }
 
-    // 2. SMS kod yuborish
-    const handleSendOTP = async () => {
-        if (!phoneInput && !user?.contacts?.find(c => c.contact_type === 'phone')) {
-            return toast.error("Telefon raqamni kiriting");
-        }
-        setIsVerifying(true);
-        try {
-            // Agar yangi raqam kiritilgan bo'lsa, avval uni saqlaymiz
-            if (phoneInput) {
-                await updateProfile({ phone: phoneInput } as any);
-            }
-            // await sendPhoneOTP(); // API chaqiruvi
-            setShowOTPModal(true);
-            toast.info("Tasdiqlash kodi yuborildi");
-        } catch { toast.error("SMS yuborishda xato") } finally { setIsVerifying(false) }
-    }
-
-    // 3. Kodni tasdiqlash
-    const handleVerifyCode = async () => {
+    // 2. Rasm yuklash
+    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
         setLoading(true);
         try {
-            // await verifyPhoneOTP(otpCode); // API chaqiruvi
+            await uploadAvatar(file);
             await refreshUser();
+            toast.success("Rasm yangilandi");
+        } catch { toast.error("Yuklashda xato") } finally { setLoading(false) }
+    }
+
+    // 3. Telefon qo'shish va OTP yuborish (Step 1)
+    const handleAddPhone = async () => {
+        if (!newPhone || newPhone.length < 9) return toast.error("Raqamni to'liq kiriting");
+        setIsSendingOTP(true);
+        try {
+            await addContactStart({ contact_type: 'phone', value: newPhone });
+            setShowOTPModal(true);
+            toast.info("Tasdiqlash kodi yuborildi");
+        } catch (err: any) {
+            toast.error(err.response?.data?.message || "Raqam qo'shib bo'lmadi");
+        } finally { setIsSendingOTP(false) }
+    }
+
+    // 4. OTP Kodni tasdiqlash (Step 2)
+    const handleVerifyOTP = async () => {
+        if (otpCode.length < 4) return toast.error("Kodni kiriting");
+        setLoading(true);
+        try {
+            await addContactVerify({ 
+                contact_type: 'phone', 
+                value: newPhone || phoneContact?.value || "", 
+                code: otpCode 
+            });
+            await refreshUser();
+            await loadData();
             setShowOTPModal(false);
             toast.success("Telefon raqami tasdiqlandi!");
-        } catch { toast.error("Kod noto'g'ri") } finally { setLoading(false) }
+        } catch { toast.error("Tasdiqlash kodi noto'g'ri") } finally { setLoading(false) }
     }
 
     return (
-        <div className="min-h-screen py-10 px-4 bg-[#F8FAFC]">
-            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="min-h-screen py-6 sm:py-10">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
                 
-                {/* CHAP TOMON: ASOSIY MA'LUMOTLAR */}
+                {/* ASOSIY MA'LUMOTLAR */}
                 <div className="lg:col-span-8 space-y-6">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm relative">
-                        {/* Edit Buttons */}
-                        <div className="absolute top-8 right-8">
-                            {!isEditing ? (
-                                <button onClick={() => setIsEditing(true)} className="flex items-center gap-2 px-6 h-12 bg-slate-900 text-white rounded-2xl font-bold text-xs uppercase tracking-wider">
-                                    <Edit3 size={16} /> Tahrirlash
+                    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white rounded-[40px] border border-slate-200 p-6 sm:p-10 shadow-sm relative overflow-hidden">
+                        <div className="flex justify-between items-start mb-8 relative z-10">
+                            <div className="flex items-center gap-4">
+                                <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Settings2 /></div>
+                                <div>
+                                    <h1 className="text-xl sm:text-2xl font-black text-slate-900 leading-tight">Profil sozlamalari</h1>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">ID: {user?.id}</p>
+                                </div>
+                            </div>
+                            <button 
+                                onClick={() => isEditing ? setIsEditing(false) : setIsEditing(true)}
+                                className="px-5 py-2.5 bg-slate-900 text-white rounded-xl font-bold text-[10px] uppercase tracking-wider"
+                            >
+                                {isEditing ? "Yopish" : "Tahrirlash"}
+                            </button>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row gap-10">
+                            <div className="relative self-center shrink-0">
+                                <div className="w-40 h-40 rounded-[50px] overflow-hidden bg-slate-100 border-4 border-white shadow-2xl">
+                                    {user?.profile?.avatar_url ? (
+                                        <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full flex items-center justify-center text-slate-300"><UserCircle2 size={100} /></div>
+                                    )}
+                                </div>
+                                <button 
+                                    onClick={() => fileInputRef.current?.click()} 
+                                    className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg border-4 border-white hover:scale-110 transition-transform"
+                                >
+                                    <Camera size={18} />
                                 </button>
-                            ) : (
-                                <div className="flex gap-2">
-                                    <button onClick={() => setIsEditing(false)} className="h-12 w-12 bg-slate-100 text-slate-500 rounded-2xl flex items-center justify-center"><X size={20} /></button>
-                                    <button onClick={handleSave} className="h-12 px-6 bg-blue-600 text-white rounded-2xl font-bold text-xs uppercase flex items-center gap-2">
-                                        <Check size={16} /> Saqlash
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className="flex items-center gap-4 mb-10">
-                            <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><Settings2 size={24} /></div>
-                            <h1 className="text-2xl font-black text-slate-900">Profil boshqaruvi</h1>
-                        </div>
-
-                        {/* Rasm va Ism */}
-                        <div className="flex flex-col md:flex-row gap-8">
-                            <div className="relative self-center">
-                                <div className="w-40 h-40 rounded-[50px] overflow-hidden bg-slate-100 border-4 border-white shadow-xl">
-                                    {user?.profile?.avatar_url ? <img src={user.profile.avatar_url} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300"><UserCircle2 size={100} /></div>}
-                                </div>
-                                <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg border-4 border-white"><Camera size={18} /></button>
-                                <input type="file" ref={fileInputRef} className="hidden" onChange={(e) => {/* upload logic */}} />
+                                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
                             </div>
 
                             <div className="flex-1 space-y-6">
                                 <div>
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">F.I.SH</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block mb-2">F.I.SH</label>
                                     {isEditing ? (
-                                        <input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} className="text-xl font-bold w-full p-4 bg-slate-50 rounded-2xl border border-slate-200 outline-none" />
+                                        <input 
+                                            value={formData.full_name} 
+                                            onChange={e => setFormData({...formData, full_name: e.target.value})}
+                                            className="w-full p-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold text-slate-900 outline-none focus:border-blue-500"
+                                        />
                                     ) : (
-                                        <h2 className="text-3xl font-black text-slate-900">{user?.profile?.full_name || "Ism kiritilmagan"}</h2>
+                                        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight">{user?.profile?.full_name || "Kiritilmagan"}</h2>
                                     )}
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Tug'ilgan sana</span>
-                                        <p className="font-bold text-slate-700">{user?.profile?.birth_date || "—"}</p>
+                                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-2 mb-2"><Calendar size={12}/> Tug'ilgan sana</span>
+                                        {isEditing ? (
+                                            <input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} className="bg-transparent font-bold outline-none w-full" />
+                                        ) : (
+                                            <p className="text-sm font-bold text-slate-700">{user?.profile?.birth_date || "—"}</p>
+                                        )}
                                     </div>
                                     <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span className="text-[10px] font-black text-slate-400 uppercase block mb-1">Jinsi</span>
-                                        <p className="font-bold text-slate-700">{user?.profile?.gender === 'male' ? 'Erkak' : 'Ayol'}</p>
+                                        <span className="text-[9px] font-black text-slate-400 uppercase flex items-center gap-2 mb-2"><User2 size={12}/> Jinsi</span>
+                                        {isEditing ? (
+                                            <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as any})} className="bg-transparent font-bold outline-none w-full">
+                                                <option value="male">Erkak</option>
+                                                <option value="female">Ayol</option>
+                                            </select>
+                                        ) : (
+                                            <p className="text-sm font-bold text-slate-700 uppercase">{user?.profile?.gender || "—"}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>
                         </div>
+
+                        {isEditing && (
+                            <button 
+                                onClick={handleUpdateProfile} 
+                                disabled={loading}
+                                className="w-full mt-8 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-2"
+                            >
+                                {loading ? <Loader2 className="animate-spin" size={16}/> : <Check size={16}/>} Saqlash
+                            </button>
+                        )}
                     </motion.div>
 
-                    {/* TELEFON TASDIQLASH QISMI (MUHIM) */}
+                    {/* ALOQA BO'LIMI (Raqam tasdiqlash shu yerda) */}
                     <div className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm">
-                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <Fingerprint size={20} className="text-indigo-600" /> Aloqa va Tasdiqlash
-                        </h3>
-                        
+                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Aloqa va Xavfsizlik</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center gap-4">
-                                <div className="w-12 h-12 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center"><Mail size={20} /></div>
-                                <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase">Email</p>
-                                    <p className="text-sm font-bold text-slate-700">{user?.email}</p>
+                            {/* Email - Faqat ko'rish */}
+                            <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-white rounded-xl text-orange-500 shadow-sm"><Mail size={20} /></div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase">Email</p>
+                                        <p className="text-sm font-bold text-slate-700">{emailContact?.value || user?.email}</p>
+                                    </div>
                                 </div>
+                                <ShieldCheck className="text-emerald-500" size={18} />
                             </div>
 
-                            <div className="p-5 rounded-3xl bg-slate-50 border border-slate-100 space-y-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-2xl bg-green-50 text-green-600 flex items-center justify-center"><Phone size={20} /></div>
-                                    <div className="flex-1">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase">Telefon</p>
-                                        {!user?.phone && !phoneInput ? (
-                                            <input 
-                                                type="text" 
-                                                placeholder="+998..." 
-                                                className="bg-transparent font-bold text-slate-700 outline-none w-full"
-                                                onChange={(e) => setPhoneInput(e.target.value)}
-                                            />
-                                        ) : (
-                                            <p className="text-sm font-bold text-slate-700">{user?.phone || phoneInput}</p>
-                                        )}
+                            {/* Telefon - Tasdiqlash mantiqi bilan */}
+                            <div className={`p-5 rounded-3xl border transition-all ${phoneContact?.is_verified ? 'bg-slate-50 border-slate-100' : 'bg-red-50/50 border-red-100'}`}>
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-3 rounded-xl shadow-sm ${phoneContact?.is_verified ? 'bg-white text-green-500' : 'bg-white text-red-500'}`}><Phone size={20} /></div>
+                                        <div>
+                                            <p className="text-[9px] font-black text-slate-400 uppercase">Telefon raqam</p>
+                                            {phoneContact ? (
+                                                <p className="text-sm font-bold text-slate-700">{phoneContact.value}</p>
+                                            ) : (
+                                                <input 
+                                                    value={newPhone} 
+                                                    onChange={e => setNewPhone(e.target.value)}
+                                                    placeholder="+998901234567"
+                                                    className="bg-transparent text-sm font-bold outline-none w-full"
+                                                />
+                                            )}
+                                        </div>
                                     </div>
-                                    {user?.phone_verified && <ShieldCheck className="text-green-500" size={20} />}
+                                    {phoneContact?.is_verified && <ShieldCheck className="text-emerald-500" size={18} />}
                                 </div>
 
-                                {!user?.phone_verified && (
+                                {!phoneContact?.is_verified && (
                                     <button 
-                                        onClick={handleSendOTP}
-                                        disabled={isVerifying}
-                                        className="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100"
+                                        onClick={handleAddPhone}
+                                        disabled={isSendingOTP}
+                                        className="w-full py-3 bg-blue-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"
                                     >
-                                        {isVerifying ? <Loader2 size={14} className="animate-spin" /> : <SmartphoneNfc size={14} />}
-                                        {user?.phone ? "Raqamni tasdiqlash" : "Raqamni saqlash va tasdiqlash"}
+                                        {isSendingOTP ? <Loader2 className="animate-spin" size={14}/> : <SmartphoneNfc size={14}/>}
+                                        {phoneContact ? "Raqamni tasdiqlash" : "Raqamni qo'shish"}
                                     </button>
                                 )}
                             </div>
@@ -221,64 +270,79 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* O'NG TOMON: SIDEBAR */}
+                {/* SIDEBAR: PROGRESS VA SESSYALAR */}
                 <div className="lg:col-span-4 space-y-6">
-                    {/* Sessiyalar */}
-                    <div className="bg-white rounded-[40px] border border-slate-200 p-6 shadow-sm">
-                        <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
-                            <ShieldCheck size={20} className="text-emerald-500" /> Faol seanslar
-                        </h3>
-                        <div className="space-y-3">
-                            {recentSessions.map(s => (
-                                <div key={s.id} className={`p-4 rounded-2xl border ${s.is_current ? 'bg-blue-50 border-blue-100' : 'bg-slate-50 border-slate-100'}`}>
-                                    <div className="flex items-center gap-3">
-                                        <Smartphone size={18} className="text-slate-400" />
-                                        <div className="flex-1 min-w-0">
-                                            <p className="text-[10px] font-black text-slate-900 truncate uppercase">{s.user_agent?.split(' ')[0]}</p>
-                                            <p className="text-[9px] text-slate-400 font-bold">{formatDistanceToNow(new Date(s.updated_at), { addSuffix: true, locale: uz })}</p>
-                                        </div>
-                                        {!s.is_current && <button onClick={() => terminateSession(s.id)} className="text-slate-300 hover:text-red-500"><Trash2 size={14} /></button>}
-                                    </div>
-                                </div>
-                            ))}
+                    <div className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden shadow-xl">
+                        <div className="relative z-10">
+                            <div className="flex items-center gap-2 mb-6 text-blue-400">
+                                <ShieldAlert size={18} />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Xavfsizlik holati</span>
+                            </div>
+                            <div className="text-5xl font-black mb-3">{completion}%</div>
+                            <div className="w-full bg-slate-800 h-2.5 rounded-full mb-6 overflow-hidden">
+                                <motion.div 
+                                    initial={{ width: 0 }} 
+                                    animate={{ width: `${completion}%` }}
+                                    className="h-full bg-blue-500 rounded-full"
+                                />
+                            </div>
+                            <p className="text-[11px] text-slate-400 leading-relaxed font-medium">
+                                {completion < 100 
+                                    ? "Imtihonlarga ruxsat olish uchun barcha ma'lumotlarni to'ldiring va raqamingizni tasdiqlang." 
+                                    : "Barcha ma'lumotlar to'liq. Siz imtihon topshirishga tayyorsiz!"}
+                            </p>
                         </div>
                     </div>
 
-                    {/* Progress Card */}
-                    <div className="bg-slate-900 rounded-[40px] p-8 text-white relative overflow-hidden">
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-2 mb-4 text-blue-400"><ShieldAlert size={20} /><span className="text-[10px] font-black uppercase tracking-widest">Xavfsizlik darajasi</span></div>
-                            <h4 className="text-2xl font-black mb-2">{user?.phone_verified ? '100%' : '50%'}</h4>
-                            <div className="w-full bg-slate-800 h-2 rounded-full mb-4 overflow-hidden">
-                                <div className={`h-full bg-blue-500 transition-all duration-1000 ${user?.phone_verified ? 'w-full' : 'w-1/2'}`} />
-                            </div>
-                            <p className="text-xs text-slate-400 font-medium">Profilingizni to'liq tasdiqlang va barcha imtiyozlarga ega bo'ling.</p>
+                    <div className="bg-white rounded-[40px] border border-slate-200 p-6 shadow-sm">
+                        <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6">Oxirgi faollik</h3>
+                        <div className="space-y-4">
+                            {sessions.slice(0, 3).map(s => (
+                                <div key={s.id} className="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl group">
+                                    <div className="p-2.5 bg-white rounded-xl text-slate-400 shadow-sm"><Smartphone size={16}/></div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-[10px] font-black text-slate-900 uppercase truncate">{s.user_agent.split(' ')[0]}</p>
+                                        <p className="text-[9px] text-slate-400 font-bold">{formatDistanceToNow(new Date(s.updated_at), { addSuffix: true, locale: uz })}</p>
+                                    </div>
+                                    {!s.is_current && (
+                                        <button onClick={() => terminateSession(s.id).then(() => loadData())} className="text-slate-300 hover:text-red-500 p-1">
+                                            <Trash2 size={14}/>
+                                        </button>
+                                    )}
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* OTP MODAL (SMS TASDIQLASH) */}
+            {/* OTP MODAL */}
             <AnimatePresence>
                 {showOTPModal && (
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4">
-                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-[40px] p-10 max-w-sm w-full text-center shadow-2xl">
-                            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner"><ShieldCheck size={40} /></div>
-                            <h3 className="text-2xl font-black text-slate-900 mb-2">Kodni kiriting</h3>
-                            <p className="text-sm text-slate-500 mb-8 font-medium">Sizning telefon raqamingizga tasdiqlash kodi yuborildi.</p>
+                        <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} className="bg-white rounded-[40px] p-8 sm:p-10 max-w-sm w-full text-center shadow-2xl">
+                            <div className="w-20 h-20 bg-blue-50 text-blue-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner"><SmartphoneNfc size={40}/></div>
+                            <h3 className="text-2xl font-black text-slate-900 mb-2">Tasdiqlash kodi</h3>
+                            <p className="text-xs text-slate-500 mb-8 font-medium">Siz kiritgan raqamga 6 xonali kod yuborildi.</p>
                             
                             <input 
                                 type="text" 
                                 maxLength={6}
                                 value={otpCode}
                                 onChange={(e) => setOtpCode(e.target.value)}
-                                className="w-full text-center text-4xl font-black tracking-[10px] p-5 bg-slate-50 border-2 border-slate-100 rounded-2xl outline-none focus:border-blue-500 mb-8"
+                                className="w-full text-center text-4xl font-black tracking-[10px] p-5 bg-slate-50 border-2 border-slate-100 rounded-3xl focus:border-blue-500 outline-none mb-8 transition-colors"
                                 placeholder="000000"
                             />
                             
                             <div className="flex gap-4">
-                                <button onClick={() => setShowOTPModal(false)} className="flex-1 h-14 bg-slate-100 text-slate-500 rounded-2xl font-black text-xs uppercase tracking-widest">Yopish</button>
-                                <button onClick={handleVerifyCode} className="flex-1 h-14 bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-blue-100">Tasdiqlash</button>
+                                <button onClick={() => setShowOTPModal(false)} className="flex-1 py-4 bg-slate-100 text-slate-500 rounded-2xl font-black text-[10px] uppercase">Bekor qilish</button>
+                                <button 
+                                    onClick={handleVerifyOTP} 
+                                    disabled={loading}
+                                    className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-black text-[10px] uppercase shadow-lg shadow-blue-100"
+                                >
+                                    {loading ? <Loader2 className="animate-spin mx-auto" size={16}/> : "Tasdiqlash"}
+                                </button>
                             </div>
                         </motion.div>
                     </motion.div>
