@@ -80,17 +80,43 @@ export default function ProfilePage() {
 
     const handleStartVerification = async () => {
         const purePhone = newPhone.replace(/\D/g, "");
-        if (!phoneContact && purePhone.length < 12) return toast.error("Iltimos, avval telefon raqamingizni kiriting");
+
+        // 1. Validatsiya
+        if (!phoneContact && purePhone.length < 12) {
+            return toast.error("Iltimos, telefon raqamingizni to'liq kiriting");
+        }
+
         const phoneToVerify = phoneContact ? phoneContact.value : purePhone;
         setIsSendingOTP(true);
+
         try {
-            await addContactStart({ type: 'phone', value: phoneToVerify });
-            window.open(getTelegramLink(), '_blank');
+            // API so'rovini yuboramiz
+            await addContactStart({
+                type: 'phone',
+                value: phoneToVerify
+            });
+
+            // OTP modalini ko'rsatamiz
             setShowOTPModal(true);
             toast.info("Tasdiqlash kodi Telegram botga yuborildi");
+
+            // BRAUZER BLOKIROVKASINI OLDINI OLISH: 
+            // Foydalanuvchi interaksiyasidan keyin darhol botni ochamiz
+            const botLink = getTelegramLink();
+
+            // Agar window.open ishlamasa, foydalanuvchiga qo'lda ochish uchun havola beramiz
+            const newWindow = window.open(botLink, '_blank');
+            if (!newWindow || newWindow.closed || typeof newWindow.closed === 'undefined') {
+                toast.warning("Brauzer botni ochishni blokladi. Iltimos, popup oynalarga ruxsat bering.");
+            }
+
         } catch (err: any) {
-            toast.error(err.response?.data?.message || "Xatolik yuz berdi");
-        } finally { setIsSendingOTP(false) }
+            console.error("Xatolik:", err);
+            const errorMsg = err.response?.data?.detail || err.response?.data?.message || "Xatolik yuz berdi";
+            toast.error(errorMsg);
+        } finally {
+            setIsSendingOTP(false);
+        }
     }
 
     const handleVerifyOTP = async () => {
