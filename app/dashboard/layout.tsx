@@ -15,7 +15,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const { user, loading: authLoading, logout } = useAuth()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-    const hasPhone = user?.phone || user?.contacts?.some(c => c.value);
+    const hasPhone = user?.contacts.phone || user?.contacts?.some(c => c.value);
     const isExamPage = pathname.includes("/test/listening") || pathname.includes("/test/reading") || pathname.includes("/test/writing")
 
     useEffect(() => {

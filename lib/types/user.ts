@@ -1,51 +1,100 @@
+/**
+ * Foydalanuvchi profilining batafsil ma'lumotlari
+ */
 export interface UserProfile {
     full_name: string;
     username: string;
     avatar_url: string | null;
     bio: string | null;
-    birth_date: string | null;
-    gender: string | null;
+    birth_date: string | null; // ISO Date format: "YYYY-MM-DD"
+    gender: 'male' | 'female' | 'other' | null;
 }
 
+/**
+ * Foydalanuvchi aloqa vositalari (Email, Telefon)
+ */
 export interface UserContact {
     id: number;
-    contact_type: "email" | "phone";
+    contact_type: 'email' | 'phone';
     value: string;
-    is_primary: boolean;
-    is_verified: boolean;
+    is_primary: boolean;   // Asosiy login vositasi
+    is_verified: boolean;  // Tasdiqlanganligi
 }
 
+/**
+ * Asosiy Foydalanuvchi modeli (Root)
+ */
 export interface User {
-    id: number; // Swagger'da 0 (integer) deb ko'rsatilgan
+    id: number;
     is_active: boolean;
     global_role: string;
     created_at: string;
-    profile: UserProfile; // Profil ma'lumotlari ichkarida
-    contacts: UserContact[]; // Kontaktlar massiv holatida
+    profile: UserProfile;   // Nested Profile object
+    contacts: UserContact[]; // List of contacts
 }
 
+/**
+ * Profil ma'lumotlarini yangilash uchun Payload
+ */
 export interface UpdateProfilePayload {
     full_name?: string;
     username?: string;
     bio?: string;
-    birth_date?: string; // ISO format: "2026-02-09"
-    gender?: string;
+    birth_date?: string; // "1990-01-01"
+    gender?: 'male' | 'female' | 'other';
 }
 
-export interface ApiMessage {
-    message: string;
+/**
+ * Faol sessiyalar (Qurilmalar) ma'lumotlari
+ */
+export interface UserSession {
+    id: string;             // UUID
+    user_agent: string;     // Qurilma/Brauzer nomi
+    ip_address: string;
+    created_at: string;
+    updated_at: string;
+    expires_at: string;
+    is_current: boolean;    // Hozirgi foydalanilayotgan qurilma
 }
 
+/**
+ * Kontakt qo'shish (Birinchi bosqich)
+ */
+export interface AddContactPayload {
+    value: string;          // "+998..." yoki "test@mail.com"
+    type: 'phone' | 'email';
+}
+
+/**
+ * Kontaktni tasdiqlash (OTP bilan)
+ */
+export interface VerifyContactPayload extends AddContactPayload {
+    code: string;           // 6 xonali OTP kod
+}
+
+/**
+ * API javoblari uchun umumiy interfeyslar
+ */
 export interface AvatarResponse {
     avatar_url: string;
     message: string;
 }
 
-export interface Session {
-    id: string;            // UUID formatida
-    user_agent: string;    // Brauzer va qurilma haqida ma'lumot
-    ip_address: string;    // Foydalanuvchi IP manzili
-    updated_at: string;    // Oxirgi faollik
-    expires_at: string;    // Sessiya tugash vaqti
-    is_current: boolean;   // Aynan hozirgi qurilma ekanligini bildiradi
+export interface ApiMessage {
+    message: string;
+    status?: string;
 }
+
+/**
+ * USER API ENDPOINTS (Ma'lumot uchun)
+ * GET    /user/me/           -> User
+ * PUT    /user/me/profile    -> User (UpdateProfilePayload)
+ * POST   /user/me/avatar     -> AvatarResponse (FormData)
+ * GET    /user/me/contacts   -> UserContact[]
+ * POST   /user/me/contacts   -> ApiMessage (AddContactPayload)
+ * POST   /user/me/contacts/verify -> ApiMessage (VerifyContactPayload)
+ * PATCH  /user/me/contacts/{id}/primary -> ApiMessage
+ * DELETE /user/me/contacts/{id} -> void
+ * GET    /user/me/sessions   -> UserSession[]
+ * DELETE /user/me/sessions/{id} -> ApiMessage
+ */
