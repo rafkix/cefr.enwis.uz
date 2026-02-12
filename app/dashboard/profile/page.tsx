@@ -4,14 +4,14 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     Camera, Phone, ShieldCheck, Smartphone, UserCircle2, Mail, Trash2,
-    Calendar, Settings2, SmartphoneNfc, Globe, LogOut, X, Info, Heart, 
+    Calendar, Settings2, SmartphoneNfc, Globe, LogOut, X, Info, Heart,
     ShieldAlert, BadgeCheck, Clock,
     Loader2
 } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
-import { 
-    updateProfile, uploadAvatar, getMySessions, 
-    getMyContacts, terminateSession 
+import {
+    updateProfile, uploadAvatar, getMySessions,
+    getMyContacts, terminateSession
 } from "@/lib/api/user"
 import { UserSession, UserContact, UpdateProfilePayload } from "@/lib/types/user"
 import { toast } from "sonner"
@@ -32,7 +32,8 @@ export default function ProfilePage() {
 
     // 1. Kontaktlar mantiqi
     const phoneContact = useMemo(() => contacts.find(c => c.contact_type === 'phone'), [contacts]);
-    
+    const emailContact = useMemo(() => contacts.find(c => c.contact_type === "email"), [contacts]);
+
     // 2. Faqat oxirgi 3 ta sessiya
     const latestSessions = useMemo(() => sessions.slice(0, 3), [sessions]);
 
@@ -50,8 +51,8 @@ export default function ProfilePage() {
     // 4. Sanani formatlash (Masalan: 12-fevral, 2024)
     const formatDate = (dateStr: string | undefined) => {
         if (!dateStr) return "Kiritilmagan";
-        return new Date(dateStr).toLocaleDateString('uz-UZ', { 
-            day: 'numeric', month: 'long', year: 'numeric' 
+        return new Date(dateStr).toLocaleDateString('uz-UZ', {
+            day: 'numeric', month: 'long', year: 'numeric'
         });
     };
 
@@ -98,7 +99,7 @@ export default function ProfilePage() {
             await refreshUser();
             setIsEditing(false);
             toast.success("Ma'lumotlar saqlandi");
-        } catch { toast.error("Xatolik yuz berdi") } 
+        } catch { toast.error("Xatolik yuz berdi") }
         finally { setLoading(false) }
     }
 
@@ -113,7 +114,7 @@ export default function ProfilePage() {
     return (
         <div className="min-h-screen dark:bg-[#0a0a0b] py-12 px-4">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                
+
                 {/* CHAP USTUN */}
                 <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
                     <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5 text-center relative overflow-hidden">
@@ -131,12 +132,12 @@ export default function ProfilePage() {
                         </div>
                         <h1 className="text-2xl font-black dark:text-white leading-tight">{user?.profile?.full_name || "Ism kiritilmagan"}</h1>
                         <p className="text-blue-500 font-bold text-sm mb-6">@{user?.profile.username}</p>
-                        
+
                         <div className="flex gap-2">
                             <button onClick={() => setIsEditing(true)} className="flex-1 bg-slate-50 dark:bg-white/5 dark:text-white py-4 rounded-2xl font-black text-[10px] tracking-widest border dark:border-white/5 hover:bg-white transition-all uppercase">
                                 <Settings2 size={16} className="inline mr-1" /> Tahrirlash
                             </button>
-                            <button onClick={logout} className="p-4 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl border border-red-100 dark:border-red-500/20"><LogOut size={20}/></button>
+                            <button onClick={logout} className="p-4 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl border border-red-100 dark:border-red-500/20"><LogOut size={20} /></button>
                         </div>
                     </div>
 
@@ -151,8 +152,8 @@ export default function ProfilePage() {
                             <p className="font-black text-xs uppercase tracking-widest">Hisob holati</p>
                         </div>
                         <div className="space-y-3">
-                            <StatusRow label="Verified" icon={<BadgeCheck className="text-green-500" size={14}/>} />
-                            <StatusRow label="Two-Factor" icon={<div className="w-2 h-2 rounded-full bg-slate-300"/>} />
+                            <StatusRow label="Verified" icon={<BadgeCheck className="text-green-500" size={14} />} />
+                            <StatusRow label="Two-Factor" icon={<div className="w-2 h-2 rounded-full bg-slate-300" />} />
                         </div>
                     </div>
                 </div>
@@ -163,7 +164,7 @@ export default function ProfilePage() {
                         <h3 className="text-lg font-black dark:text-white mb-8 flex items-center gap-2"><Info size={22} className="text-blue-500" /> Shaxsiy ma'lumotlar</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                             <InfoItem icon={<Phone className="text-green-500" />} label="Telefon" value={phoneContact?.value || "Ulanmagan"} verified={phoneContact?.is_verified} />
-                            <InfoItem icon={<Mail className="text-orange-500" />} label="Email" value={user?.email || "—"} verified={true} />
+                            <InfoItem icon={<Mail className="text-orange-500" />} label="Email" value={emailContact?.value || "—"} verified={true} />
                             {/* EMAIL OSTIGA QO'SHILGAN YANGI BLOK */}
                             <InfoItem icon={<Clock className="text-blue-400" />} label="Ro'yxatdan o'tilgan" value={formatDate(user?.created_at)} />
                             <InfoItem icon={<Calendar className="text-purple-500" />} label="Tug'ilgan sana (Yosh)" value={`${formatDate(user?.profile?.birth_date)} (${calculateAge(user?.profile?.birth_date)})`} />
@@ -181,7 +182,7 @@ export default function ProfilePage() {
                                 <div key={s.id} className="flex items-center justify-between p-5 rounded-[28px] bg-slate-50 dark:bg-white/5 border dark:border-white/5 group transition-all">
                                     <div className="flex items-center gap-4">
                                         <div className={`p-4 rounded-2xl ${s.is_current ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-white/10 text-slate-400'}`}>
-                                            {s.user_agent.toLowerCase().includes('mobile') ? <Smartphone size={20}/> : <Globe size={20}/>}
+                                            {s.user_agent.toLowerCase().includes('mobile') ? <Smartphone size={20} /> : <Globe size={20} />}
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
@@ -206,27 +207,27 @@ export default function ProfilePage() {
                 {isEditing && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
                         <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-[#1c1c1d] w-full max-w-xl rounded-[40px] p-10 relative shadow-2xl">
-                            <button onClick={() => setIsEditing(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-white/5 rounded-full dark:text-white"><X size={20}/></button>
+                            <button onClick={() => setIsEditing(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-white/5 rounded-full dark:text-white"><X size={20} /></button>
                             <h2 className="text-2xl font-black dark:text-white mb-8">Profilni tahrirlash</h2>
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="col-span-2 space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">To'liq ism-sharif</label>
-                                    <input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-bold" />
+                                    <input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-bold" />
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Jins</label>
-                                    <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as any})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold">
+                                    <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value as any })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold">
                                         <option value="male">Erkak</option>
                                         <option value="female">Ayol</option>
                                     </select>
                                 </div>
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Tug'ilgan sana</label>
-                                    <input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold" />
+                                    <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold" />
                                 </div>
                                 <div className="col-span-2 space-y-2">
                                     <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Bio</label>
-                                    <textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-medium min-h-[100px]" />
+                                    <textarea value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-medium min-h-[100px]" />
                                 </div>
                             </div>
                             <button onClick={handleUpdateProfile} disabled={loading} className="w-full mt-8 py-5 bg-blue-500 text-white rounded-[24px] font-black shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
