@@ -24,6 +24,17 @@ export const updateProfile = (data: UpdateProfilePayload) =>
 
 // Avatarni yuklash (Create/Update)
 export const uploadAvatar = async (file: File) => {
+    // 1. Tekshirish: Faqat rasmlar (JPEG, PNG, WEBP)
+    if (!file.type.startsWith("image/")) {
+        throw new Error("Faqat rasm fayllari yuklanishi mumkin!");
+    }
+
+    // 2. Tekshirish: Maksimal hajm (masalan, 5MB)
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (file.size > maxSize) {
+        throw new Error("Rasm hajmi 5MB dan oshmasligi kerak!");
+    }
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -31,11 +42,14 @@ export const uploadAvatar = async (file: File) => {
         headers: {
             "Content-Type": "multipart/form-data",
         },
+        // Agar sizda axios interceptors bo'lsa, Content-Type ni ba'zan 
+        // o'zi avtomatik aniqlashi uchun headers'ni yozmaslik ham mumkin.
+        
         onUploadProgress: (progressEvent) => {
-            const percentCompleted = Math.round(
-                (progressEvent.loaded * 100) / (progressEvent.total || 1)
-            );
-            console.log(`Avatar yuklanmoqda: ${percentCompleted}%`);
+            const total = progressEvent.total || 1;
+            const percentCompleted = Math.round((progressEvent.loaded * 100) / total);
+            console.log(`Yuklanmoqda: ${percentCompleted}%`);
+            // Bu yerda callback yoki state'ga percentCompleted ni berish mumkin
         },
     });
 };
