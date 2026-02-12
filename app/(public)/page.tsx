@@ -2,12 +2,17 @@
 
 import React, { useState } from "react"
 import { useRouter } from "next/navigation"
-import { motion, useScroll, useMotionValueEvent } from "framer-motion"
+import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion"
 import {
     ArrowRight, Zap, Mic, PenTool, Headphones, BookOpen, ShieldCheck,
     CheckCircle2, AlertTriangle, Sparkles, Heart, HandHeart, GraduationCap, // ❤️ Kerakli iconlar
-    BarChart3
+    BarChart3,
+    ExternalLink,
+    CreditCard,
+    UserPlus,
+    Coins
 } from "lucide-react"
+import Link from "next/link"
 
 // --- ANIMATIONS ---
 const fadeInUp = {
@@ -30,6 +35,18 @@ export default function UltimateAIHome() {
     useMotionValueEvent(scrollY, "change", (latest) => {
         setIsScrolled(latest > 50)
     })
+    const [copied, setCopied] = useState(false);
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText('6262570800519183');
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const fadeInUp = {
+        hidden: { opacity: 0, y: 20 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
+    };
 
     return (
         <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 selection:bg-[#17776A] selection:text-white overflow-x-hidden">
@@ -85,10 +102,10 @@ export default function UltimateAIHome() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         transition={{ duration: 0.8 }}
-                        className="relative h-[550px] hidden lg:block origin-right scale-110"
+                        className="relative h-[550px] hidden lg:block origin-right scale-110 left-30 top-20"
                     >
                         {/* Reading Card (Back) */}
-                        <div className="absolute top-0 right-10 bg-white p-6 rounded-[30px] shadow-xl border border-slate-100 w-80 transform -rotate-3 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
+                        <div className="absolute top-0 -left-0.5 bg-white p-6 rounded-[30px] shadow-xl border border-slate-100 w-80 transform -rotate-3 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2 bg-[#17776A]/30 rounded-lg text-[#17776A]"><BookOpen size={20} /></div>
                                 <h4 className="font-bold text-slate-800">Full Reading</h4>
@@ -106,7 +123,7 @@ export default function UltimateAIHome() {
                         </div>
 
                         {/* Writing Card (Back) */}
-                        <div className="absolute top-20 right-20 bg-white p-6 rounded-[30px] shadow-xl border border-slate-100 w-80 transform rotate-6 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
+                        <div className="absolute top-20 right-40 bg-white p-6 rounded-[30px] shadow-xl border border-slate-100 w-80 transform rotate-6 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><PenTool size={20} /></div>
                                 <h4 className="font-bold text-slate-800">Writing Task 2</h4>
@@ -124,7 +141,7 @@ export default function UltimateAIHome() {
                         </div>
 
                         {/* Listening Card */}
-                        <div className="absolute top-40 right-10 bg-white p-7 rounded-[30px] shadow-xl border border-slate-100 w-80 transform -rotate-3 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
+                        <div className="absolute top-40 -left-0.5 bg-white p-7 rounded-[30px] shadow-xl border border-slate-100 w-80 transform -rotate-3 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Headphones size={20} /></div>
                                 <h4 className="font-bold text-slate-800">Full Listening</h4>
@@ -142,7 +159,7 @@ export default function UltimateAIHome() {
                         </div>
 
                         {/* Speaking Card (Front) */}
-                        <div className="absolute top-60 right-20 bg-white/90 backdrop-blur-xl p-8 rounded-[36px] shadow-2xl border border-white/60 w-96 z-20 transform rotate-6 hover:rotate-0 transition-transform duration-500">
+                        <div className="absolute top-60 right-40 bg-white/90 backdrop-blur-xl p-8 rounded-[36px] shadow-2xl border border-white/60 w-96 z-20 transform rotate-6 hover:rotate-0 transition-transform duration-500">
                             <div className="flex justify-between items-start mb-6">
                                 <div>
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Speaking AI</p>
@@ -175,7 +192,7 @@ export default function UltimateAIHome() {
             </section>
 
             {/* ================= 3. SERVICE SECTION ================= */}
-            <section className="py-20 px-6 md:px-12 lg:px-20">
+            <section className="relative pt-40 pb-24 px-6 md:px-12 lg:px-20 overflow-hidden">
                 <div className="mx-auto max-w-[1536px]">
                     <motion.div
                         variants={stagger}
@@ -252,104 +269,158 @@ export default function UltimateAIHome() {
                 </div>
             </section>
 
-            {/* ================= ❤️ 3. CHARITY SECTION (YANGI QO'SHILDI) ================= */}
-            <section className="py-24 px-6 md:px-12 lg:px-20 bg-white relative overflow-hidden">
-                {/* Dekorativ fon */}
-                <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-rose-50/50 via-white to-white pointer-events-none"></div>
+            {/* ================= 4. CHARITY SECTION (SERVICE STYLE MATCH) ================= */}
+            <section className="py-20 px-6 md:px-12 lg:px-20 bg-white relative overflow-hidden">
+                <div className="mx-auto max-w-[1536px]">
 
-                <div className="mx-auto max-w-[1536px] relative z-10">
-                    <div className="bg-[#FFF0F5]/40 border border-rose-100 rounded-[3rem] p-8 md:p-16 lg:p-20 relative overflow-hidden">
-                        {/* Orqa fon effektlari */}
-                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-rose-100/40 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
+                    {/* Asosiy Konteyner */}
+                    <motion.div
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true }}
+                        variants={fadeInUp}
+                        className="bg-[#FFF5F7] rounded-[40px] p-8 md:p-14 lg:p-16 border border-rose-100 relative overflow-hidden group shadow-2xl shadow-rose-100/30"
+                    >
+                        {/* Hayriya mavzusidagi fon elementlari */}
+                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-rose-200/30 to-transparent rounded-full blur-3xl -mr-40 -mt-40 transition-all duration-1000 group-hover:scale-110" />
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-100/40 rounded-full blur-2xl -ml-20 -mb-20" />
 
-                        <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24 relative z-10">
+                        <div className="relative z-10">
+                            <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
 
-                            {/* Chap tomon: Matn */}
-                            <div className="flex-1 space-y-8 text-center lg:text-right">
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    whileInView={{ opacity: 1, y: 0 }}
-                                    viewport={{ once: true }}
-                                    className="inline-flex items-center gap-2 px-4 py-1.5 bg-white text-rose-600 rounded-full text-xs font-black uppercase tracking-widest shadow-sm border border-rose-100"
-                                >
-                                    <HandHeart size={14} /> Ijtimoiy Mas'uliyat
-                                </motion.div>
-
-                                <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                                    Har bir test — <br />
-                                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-red-600">yangi imkoniyat.</span>
-                                </h2>
-
-                                <p className="text-slate-600 text-lg md:text-xl font-medium leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                                    Biz foydamizning <span className="font-bold text-slate-900 border-b-2 border-rose-200">5% qismini</span> imkoniyati cheklangan va ota-ona qaramog'idan mahrum bo'lgan iqtidorli bolalarning ta'lim olishiga (grantlar) yo'naltiramiz.
-                                </p>
-
-                                {/* Stats Cards */}
-                                <div className="flex flex-col sm:flex-row gap-6 justify-center lg:justify-start pt-2">
-                                    <motion.div
-                                        whileHover={{ y: -5 }}
-                                        className="flex items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-rose-100 shadow-lg shadow-rose-100/30"
-                                    >
-                                        <div className="p-3 bg-rose-50 text-rose-500 rounded-xl">
-                                            <GraduationCap size={28} />
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-[900] text-slate-900 leading-none">120+</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">Ta'lim Grantlari</p>
-                                        </div>
-                                    </motion.div>
-
-                                    <motion.div
-                                        whileHover={{ y: -5 }}
-                                        className="flex items-center gap-4 bg-white px-6 py-5 rounded-2xl border border-rose-100 shadow-lg shadow-rose-100/30"
-                                    >
-                                        <div className="p-3 bg-rose-50 text-rose-500 rounded-xl">
-                                            <Heart size={28} />
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="text-2xl font-[900] text-slate-900 leading-none">50m</p>
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase mt-1 tracking-wider">Xayriya Summasi</p>
-                                        </div>
-                                    </motion.div>
-                                </div>
-                            </div>
-
-                            {/* O'ng tomon: Visual */}
-                            <div className="flex-1 flex justify-center w-full">
-                                <div className="relative w-full max-w-md aspect-square bg-white rounded-full flex items-center justify-center shadow-2xl shadow-rose-200/50 border border-rose-50">
-                                    <div className="absolute inset-0 bg-rose-100 rounded-full animate-ping opacity-20" />
-                                    <div className="relative z-10 flex flex-col items-center text-center p-10">
-                                        <Heart size={140} className="text-rose-500 fill-rose-500 drop-shadow-2xl animate-pulse mb-6" />
-                                        <span className="text-sm font-black text-rose-400 uppercase tracking-[0.3em] mb-2">Enwis Charity</span>
-                                        <span className="text-3xl font-bold text-slate-900">Yaxshilik ulashing</span>
+                                {/* 1. Matnli Qism */}
+                                <div className="flex-[1.2] space-y-8">
+                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm border border-rose-100">
+                                        <HandHeart size={16} className="animate-bounce" /> Ijtimoiy Mas'uliyat
                                     </div>
 
-                                    {/* Orbiting Badges */}
-                                    <motion.div
-                                        animate={{ y: [0, -15, 0] }}
-                                        transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                                        className="absolute top-12 right-0 bg-white px-6 py-3 rounded-2xl shadow-xl border border-rose-100 flex items-center gap-3"
-                                    >
-                                        <div className="w-2.5 h-2.5 bg-green-500 rounded-full" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Mehr</span>
-                                    </motion.div>
-                                    <motion.div
-                                        animate={{ y: [0, 15, 0] }}
-                                        transition={{ repeat: Infinity, duration: 5, ease: "easeInOut" }}
-                                        className="absolute bottom-16 right-0 bg-white px-6 py-3 rounded-2xl shadow-xl border border-rose-100 flex items-center gap-3"
-                                    >
-                                        <div className="w-2.5 h-2.5 bg-blue-500 rounded-full" />
-                                        <span className="text-xs font-bold text-slate-700 uppercase tracking-wider">Umid</span>
-                                    </motion.div>
+                                    <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
+                                        Har bir test — <br />
+                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-red-600">
+                                            yangi imkoniyat.
+                                        </span>
+                                    </h2>
+
+                                    <p className="text-slate-600 text-lg md:text-xl font-medium leading-relaxed max-w-2xl">
+                                        Biz har bir test sotuvidan tushgan foydaning <span className="text-slate-900 font-bold border-b-2 border-rose-300">5% qismini</span> iqtidorli, ammo sharoiti og'ir yoshlarning ta'lim grantlariga yo'naltiramiz.
+                                    </p>
+
+                                    {/* Jarayon Grid (Service Style) */}
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                        {[
+                                            { icon: <UserPlus className="text-blue-500" />, title: "Siz test olasiz", desc: "5% fondga o'tadi" },
+                                            { icon: <Coins className="text-amber-500" />, title: "Fond yig'iladi", desc: "Shaffof jamlanadi" },
+                                            { icon: <Sparkles className="text-rose-500" />, title: "Grant beriladi", desc: "Ta'lim qo'llanadi" }
+                                        ].map((step, idx) => (
+                                            <div key={idx} className="bg-white/80 backdrop-blur-sm p-5 rounded-3xl border border-rose-100/50 hover:shadow-lg transition-all">
+                                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-4">{step.icon}</div>
+                                                <h4 className="text-sm font-black text-slate-900">{step.title}</h4>
+                                                <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">{step.desc}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 2. Visual Qism (Hayriya ramzi) */}
+                                <div className="flex-1 flex justify-center relative">
+                                    <div className="relative w-72 h-72 md:w-96 md:h-96">
+                                        {/* Orqa fon animatsiyasi */}
+                                        <div className="absolute inset-0 bg-rose-200 rounded-[4rem] rotate-6 opacity-20 animate-pulse" />
+
+                                        <div className="relative w-full h-full bg-white rounded-[4rem] flex flex-col items-center justify-center shadow-2xl border border-rose-50 group-hover:scale-105 transition-transform duration-500">
+                                            <Heart size={140} className="text-rose-500 fill-rose-500 animate-pulse" />
+                                            <div className="mt-4 text-center">
+                                                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Enwis Care</span>
+                                                <span className="text-2xl font-black text-slate-800">Mehr-shafqat</span>
+                                            </div>
+
+                                            {/* Uchar stickerlar */}
+                                            <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="absolute -top-6 -right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl text-xs font-bold -rotate-6">
+                                                Savob qiling
+                                            </motion.div>
+                                            <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="absolute -bottom-6 -left-6 bg-white text-rose-500 px-6 py-3 rounded-2xl shadow-xl text-xs font-black border border-rose-100 rotate-6">
+                                                Kelajakni quring
+                                            </motion.div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
+
+                            {/* 3. Donat Bloki (Speaking Simulator uslubida) */}
+                            <div className="mt-24">
+                                <motion.div
+                                    whileHover={{ y: -5 }}
+                                    className="bg-rose-900 rounded-[40px] p-8 md:p-12 text-white relative overflow-hidden shadow-2xl"
+                                >
+                                    {/* Grainy Texture */}
+                                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
+
+                                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
+                                        <div className="flex flex-col md:flex-row items-center gap-8">
+                                            <div className="w-20 h-20 bg-rose-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-rose-600/40 relative group-hover:rotate-12 transition-transform">
+                                                <Heart className="text-white fill-white" size={40} />
+                                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-slate-900 animate-ping" />
+                                            </div>
+                                            <div className="text-center md:text-left">
+                                                <h3 className="text-3xl font-black tracking-tight mb-2 uppercase italic">Loyihani qo'llang</h3>
+                                                <p className="text-slate-400 font-medium max-w-sm">Sizning yordamingiz platforma rivoji va yangi grantlar uchun xizmat qiladi.</p>
+                                            </div>
+                                        </div>
+
+                                        {/* Karta va Tugma */}
+                                        <div className="flex flex-col items-center gap-3 w-full lg:w-auto">
+                                            <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
+                                                {/* Karta */}
+                                                <div
+                                                    onClick={handleCopy}
+                                                    className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/10 p-5 rounded-[2rem] flex items-center gap-5 transition-all cursor-pointer group/card active:scale-95"
+                                                >
+                                                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 group-hover/card:rotate-12 transition-transform">
+                                                        <CreditCard size={24} />
+                                                    </div>
+                                                    <div className="pr-4">
+                                                        <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Uzcard / Humo</p>
+                                                        <p className="text-xl font-mono font-bold text-white tracking-widest">6262 5708 0051 9183</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Donat Button */}
+                                                <Link
+                                                    href="https://idonate.uz/d/rafkix"
+                                                    target="_blank"
+                                                    className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white px-10 py-6 rounded-[2rem] flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-rose-600/30 active:scale-95"
+                                                >
+                                                    Donat <ExternalLink size={18} />
+                                                </Link>
+                                            </div>
+
+                                            {/* Nusxalandi Bildirishnomasi (Karta ostida) */}
+                                            <div className="h-6 overflow-hidden">
+                                                <AnimatePresence>
+                                                    {copied && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: -20 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: 10 }}
+                                                            className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest"
+                                                        >
+                                                            <CheckCircle2 size={14} /> Karta raqami nusxalandi!
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            </div>
+
                         </div>
-                    </div>
+                    </motion.div>
                 </div>
             </section>
 
             {/* ================= 6. PRICING SECTION ================= */}
-            <section id="pricing" className="py-32 px-6 md:px-12 lg:px-20 bg-[#FDFDFF] relative overflow-hidden">
+            <section id="pricing" className="py-20 px-6 md:px-12 lg:px-20 bg-[#FDFDFF] relative overflow-hidden">
 
                 {/* Background Decor */}
                 <div className="absolute top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[1536px] -z-10 pointer-events-none">

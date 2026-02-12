@@ -100,9 +100,9 @@ export default function TestPage() {
 
                             <div className="relative z-10 flex flex-col h-full">
                                 <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mb-8 shadow-sm transition-transform group-hover:scale-110 group-hover:rotate-3 
-                                    ${test.id === 'listening' ? 'bg-purple-50 text-purple-600' : 
-                                      test.id === 'reading' ? 'bg-blue-50 text-blue-600' : 
-                                      test.id === 'writing' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
+                                    ${test.id === 'listening' ? 'bg-purple-50 text-purple-600' :
+                                        test.id === 'reading' ? 'bg-blue-50 text-blue-600' :
+                                            test.id === 'writing' ? 'bg-orange-50 text-orange-600' : 'bg-red-50 text-red-600'}`}>
                                     <test.icon size={28} />
                                 </div>
 
@@ -132,7 +132,7 @@ export default function TestPage() {
             </div>
 
             {/* --- SUPPORT SECTION (Sahifa oxirida chiroyli kenglikda) --- */}
-            <motion.div 
+            <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
@@ -140,7 +140,7 @@ export default function TestPage() {
             >
                 {/* Orqa fon uchun dekor */}
                 <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-rose-50 rounded-full blur-3xl opacity-50" />
-                
+
                 <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
                     <div className="flex items-center gap-6 text-center lg:text-left flex-col lg:flex-row">
                         <div className="w-16 h-16 rounded-[24px] bg-rose-50 flex items-center justify-center shadow-inner animate-pulse">

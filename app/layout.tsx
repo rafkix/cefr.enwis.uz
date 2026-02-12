@@ -1,28 +1,36 @@
 import type { Metadata, Viewport } from "next"
 import { Geist, Geist_Mono } from "next/font/google"
 import "./globals.css"
+
 import { Analytics } from "@vercel/analytics/next"
 import LayoutWrapper from "@/components/LayoutWrapper"
 import { Suspense } from "react"
 import ProgressBar from "@/components/Providers/ProgressBar"
 import { AuthProvider } from "@/lib/AuthContext"
 
-/* Fonts */
+import Script from "next/script"
+
+/* ================= FONTS ================= */
+
 const geist = Geist({
     subsets: ["latin"],
+    variable: "--font-geist",
 })
 
 const geistMono = Geist_Mono({
     subsets: ["latin"],
+    variable: "--font-geist-mono",
 })
 
-/* Mobile / viewport */
+/* ================= VIEWPORT ================= */
+
 export const viewport: Viewport = {
     width: "device-width",
     initialScale: 1,
 }
 
-/* SEO + Telegram / OpenGraph */
+/* ================= SEO ================= */
+
 export const metadata: Metadata = {
     metadataBase: new URL("https://cefr.enwis.uz"),
 
@@ -35,7 +43,7 @@ export const metadata: Metadata = {
         "CEFR imtihoniga real formatda tayyorlaning: listening, reading, writing va speaking uchun tizimli platforma",
 
     alternates: {
-        canonical: "https://cefr.enwis.uz",
+        canonical: "/",
     },
 
     openGraph: {
@@ -75,20 +83,41 @@ export const metadata: Metadata = {
     },
 }
 
-/* Root layout */
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+/* ================= ROOT LAYOUT ================= */
+
+export default function RootLayout({
+    children,
+}: {
+    children: React.ReactNode
+}) {
     return (
-        <html lang="uz">
-            <body>
-                <meta name="referrer" content="no-referrer-when-downgrade"></meta>
-                <script src="https://accounts.google.com/gsi/client" async defer></script>
-                <Suspense fallback={null}><ProgressBar /></Suspense>
-                {/* AuthProvider hamma narsani o'rab turibdi */}
+        <html
+            lang="uz"
+            className={`${geist.variable} ${geistMono.variable}`}
+        >
+            <body className="antialiased">
+
+                {/* Google Identity Script */}
+                <Script
+                    src="https://accounts.google.com/gsi/client"
+                    strategy="afterInteractive"
+                />
+
+                {/* Route progress */}
+                <Suspense fallback={null}>
+                    <ProgressBar />
+                </Suspense>
+
+                {/* Global Providers */}
                 <AuthProvider>
-                    <LayoutWrapper>{children}</LayoutWrapper>
+                    <LayoutWrapper>
+                        {children}
+                    </LayoutWrapper>
                 </AuthProvider>
-                
+
+                {/* Analytics */}
                 <Analytics />
+
             </body>
         </html>
     )
