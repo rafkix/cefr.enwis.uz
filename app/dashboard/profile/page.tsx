@@ -12,8 +12,7 @@ import {
 import { useAuth } from "@/lib/AuthContext"
 import {
     updateProfile, uploadAvatar, getMySessions,
-    getMyContacts, terminateSession,
-    addContactStart
+    getMyContacts, terminateSession
 } from "@/lib/api/user"
 import { UserSession, UserContact, UpdateProfilePayload } from "@/lib/types/user"
 import { formatDistanceToNow } from "date-fns"
@@ -35,7 +34,6 @@ export default function ProfilePage() {
     })
 
     const [newPhone, setNewPhone] = useState("")
-    const [isSendingToBot, setIsSendingToBot] = useState(false)
 
     // Memoized values
     const isGoogleUser = useMemo(() => user?.provider === 'google.com', [user]);
@@ -71,42 +69,21 @@ export default function ProfilePage() {
         }
     }, [user, loadData])
 
-    // Telegram link generator
-    const getTelegramLink = (phoneVal: string) => {
-        const purePhone = phoneVal.replace(/\D/g, "");
-        if (isGoogleUser || !phoneContact) {
-            return `https://t.me/EnwisAuthBot?start=${purePhone}_${user?.id}`;
-        }
-        return `https://t.me/EnwisAuthBot?start=verify_phone`;
-    };
-
-    const handleBotRedirect = async () => {
+    // Telegram link generator - Faqat yo'naltirish uchun
+    const openBot = () => {
         const phoneToVerify = phoneContact ? phoneContact.value : newPhone.replace(/\D/g, "");
-
+        
         if (!phoneContact && phoneToVerify.length < 12) {
-            return toast.error("Iltimos, telefon raqamingizni to'liq kiriting");
+            return toast.error("Iltimos, telefon raqamingizni kiriting");
         }
 
-        setIsSendingToBot(true);
-
-        try {
-            // API ga xabar berish (ixtiyoriy, agar backend kutsa)
-            await addContactStart({
-                type: 'phone',
-                value: phoneToVerify
-            });
-
-            // To'g'ridan-to'g'ri botga yuborish
-            const botLink = getTelegramLink(phoneToVerify);
-            window.open(botLink, '_blank');
-            toast.info("Tasdiqlash uchun Telegram botga o'ting");
-        } catch (err: any) {
-            const msg = err.response?.data?.detail || "Xatolik yuz berdi";
-            toast.error(msg);
-        } finally {
-            setIsSendingToBot(false);
-        }
-    }
+        const purePhone = phoneToVerify.replace(/\D/g, "");
+        // Botga start parametri bilan yuboramiz
+        const botLink = `https://t.me/EnwisAuthBot?start=${purePhone}_${user?.id}`;
+        
+        window.open(botLink, '_blank');
+        toast.info("Tasdiqlash uchun Telegram botga o'tildi");
+    };
 
     const handleUpdateProfile = async () => {
         setLoading(true);
@@ -134,7 +111,7 @@ export default function ProfilePage() {
         <div className="min-h-screen py-6 sm:py-10 bg-slate-50/50">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 px-4">
 
-                {/* LEFT SIDE: MAIN INFO */}
+                {/* ASOSIY MA'LUMOTLAR */}
                 <div className="lg:col-span-8 space-y-6">
                     {isGoogleUser && (
                         <div className="bg-blue-50 border border-blue-100 rounded-3xl p-4 flex items-center gap-4">
@@ -159,8 +136,8 @@ export default function ProfilePage() {
 
                         <div className="flex flex-col md:flex-row gap-10">
                             <div className="relative self-center shrink-0">
-                                <div className="w-40 h-40 rounded-[50px] overflow-hidden bg-slate-100 border-4 border-white shadow-2xl text-slate-300">
-                                    {user?.profile?.avatar_url ? <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><UserCircle2 size={100} /></div>}
+                                <div className="w-40 h-40 rounded-[50px] overflow-hidden bg-slate-100 border-4 border-white shadow-2xl">
+                                    {user?.profile?.avatar_url ? <img src={user.profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-slate-300"><UserCircle2 size={100} /></div>}
                                 </div>
                                 <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-2 -right-2 bg-blue-600 text-white p-3 rounded-2xl shadow-lg border-4 border-white hover:scale-110 transition-all"><Camera size={18} /></button>
                                 <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
@@ -200,7 +177,7 @@ export default function ProfilePage() {
                         )}
                     </motion.div>
 
-                    {/* CONTACTS */}
+                    {/* ALOQA MA'LUMOTLARI */}
                     <div className="bg-white rounded-[40px] border border-slate-200 p-8 shadow-sm">
                         <h3 className="text-[10px] font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
                             <ShieldCheck size={14} className="text-blue-500" /> Aloqa ma'lumotlari
@@ -232,10 +209,11 @@ export default function ProfilePage() {
                                     </div>
                                     {phoneContact?.is_verified && <ShieldCheck className="text-emerald-500" size={18} />}
                                 </div>
+                                
                                 {!phoneContact?.is_verified && (
-                                    <button onClick={handleBotRedirect} disabled={isSendingToBot} className="w-full py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
-                                        {isSendingToBot ? <Loader2 className="animate-spin" size={14} /> : <SmartphoneNfc size={14} />} 
-                                        {phoneContact ? "Bot orqali tasdiqlash" : "Botda davom ettirish"}
+                                    <button onClick={openBot} className="w-full py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95 transition-all">
+                                        <SmartphoneNfc size={14} /> 
+                                        {phoneContact ? "Botda tasdiqlash" : "Raqamni botda tasdiqlash"}
                                     </button>
                                 )}
                             </div>
@@ -243,7 +221,7 @@ export default function ProfilePage() {
                     </div>
                 </div>
 
-                {/* RIGHT SIDEBAR: STATUS & SESSIONS */}
+                {/* O'NG TOMON: STATUS VA SESSIYALAR */}
                 <div className="lg:col-span-4 space-y-6">
                     <div className="bg-slate-900 rounded-[40px] p-8 text-white shadow-xl">
                         <div className="flex items-center gap-2 mb-6 text-blue-400">
@@ -254,8 +232,8 @@ export default function ProfilePage() {
                         <div className="w-full bg-slate-800 h-2.5 rounded-full mb-4 overflow-hidden">
                             <motion.div initial={{ width: 0 }} animate={{ width: `${completion}%` }} className={`h-full rounded-full ${completion === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} />
                         </div>
-                        <p className="text-[10px] text-slate-400 font-medium">
-                            {completion < 100 ? "Profilingizni bot orqali tasdiqlab, himoyani 100% ga yetkazing." : "Tabriklaymiz! Profilingiz to'liq himoyalangan."}
+                        <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                            {completion < 100 ? "Profilingizni to'liq himoya qilish uchun barcha ma'lumotlarni kiriting va raqamingizni tasdiqlang." : "Tabriklaymiz! Profilingiz to'liq himoyalangan."}
                         </p>
                     </div>
 
@@ -266,17 +244,17 @@ export default function ProfilePage() {
 
                         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
                             {sessions.map((s) => (
-                                <div key={s.id} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all group ${s.is_current ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                                <div key={s.id} className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${s.is_current ? 'bg-blue-50/50 border-blue-100' : 'bg-slate-50 border-transparent'}`}>
                                     <div className={`p-2.5 rounded-xl shrink-0 ${s.is_current ? 'bg-white text-blue-600' : 'bg-white text-slate-400'}`}>
                                         {s.user_agent.toLowerCase().includes('mobile') ? <Smartphone size={16} /> : <Globe size={16} />}
                                     </div>
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-1.5">
                                             <p className="text-[9px] font-black text-slate-900 truncate">{s.ip_address}</p>
-                                            {s.is_current && <span className="bg-emerald-500 w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]" />}
+                                            {s.is_current && <span className="bg-emerald-500 w-1.5 h-1.5 rounded-full" />}
                                         </div>
-                                        <p className="text-[8px] text-slate-400 font-bold truncate">{s.user_agent.split(') ')[1] || "Noma'lum qurilma"}</p>
-                                        <p className="text-[7px] text-slate-400 mt-1 flex items-center gap-1 uppercase">
+                                        <p className="text-[8px] text-slate-400 font-bold truncate">{s.user_agent.split(') ')[1] || "Qurilma"}</p>
+                                        <p className="text-[7px] text-slate-400 mt-1 uppercase">
                                             {formatDistanceToNow(new Date(s.updated_at), { addSuffix: true, locale: uz })}
                                         </p>
                                     </div>
@@ -290,7 +268,7 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    <button onClick={logout} className="w-full p-6 bg-red-50 text-red-600 rounded-[35px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-100 transition-all border border-red-100 shadow-sm shadow-red-50">
+                    <button onClick={logout} className="w-full p-6 bg-red-50 text-red-600 rounded-[35px] font-black text-[10px] uppercase tracking-widest flex items-center justify-center gap-3 hover:bg-red-100 transition-all border border-red-100">
                         <LogOut size={16} /> Tizimdan chiqish
                     </button>
                 </div>
@@ -299,7 +277,7 @@ export default function ProfilePage() {
             <style jsx>{`
                 .custom-scrollbar::-webkit-scrollbar { width: 4px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8e0; border-radius: 10px; }
             `}</style>
         </div>
     )
