@@ -46,11 +46,7 @@ export const uploadAvatar = async (file: File) => {
 
 // Yangi kontakt qo'shishni boshlash - OTP yuborish (Create - Step 1)
 export const addContactStart = (data: AddContactPayload) => 
-    api.post<ApiMessage>("/user/me/contacts", data);
-
-// Kodni tasdiqlash va kontaktni saqlash (Create - Step 2)
-export const addContactVerify = (data: VerifyContactPayload) => 
-    api.post<ApiMessage>("/user/me/contacts/verify", data);
+    api.post<ApiMessage>("/user/me/contacts_add", data);
 
 // Barcha kontaktlarni olish (Read)
 export const getMyContacts = () => 
