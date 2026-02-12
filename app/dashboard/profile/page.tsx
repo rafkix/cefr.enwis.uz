@@ -111,6 +111,43 @@ export default function ProfilePage() {
         } catch { toast.error("Sessiyani yopib bo'lmadi") }
     };
 
+    // OTP va Raqam qo'shish uchun yangi statelar
+    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState("");
+    const [otpCode, setOtpCode] = useState("");
+    const [step, setStep] = useState<'input' | 'verify'>('input'); // 1-bosqich: raqam kiritish, 2-bosqich: kod
+    const [isVerifying, setIsVerifying] = useState(false);
+
+    // Raqamga kod yuborish
+    const handleSendCode = async () => {
+        if (phoneNumber.length < 9) return toast.error("Raqamni to'liq kiriting");
+        setIsVerifying(true);
+        try {
+            // Backend API: masalan /auth/send-otp
+            // await sendOTP(phoneNumber); 
+            setStep('verify');
+            toast.success("Tasdiqlash kodi yuborildi");
+        } catch {
+            toast.error("Kod yuborishda xatolik");
+        } finally { setIsVerifying(false); }
+    };
+
+    // Kodni tasdiqlash
+    const handleVerifyCode = async () => {
+        if (otpCode.length < 4) return toast.error("Kodni kiriting");
+        setIsVerifying(true);
+        try {
+            // Backend API: masalan /auth/verify-phone
+            // await verifyPhone(phoneNumber, otpCode);
+            await loadData(); // Kontaktlarni qayta yuklash
+            setIsPhoneModalOpen(false);
+            setStep('input');
+            toast.success("Telefon raqami tasdiqlandi!");
+        } catch {
+            toast.error("Kod noto'g'ri kiritildi");
+        } finally { setIsVerifying(false); }
+    };
+
     return (
         <div className="min-h-screen dark:bg-[#0a0a0b] py-12 px-4">
             <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
@@ -163,7 +200,20 @@ export default function ProfilePage() {
                     <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5">
                         <h3 className="text-lg font-black dark:text-white mb-8 flex items-center gap-2"><Info size={22} className="text-blue-500" /> Shaxsiy ma'lumotlar</h3>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                            <InfoItem icon={<Phone className="text-green-500" />} label="Telefon" value={phoneContact?.value || "Ulanmagan"} verified={phoneContact?.is_verified} />
+                            <InfoItem
+                                icon={<Phone className="text-green-500" />}
+                                label="Telefon"
+                                value={phoneContact?.value || "Ulanmagan"}
+                                verified={phoneContact?.is_verified}
+                                action={!phoneContact?.is_verified && (
+                                    <button
+                                        onClick={() => setIsPhoneModalOpen(true)}
+                                        className="text-[10px] font-black text-blue-500 bg-blue-50 dark:bg-blue-500/10 px-2 py-1 rounded-lg uppercase ml-auto"
+                                    >
+                                        {phoneContact ? "Tasdiqlash" : "Ulash"}
+                                    </button>
+                                )}
+                            />
                             <InfoItem icon={<Mail className="text-orange-500" />} label="Email" value={emailContact?.value || "—"} verified={true} />
                             {/* EMAIL OSTIGA QO'SHILGAN YANGI BLOK */}
                             <InfoItem icon={<Clock className="text-blue-400" />} label="Ro'yxatdan o'tilgan" value={formatDate(user?.created_at)} />
@@ -202,37 +252,68 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* EDIT MODAL */}
+            {/* TELEFON TASDIQLASH MODALI */}
             <AnimatePresence>
-                {isEditing && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
-                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-[#1c1c1d] w-full max-w-xl rounded-[40px] p-10 relative shadow-2xl">
-                            <button onClick={() => setIsEditing(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-white/5 rounded-full dark:text-white"><X size={20} /></button>
-                            <h2 className="text-2xl font-black dark:text-white mb-8">Profilni tahrirlash</h2>
-                            <div className="grid grid-cols-2 gap-6">
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">To'liq ism-sharif</label>
-                                    <input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-bold" />
+                {isPhoneModalOpen && (
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} className="bg-white dark:bg-[#1c1c1d] w-full max-w-md rounded-[32px] p-8 relative shadow-2xl">
+                            <button onClick={() => setIsPhoneModalOpen(false)} className="absolute top-4 right-4 p-2 text-slate-400"><X size={20} /></button>
+
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                    {step === 'input' ? <Smartphone size={32} /> : <ShieldCheck size={32} />}
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Jins</label>
-                                    <select value={formData.gender} onChange={e => setFormData({ ...formData, gender: e.target.value as any })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold">
-                                        <option value="male">Erkak</option>
-                                        <option value="female">Ayol</option>
-                                    </select>
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Tug'ilgan sana</label>
-                                    <input type="date" value={formData.birth_date} onChange={e => setFormData({ ...formData, birth_date: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold" />
-                                </div>
-                                <div className="col-span-2 space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Bio</label>
-                                    <textarea value={formData.bio} onChange={e => setFormData({ ...formData, bio: e.target.value })} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-medium min-h-[100px]" />
-                                </div>
+                                <h3 className="text-xl font-black dark:text-white">
+                                    {step === 'input' ? "Telefon raqamini ulash" : "Kodni kiriting"}
+                                </h3>
+                                <p className="text-sm text-slate-500 mt-2">
+                                    {step === 'input'
+                                        ? "Xizmatlardan to'liq foydalanish uchun raqamingizni tasdiqlang"
+                                        : `+998 ${phoneNumber} raqamiga yuborilgan kodni kiriting`}
+                                </p>
                             </div>
-                            <button onClick={handleUpdateProfile} disabled={loading} className="w-full mt-8 py-5 bg-blue-500 text-white rounded-[24px] font-black shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
-                                {loading ? <Loader2 className="animate-spin mx-auto" /> : "SAQLASH"}
-                            </button>
+
+                            {step === 'input' ? (
+                                <div className="space-y-4">
+                                    <div className="relative">
+                                        <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold dark:text-white">+998</span>
+                                        <input
+                                            type="tel"
+                                            placeholder="90 123 45 67"
+                                            value={phoneNumber}
+                                            onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                                            className="w-full py-4 pl-16 pr-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-bold"
+                                        />
+                                    </div>
+                                    <button
+                                        onClick={handleSendCode}
+                                        disabled={isVerifying || phoneNumber.length < 9}
+                                        className="w-full py-4 bg-blue-500 text-white rounded-2xl font-black shadow-lg disabled:opacity-50"
+                                    >
+                                        {isVerifying ? <Loader2 className="animate-spin mx-auto" size={20} /> : "KOD YUBORISH"}
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    <input
+                                        type="text"
+                                        placeholder="0000"
+                                        value={otpCode}
+                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                                        className="w-full py-4 text-center text-2xl tracking-[10px] bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-black"
+                                    />
+                                    <div className="flex gap-2">
+                                        <button onClick={() => setStep('input')} className="flex-1 py-4 bg-slate-100 dark:bg-white/5 dark:text-white rounded-2xl font-bold text-xs uppercase">Orqaga</button>
+                                        <button
+                                            onClick={handleVerifyCode}
+                                            disabled={isVerifying || otpCode.length < 4}
+                                            className="flex-[2] py-4 bg-green-500 text-white rounded-2xl font-black shadow-lg disabled:opacity-50 text-xs uppercase"
+                                        >
+                                            {isVerifying ? <Loader2 className="animate-spin mx-auto" size={20} /> : "TASDIQLASH"}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </motion.div>
                     </div>
                 )}
@@ -257,7 +338,7 @@ const StatusRow = ({ label, icon }: { label: string, icon: any }) => (
     </div>
 );
 
-function InfoItem({ icon, label, value, verified, isFullWidth }: any) {
+function InfoItem({ icon, label, value, verified, isFullWidth, action }: any) {
     return (
         <div className={`p-5 rounded-[30px] bg-slate-50 dark:bg-white/5 border dark:border-white/5 flex items-start gap-4 ${isFullWidth ? 'md:col-span-2' : ''}`}>
             <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center shrink-0 shadow-sm">{icon}</div>
@@ -266,6 +347,7 @@ function InfoItem({ icon, label, value, verified, isFullWidth }: any) {
                 <div className="flex items-center gap-1.5">
                     <p className="font-bold dark:text-white text-[13px] truncate">{value}</p>
                     {verified && <ShieldCheck size={14} className="text-blue-500 shrink-0" />}
+                    {action} {/* <--- Tugma shu yerda chiqadi */}
                 </div>
             </div>
         </div>
