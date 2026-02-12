@@ -3,51 +3,64 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-    Camera, Loader2, Phone, ShieldCheck,
-    Smartphone, UserCircle2, Mail, Trash2,
-    Calendar, User2, Settings2,
-    Check, ShieldAlert, SmartphoneNfc,
-    Globe, Lock, LogOut, ChevronRight,
-    AtSign, AlignLeft, X
+    Camera, Phone, ShieldCheck, Smartphone, UserCircle2, Mail, Trash2,
+    Calendar, Settings2, SmartphoneNfc, Globe, LogOut, X, Info, Heart, 
+    ShieldAlert, BadgeCheck, Clock,
+    Loader2
 } from "lucide-react"
 import { useAuth } from "@/lib/AuthContext"
-import {
-    updateProfile, uploadAvatar, getMySessions,
-    getMyContacts, terminateSession
+import { 
+    updateProfile, uploadAvatar, getMySessions, 
+    getMyContacts, terminateSession 
 } from "@/lib/api/user"
 import { UserSession, UserContact, UpdateProfilePayload } from "@/lib/types/user"
 import { toast } from "sonner"
 
-// .env dan API URL ni olish
 const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
 export default function ProfilePage() {
     const { user, refreshUser, logout } = useAuth()
     const fileInputRef = useRef<HTMLInputElement>(null)
-
     const [isEditing, setIsEditing] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [uploading, setUploading] = useState(false)
     const [sessions, setSessions] = useState<UserSession[]>([])
     const [contacts, setContacts] = useState<UserContact[]>([])
     const [formData, setFormData] = useState<UpdateProfilePayload>({
-        full_name: "", 
-        bio: "", 
-        birth_date: "", 
-        gender: 'male'
+        full_name: "", bio: "", birth_date: "", gender: 'male'
     })
 
-    // Kontaktlarni saralash
+    // 1. Kontaktlar mantiqi
     const phoneContact = useMemo(() => contacts.find(c => c.contact_type === 'phone'), [contacts]);
+    
+    // 2. Faqat oxirgi 3 ta sessiya
+    const latestSessions = useMemo(() => sessions.slice(0, 3), [sessions]);
 
-    // Ma'lumotlarni yuklash
+    // 3. Yoshni aniq hisoblash (Ham chapda, ham o'ngda ishlatiladi)
+    const calculateAge = useCallback((birthDate: string | undefined) => {
+        if (!birthDate) return "—";
+        const birth = new Date(birthDate);
+        const today = new Date();
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+        return age < 0 ? 0 : age;
+    }, []);
+
+    // 4. Sanani formatlash (Masalan: 12-fevral, 2024)
+    const formatDate = (dateStr: string | undefined) => {
+        if (!dateStr) return "Kiritilmagan";
+        return new Date(dateStr).toLocaleDateString('uz-UZ', { 
+            day: 'numeric', month: 'long', year: 'numeric' 
+        });
+    };
+
     const loadData = useCallback(async () => {
         try {
             const [sessRes, contRes] = await Promise.all([getMySessions(), getMyContacts()]);
             setSessions(sessRes.data);
             setContacts(contRes.data);
-        } catch (err) { 
-            console.error("Ma'lumot yuklashda xatolik:", err) 
-        }
+        } catch (err) { console.error("Ma'lumot yuklashda xatolik:", err) }
     }, [])
 
     useEffect(() => {
@@ -55,55 +68,28 @@ export default function ProfilePage() {
             setFormData({
                 full_name: user.profile?.full_name || "",
                 bio: user.profile?.bio || "",
-                birth_date: user.profile?.birth_date || "",
+                birth_date: user.profile?.birth_date?.split('T')[0] || "",
                 gender: (user.profile?.gender as any) || "male"
             });
             loadData();
         }
     }, [user, loadData])
 
-    /**
-     * SIZ AYTGAN ANIQ MANTIQ:
-     * 1. Raqam mavjud bo'lsa (verified emas) -> verify_phone
-     * 2. Raqam mavjud bo'lmasa -> phone_userId
-     */
-    const handleVerify = () => {
-        let botLink = "";
-        
-        if (phoneContact && phoneContact.value) {
-            // 1-shart: Agar foydalanuvchida telefon raqami allaqachon mavjud bo'lsa
-            botLink = "https://t.me/EnwisAuthBot?start=verify_phone";
-            toast.info("Tasdiqlash uchun botga yo'naltirilmoqda...");
-        } else {
-            // 2-shart: Agar telefon raqami umuman bo'lmasa
-            // (Bu yerda purePhone sifatida mavjud bo'lmagan raqam o'rniga user ma'lumotidan foydalanamiz)
-            const userId = user?.id;
-            const fallbackPhone = "connect"; // Agar raqam yo'q bo'lsa, identifikator sifatida
-            botLink = `https://t.me/EnwisAuthBot?start=${fallbackPhone}_${userId}`;
-            toast.info("Raqamni ulash uchun botga o'ting");
-        }
+    // --- API FUNKSIYALARI ---
 
-        setTimeout(() => {
-            window.open(botLink, "_blank");
-        }, 500);
-    };
-
-    const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) return toast.error("Rasm hajmi 5MB dan kichik bo'lishi kerak");
 
-        setLoading(true);
+        setUploading(true);
         try {
             await uploadAvatar(file);
             await refreshUser();
             toast.success("Profil rasmi yangilandi");
-        } catch { 
-            toast.error("Rasmni yuklashda xato yuz berdi");
-        } finally { 
-            setLoading(false);
-        }
-    }
+        } catch (err) {
+            toast.error("Rasm yuklashda xatolik");
+        } finally { setUploading(false) }
+    };
 
     const handleUpdateProfile = async () => {
         setLoading(true);
@@ -112,188 +98,174 @@ export default function ProfilePage() {
             await refreshUser();
             setIsEditing(false);
             toast.success("Ma'lumotlar saqlandi");
-        } catch { 
-            toast.error("Saqlashda xatolik yuz berdi");
-        } finally { 
-            setLoading(false);
-        }
+        } catch { toast.error("Xatolik yuz berdi") } 
+        finally { setLoading(false) }
     }
 
-    const getAvatarSrc = () => {
-        if (!user?.profile?.avatar_url) return null;
-        if (user.profile.avatar_url.startsWith('http')) return user.profile.avatar_url;
-        return `${API_URL}${user.profile.avatar_url}`;
+    const handleTerminate = async (sid: string) => {
+        try {
+            await terminateSession(sid);
+            setSessions(prev => prev.filter(s => s.id !== sid));
+            toast.success("Sessiya yopildi");
+        } catch { toast.error("Sessiyani yopib bo'lmadi") }
     };
 
     return (
-        <div className="min-h-screen bg-[#f0f2f5] dark:bg-[#0f0f0f] py-6 px-4 font-sans transition-colors duration-300">
-            <div className="max-w-md mx-auto space-y-4">
+        <div className="min-h-screen dark:bg-[#0a0a0b] py-12 px-4">
+            <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 
-                {/* PROFIL KARTASI */}
-                <div className="bg-white dark:bg-[#1c1c1d] rounded-[32px] shadow-sm overflow-hidden border dark:border-white/5">
-                    <div className="p-8 flex flex-col items-center border-b dark:border-white/5 relative">
-                        <div className="relative mb-4">
-                            <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-blue-500/20 dark:ring-blue-500/40">
-                                {getAvatarSrc() ? (
-                                    <img src={getAvatarSrc()!} className="w-full h-full object-cover" alt="Avatar" />
+                {/* CHAP USTUN */}
+                <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-8">
+                    <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5 text-center relative overflow-hidden">
+                        <div className="relative inline-block mb-6">
+                            <div className="w-32 h-32 rounded-[40px] overflow-hidden ring-4 ring-blue-500/5 shadow-2xl bg-slate-100">
+                                {user?.profile?.avatar_url ? (
+                                    <img src={user.profile.avatar_url.startsWith('http') ? user.profile.avatar_url : `${API_URL}${user.profile.avatar_url}`} className="w-full h-full object-cover" />
                                 ) : (
-                                    <div className="w-full h-full bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400">
-                                        <UserCircle2 size={64} />
-                                    </div>
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300"><UserCircle2 size={80} /></div>
                                 )}
+                                {uploading && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><Loader2 className="animate-spin text-white" /></div>}
                             </div>
-                            <button 
-                                onClick={() => fileInputRef.current?.click()}
-                                className="absolute -bottom-1 -right-1 bg-[#0088cc] text-white p-2 rounded-full shadow-lg hover:scale-110 active:scale-90 transition-all"
-                            >
-                                {loading ? <Loader2 size={16} className="animate-spin" /> : <Camera size={16} />}
-                            </button>
-                            <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handlePhotoUpload} />
+                            <button onClick={() => fileInputRef.current?.click()} className="absolute -bottom-1 -right-1 bg-blue-500 text-white p-3 rounded-2xl shadow-lg hover:scale-110 transition-transform"><Camera size={18} /></button>
+                            <input type="file" ref={fileInputRef} className="hidden" onChange={handleAvatarUpload} accept="image/*" />
                         </div>
+                        <h1 className="text-2xl font-black dark:text-white leading-tight">{user?.profile?.full_name || "Ism kiritilmagan"}</h1>
+                        <p className="text-blue-500 font-bold text-sm mb-6">@{user?.profile.username}</p>
                         
-                        <h2 className="text-xl font-black dark:text-white tracking-tight">
-                            {user?.profile?.full_name || "Foydalanuvchi"}
-                        </h2>
-                        <p className="text-blue-500 text-xs font-bold mt-1">@{user?.username}</p>
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsEditing(true)} className="flex-1 bg-slate-50 dark:bg-white/5 dark:text-white py-4 rounded-2xl font-black text-[10px] tracking-widest border dark:border-white/5 hover:bg-white transition-all uppercase">
+                                <Settings2 size={16} className="inline mr-1" /> Tahrirlash
+                            </button>
+                            <button onClick={logout} className="p-4 bg-red-50 dark:bg-red-500/10 text-red-500 rounded-2xl border border-red-100 dark:border-red-500/20"><LogOut size={20}/></button>
+                        </div>
                     </div>
 
-                    {/* KONTAKTLAR */}
-                    <div className="p-2">
-                        <ProfileItem 
-                            icon={<Phone size={18} className="text-green-500" />} 
-                            label="Telefon" 
-                            value={phoneContact?.value || "Ulanmagan"}
-                            verified={phoneContact?.is_verified}
-                            statusText={phoneContact?.is_verified ? "Tasdiqlangan" : (phoneContact?.value ? "Tasdiqlash" : "Ulash")}
-                            onClick={!phoneContact?.is_verified ? handleVerify : undefined}
-                        />
-                        <ProfileItem 
-                            icon={<Mail size={18} className="text-orange-500" />} 
-                            label="Elektron pochta" 
-                            value={user?.email || "—"} 
-                            verified={true}
-                        />
+                    <div className="grid grid-cols-2 gap-4">
+                        <StatCard label="Yosh" value={calculateAge(user?.profile?.birth_date)} />
+                        <StatCard label="Jins" value={user?.profile?.gender === 'male' ? 'Erkak' : 'Ayol'} />
+                    </div>
+
+                    <div className="bg-white dark:bg-[#151516] rounded-[32px] p-6 border dark:border-white/5 shadow-sm">
+                        <div className="flex items-center gap-3 mb-4 text-blue-500">
+                            <ShieldAlert size={20} />
+                            <p className="font-black text-xs uppercase tracking-widest">Hisob holati</p>
+                        </div>
+                        <div className="space-y-3">
+                            <StatusRow label="Verified" icon={<BadgeCheck className="text-green-500" size={14}/>} />
+                            <StatusRow label="Two-Factor" icon={<div className="w-2 h-2 rounded-full bg-slate-300"/>} />
+                        </div>
                     </div>
                 </div>
 
-                {/* TUGMALAR */}
-                <div className="grid grid-cols-2 gap-3">
-                    <button 
-                        onClick={() => setIsEditing(true)}
-                        className="bg-white dark:bg-[#1c1c1d] dark:text-white p-4 rounded-3xl shadow-sm flex flex-col items-center gap-2 border dark:border-white/5 hover:bg-slate-50 transition-all"
-                    >
-                        <Settings2 className="text-blue-500" size={20} />
-                        <span className="text-[11px] font-bold uppercase tracking-widest">Tahrirlash</span>
-                    </button>
-                    <button 
-                        onClick={logout}
-                        className="bg-white dark:bg-[#1c1c1d] text-red-500 p-4 rounded-3xl shadow-sm flex flex-col items-center gap-2 border dark:border-white/5 hover:bg-red-50 transition-all"
-                    >
-                        <LogOut size={20} />
-                        <span className="text-[11px] font-bold uppercase tracking-widest">Chiqish</span>
-                    </button>
-                </div>
+                {/* O'NG USTUN */}
+                <div className="lg:col-span-8 space-y-6">
+                    <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5">
+                        <h3 className="text-lg font-black dark:text-white mb-8 flex items-center gap-2"><Info size={22} className="text-blue-500" /> Shaxsiy ma'lumotlar</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <InfoItem icon={<Phone className="text-green-500" />} label="Telefon" value={phoneContact?.value || "Ulanmagan"} verified={phoneContact?.is_verified} />
+                            <InfoItem icon={<Mail className="text-orange-500" />} label="Email" value={user?.email || "—"} verified={true} />
+                            {/* EMAIL OSTIGA QO'SHILGAN YANGI BLOK */}
+                            <InfoItem icon={<Clock className="text-blue-400" />} label="Ro'yxatdan o'tilgan" value={formatDate(user?.created_at)} />
+                            <InfoItem icon={<Calendar className="text-purple-500" />} label="Tug'ilgan sana (Yosh)" value={`${formatDate(user?.profile?.birth_date)} (${calculateAge(user?.profile?.birth_date)})`} />
+                            <InfoItem icon={<Heart className="text-pink-500" />} label="BIO" value={user?.profile?.bio || "Bio ma'lumoti mavjud emas"} isFullWidth />
+                        </div>
+                    </div>
 
-                {/* SESSYALAR */}
-                <div className="bg-white dark:bg-[#1c1c1d] rounded-[32px] p-5 shadow-sm border dark:border-white/5">
-                    <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <SmartphoneNfc size={14} /> Faol qurilmalar
-                    </h3>
-                    <div className="space-y-3">
-                        {sessions.map((s) => (
-                            <div key={s.id} className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 dark:bg-white/5">
-                                <div className={`p-2 rounded-xl ${s.is_current ? 'bg-blue-500 text-white' : 'bg-white dark:bg-[#242424] text-slate-400'}`}>
-                                    {s.user_agent.toLowerCase().includes('mobile') ? <Smartphone size={16} /> : <Globe size={16} />}
+                    <div className="bg-white dark:bg-[#151516] rounded-[40px] p-8 shadow-sm border dark:border-white/5">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-lg font-black dark:text-white flex items-center gap-2"><SmartphoneNfc size={22} className="text-blue-500" /> Oxirgi sessiyalar</h3>
+                            <span className="text-[10px] font-black bg-slate-100 dark:bg-white/5 px-3 py-1 rounded-full text-slate-500 uppercase">Oxirgi 3 ta</span>
+                        </div>
+                        <div className="space-y-3">
+                            {latestSessions.map((s) => (
+                                <div key={s.id} className="flex items-center justify-between p-5 rounded-[28px] bg-slate-50 dark:bg-white/5 border dark:border-white/5 group transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`p-4 rounded-2xl ${s.is_current ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20' : 'bg-white dark:bg-white/10 text-slate-400'}`}>
+                                            {s.user_agent.toLowerCase().includes('mobile') ? <Smartphone size={20}/> : <Globe size={20}/>}
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-bold dark:text-white text-sm">{s.ip_address}</p>
+                                                {s.is_current && <span className="text-[8px] bg-blue-500 text-white px-2 py-0.5 rounded-full font-black">ONLINE</span>}
+                                            </div>
+                                            <p className="text-[11px] text-slate-400 font-medium">{s.user_agent.split('(')[0]}</p>
+                                        </div>
+                                    </div>
+                                    {!s.is_current && (
+                                        <button onClick={() => handleTerminate(s.id)} className="p-3 text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-2xl transition-all opacity-0 group-hover:opacity-100"><Trash2 size={18} /></button>
+                                    )}
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-xs font-bold dark:text-white truncate">
-                                        {s.ip_address} {s.is_current && <span className="text-blue-500 font-black ml-1 text-[9px]">FAOL</span>}
-                                    </p>
-                                    <p className="text-[9px] text-slate-400 truncate opacity-70">{s.user_agent.split(') ')[1] || "Browser"}</p>
-                                </div>
-                                {!s.is_current && (
-                                    <button 
-                                        onClick={() => terminateSession(s.id).then(loadData)}
-                                        className="text-red-400 p-2 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-full transition-all"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
 
-            {/* MODAL */}
+            {/* EDIT MODAL */}
             <AnimatePresence>
                 {isEditing && (
-                    <>
-                        <motion.div 
-                            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                            onClick={() => setIsEditing(false)}
-                            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" 
-                        />
-                        <motion.div 
-                            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-                            className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#1c1c1d] rounded-t-[40px] z-[60] p-8 max-w-lg mx-auto"
-                        >
-                            <div className="w-12 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full mx-auto mb-8" />
-                            <h2 className="text-xl font-black dark:text-white mb-6">Profilni tahrirlash</h2>
-                            
-                            <div className="space-y-4">
-                                <input 
-                                    value={formData.full_name} 
-                                    onChange={e => setFormData({...formData, full_name: e.target.value})}
-                                    placeholder="Ism sharif"
-                                    className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white"
-                                />
-                                <textarea 
-                                    value={formData.bio} 
-                                    onChange={e => setFormData({...formData, bio: e.target.value})}
-                                    placeholder="Bio"
-                                    className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white min-h-[100px]"
-                                />
-                                <button 
-                                    onClick={handleUpdateProfile}
-                                    disabled={loading}
-                                    className="w-full py-5 bg-[#0088cc] text-white rounded-[24px] font-black text-sm"
-                                >
-                                    SAQLASH
-                                </button>
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+                        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="bg-white dark:bg-[#1c1c1d] w-full max-w-xl rounded-[40px] p-10 relative shadow-2xl">
+                            <button onClick={() => setIsEditing(false)} className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-white/5 rounded-full dark:text-white"><X size={20}/></button>
+                            <h2 className="text-2xl font-black dark:text-white mb-8">Profilni tahrirlash</h2>
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">To'liq ism-sharif</label>
+                                    <input value={formData.full_name} onChange={e => setFormData({...formData, full_name: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-bold" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Jins</label>
+                                    <select value={formData.gender} onChange={e => setFormData({...formData, gender: e.target.value as any})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold">
+                                        <option value="male">Erkak</option>
+                                        <option value="female">Ayol</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Tug'ilgan sana</label>
+                                    <input type="date" value={formData.birth_date} onChange={e => setFormData({...formData, birth_date: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none dark:text-white font-bold" />
+                                </div>
+                                <div className="col-span-2 space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase ml-2">Bio</label>
+                                    <textarea value={formData.bio} onChange={e => setFormData({...formData, bio: e.target.value})} className="w-full p-4 bg-slate-50 dark:bg-white/5 rounded-2xl outline-none focus:ring-2 ring-blue-500 dark:text-white font-medium min-h-[100px]" />
+                                </div>
                             </div>
+                            <button onClick={handleUpdateProfile} disabled={loading} className="w-full mt-8 py-5 bg-blue-500 text-white rounded-[24px] font-black shadow-xl shadow-blue-500/20 active:scale-95 transition-all">
+                                {loading ? <Loader2 className="animate-spin mx-auto" /> : "SAQLASH"}
+                            </button>
                         </motion.div>
-                    </>
+                    </div>
                 )}
             </AnimatePresence>
         </div>
     )
 }
 
-function ProfileItem({ icon, label, value, verified, onClick, statusText }: any) {
+// --- YORDAMCHI KOMPONENTLAR ---
+
+const StatCard = ({ label, value }: { label: string, value: any }) => (
+    <div className="bg-white dark:bg-[#151516] p-6 rounded-[32px] border dark:border-white/5 text-center shadow-sm hover:shadow-md transition-shadow">
+        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{label}</p>
+        <p className="text-2xl font-black dark:text-white">{value}</p>
+    </div>
+);
+
+const StatusRow = ({ label, icon }: { label: string, icon: any }) => (
+    <div className="flex items-center justify-between text-xs font-bold dark:text-slate-300">
+        <span>{label}</span>
+        {icon}
+    </div>
+);
+
+function InfoItem({ icon, label, value, verified, isFullWidth }: any) {
     return (
-        <div 
-            onClick={onClick}
-            className={`flex items-center gap-4 p-4 rounded-[24px] transition-all group ${onClick ? 'cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 active:scale-[0.98]' : ''}`}
-        >
-            <div className="w-12 h-12 rounded-2xl bg-slate-50 dark:bg-white/5 flex items-center justify-center shrink-0">
-                {icon}
-            </div>
-            <div className="flex-1 min-w-0">
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5">{label}</p>
-                <p className="text-sm font-bold dark:text-slate-200 truncate">{value}</p>
-            </div>
-            <div className="flex items-center gap-2">
-                {verified ? (
-                    <ShieldCheck size={18} className="text-blue-500" />
-                ) : (
-                    onClick && (
-                        <div className="flex items-center gap-1 bg-blue-500 text-white px-3 py-1.5 rounded-xl font-black text-[10px] uppercase">
-                            {statusText}
-                            <ChevronRight size={12} />
-                        </div>
-                    )
-                )}
+        <div className={`p-5 rounded-[30px] bg-slate-50 dark:bg-white/5 border dark:border-white/5 flex items-start gap-4 ${isFullWidth ? 'md:col-span-2' : ''}`}>
+            <div className="w-12 h-12 rounded-2xl bg-white dark:bg-white/10 flex items-center justify-center shrink-0 shadow-sm">{icon}</div>
+            <div className="min-w-0 flex-1">
+                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+                <div className="flex items-center gap-1.5">
+                    <p className="font-bold dark:text-white text-[13px] truncate">{value}</p>
+                    {verified && <ShieldCheck size={14} className="text-blue-500 shrink-0" />}
+                </div>
             </div>
         </div>
     )
