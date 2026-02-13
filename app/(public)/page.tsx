@@ -192,7 +192,7 @@ export default function UltimateAIHome() {
             </section>
 
             {/* ================= 3. SERVICE SECTION ================= */}
-            <section className="relative pt-40 pb-24 px-6 md:px-12 lg:px-20 overflow-hidden">
+            <section className="relative pt-20 pb-24 px-6 md:px-12 lg:px-20 overflow-hidden">
                 <div className="mx-auto max-w-[1536px]">
                     <motion.div
                         variants={stagger}
@@ -420,7 +420,7 @@ export default function UltimateAIHome() {
             </section>
 
             {/* ================= 6. PRICING SECTION ================= */}
-            <section id="pricing" className="py-20 px-6 md:px-12 lg:px-20 bg-[#FDFDFF] relative overflow-hidden">
+            <section id="pricing" className="py-20  px-6 md:px-12 lg:px-20 bg-[#FDFDFF] relative overflow-hidden">
 
                 {/* Background Decor */}
                 <div className="absolute top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[1536px] -z-10 pointer-events-none">
