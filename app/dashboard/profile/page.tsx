@@ -140,6 +140,7 @@ export default function ProfilePage() {
                             {user?.profile?.full_name || "Ism yo'q"}
                         </h1>
                         <p className="text-blue-500 font-bold text-sm mb-6">@{user?.profile?.username || "user"}</p>
+                        <p className="text-blue-500 font-bold text-sm mb-6"><code>{user?.id || "none"}</code></p>
 
                         <div className="flex gap-2">
                             {isEditing ? (
