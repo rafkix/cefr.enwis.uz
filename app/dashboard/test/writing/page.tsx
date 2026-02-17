@@ -1,73 +1,51 @@
 "use client"
 
-import { useState, useMemo } from "react"
+import { useState, useMemo, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion, AnimatePresence } from "framer-motion"
 import {
-    Pencil, Clock, ChevronRight, ChevronLeft, Zap, Search, Inbox,
-    Filter, Activity, Lock, Sparkles, PenTool, Edit3
+    Pencil, Clock, ChevronRight, ChevronLeft, Search, Inbox,
+    Filter, Activity, Lock, Sparkles, PenTool, Edit3, Loader2
 } from "lucide-react"
 
 import { Badge } from "@/components/ui/badge"
-
-// Writing uchun moslashtirilgan interface
-export interface WritingExamItem {
-    id: string
-    title: string
-    isFree: boolean
-    isActive: boolean    
-    level: string
-    duration: number
-    taskType: "Task 1" | "Task 2" | "Full Test"
-    estimatedWords: string
-}
+// API xizmatlarini import qilamiz
+import { getAllWritingExamsAPI } from "@/lib/api/writing" 
+import { WritingExam } from "@/lib/types/writing"
 
 export default function WritingListPage() {
     const router = useRouter()
-
-    // API yo'qligi sababli Statik ma'lumotlar (Dummy Data)
-    const [exams] = useState<WritingExamItem[]>([
-        {
-            id: "101",
-            title: "Environmental Protection Essay",
-            isFree: true,
-            isActive: true,
-            level: "B2 Upper",
-            duration: 40,
-            taskType: "Task 2",
-            estimatedWords: "250+ words"
-        },
-        {
-            id: "102",
-            title: "Bar Chart Analysis",
-            isFree: true,
-            isActive: true,
-            level: "B1 Inter",
-            duration: 20,
-            taskType: "Task 1",
-            estimatedWords: "150+ words"
-        },
-        {
-            id: "103",
-            title: "Technology in Education",
-            isFree: false,
-            isActive: true,
-            level: "C1 Advanced",
-            duration: 60,
-            taskType: "Full Test",
-            estimatedWords: "400+ words"
-        }
-    ])
-
+    
+    // --- STATE ---
+    const [exams, setExams] = useState<WritingExam[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
     const [activeTab, setActiveTab] = useState<'all' | 'free' | 'premium'>('all')
     const [searchTerm, setSearchTerm] = useState("")
+
+    // --- API DAN MA'LUMOTLARNI OLISH ---
+    useEffect(() => {
+        const fetchExams = async () => {
+            try {
+                setLoading(true)
+                const response = await getAllWritingExamsAPI()
+                setExams(response.data)
+            } catch (err: any) {
+                setError("Imtihonlarni yuklashda xatolik yuz berdi.")
+                console.error(err)
+            } finally {
+                setLoading(false)
+            }
+        }
+        fetchExams()
+    }, [])
 
     // --- FILTRLASH MANTIGI ---
     const filteredTests = useMemo(() => {
         return exams.filter((test) => {
             const matchesSearch =
                 test.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                test.level.toLowerCase().includes(searchTerm.toLowerCase());
+                test.cefrLevel.toLowerCase().includes(searchTerm.toLowerCase());
 
             if (activeTab === 'free') return matchesSearch && test.isFree;
             if (activeTab === 'premium') return matchesSearch && !test.isFree;
@@ -75,13 +53,19 @@ export default function WritingListPage() {
         });
     }, [exams, searchTerm, activeTab]);
 
-    // --- START PAGEGA YO'NALTIRISH ---
-    const handleTestClick = (test: WritingExamItem) => {
+    const handleTestClick = (test: WritingExam) => {
         if (!test.isActive) return;
-        
-        // Bu yerda routing start pagega o'tadi
-        // Query parametr sifatida ID va Mode yuboriladi
+        // Agar premium bo'lsa va foydalanuvchida ruxsat bo'lmasa, bu yerda tekshirish mumkin
         router.push(`/dashboard/test/writing/start?id=${test.id}&mode=practice`)
+    }
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+                <Loader2 className="w-12 h-12 text-orange-500 animate-spin" />
+                <p className="text-sm font-black uppercase tracking-widest text-slate-400">Yuklanmoqda...</p>
+            </div>
+        )
     }
 
     return (
@@ -207,20 +191,22 @@ export default function WritingListPage() {
                                                 ) : (
                                                     <Badge className="bg-orange-50 text-orange-600 border-orange-100 text-[9px] font-black uppercase tracking-tighter">PREMIUM</Badge>
                                                 )}
-                                                <Badge variant="outline" className="text-[9px] font-black border-slate-200">{test.taskType}</Badge>
+                                                <Badge variant="outline" className="text-[9px] font-black border-slate-200">
+                                                    {test.tasks.length > 1 ? "Full Test" : "Task " + test.tasks[0]?.partNumber}
+                                                </Badge>
                                             </div>
 
                                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-x-5 gap-y-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
                                                 <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
                                                     <Clock size={12} className="text-orange-500" />
-                                                    <span>{test.duration} MIN</span>
+                                                    <span>{test.durationMinutes} MIN</span>
                                                 </div>
                                                 <div className="flex items-center gap-1.5 bg-slate-50 px-2 py-1 rounded-md">
                                                     <Pencil size={12} className="text-slate-400" />
-                                                    <span>{test.estimatedWords}</span>
+                                                    <span>{test.tasks.length} Task(s)</span>
                                                 </div>
                                                 <div className="px-2 py-1 rounded-md bg-orange-100 text-orange-700">
-                                                    {test.level}
+                                                    {test.cefrLevel}
                                                 </div>
                                             </div>
                                         </div>
@@ -239,7 +225,7 @@ export default function WritingListPage() {
                     </AnimatePresence>
                 </div>
                 
-                {filteredTests.length === 0 && (
+                {filteredTests.length === 0 && !loading && (
                     <div className="text-center py-24 bg-white rounded-[40px] border-2 border-dashed border-slate-100">
                         <Inbox className="mx-auto text-slate-200 mb-6" size={40} />
                         <p className="text-slate-500 font-black uppercase tracking-widest text-[10px]">Ma'lumot topilmadi</p>

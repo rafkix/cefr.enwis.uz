@@ -33,7 +33,7 @@ const TEST_CATEGORIES = [
         icon: PenTool,
         color: "orange",
         path: "/dashboard/test/writing",
-        isAvailable: false
+        isAvailable: true
     },
     {
         id: "speaking",
