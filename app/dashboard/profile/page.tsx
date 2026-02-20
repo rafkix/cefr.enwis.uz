@@ -179,6 +179,7 @@ export default function ProfilePage() {
               {user?.profile?.full_name || "Ism kiritilmagan"}
             </h1>
             <p className="text-blue-500 font-bold text-sm mb-6">@{user?.profile?.username}</p>
+            <code><p className="text-blue-500 font-bold text-sm mb-6">{user?.id}</p></code>
 
             <div className="flex gap-2">
               {isEditing ? (
