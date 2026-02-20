@@ -105,7 +105,7 @@ export default function ResultPage() {
           (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
 
-        setResults(combined)
+        setResults(combined)    
       } catch (error) {
         console.error("Ma'lumotlarni yuklashda xatolik:", error)
       } finally {
