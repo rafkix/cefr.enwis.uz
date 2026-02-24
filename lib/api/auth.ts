@@ -28,6 +28,10 @@ export const authService = {
   sendOtp: (payload: SendOtpPayload) => {
     return api.post<string>('/auth/send-otp', payload)
   },
+  
+  sendOtpBot: (payload: SendOtpPayload) => {
+    return api.post<string>('/auth/bot/send-otp', payload)
+  },
 
   // OTP tasdiqlash: { phone, code }
   loginByPhone: async (payload: PhoneLoginPayload) => {

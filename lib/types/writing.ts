@@ -1,54 +1,74 @@
+export interface WritingTaskFormat {
+  id: number;
+  name: string;
+  cefr_level: string;
+  min_words: number;
+  max_words: number;
+  style: string;
+  scoring_mode: string;
+  penalty_enabled: boolean;
+}
+
 export interface WritingTask {
-  id?: number
-  partNumber: number
-  type: string
-  topic: string
-  instruction: string
-  contextText: string
-  minWords: number
-  maxWords: number
+  id: number;
+  part_number: number;
+  sub_part: number;
+  topic: string;
+  instruction: string;
+  context_text: string;
+  created_at: string;
+  format: WritingTaskFormat;
 }
 
 export interface WritingExam {
-  id: string
-  title: string
-  cefrLevel: string
-  durationMinutes: number
-  isDemo: boolean
-  isFree: boolean
-  isMock: boolean
-  isActive: boolean
-  createdAt: string
-  tasks: WritingTask[]
+  id: string;
+  title: string;
+  cefr_level: string;
+  duration_minutes: number;
+  is_demo: boolean;
+  is_free: boolean;
+  is_mock: boolean;
+  is_active: boolean;
+  year: number;
+  sequence_number: number;
+  created_at: string;
+  tasks: WritingTask[];
+}
+
+export interface WritingAnswer {
+  task_id: number;
+  content: string;
 }
 
 export interface WritingSubmission {
-  examId: string
-  exam_attempt_id: number | null
-  userResponses: {
-    [taskId: string]: string // Har bir task ID uchun yozilgan matn
-  }
+  answers: WritingAnswer[];
+}
+
+export interface WritingCriterionScore {
+  id: number;
+  criterion: string;
+  score: number;
+}
+
+export interface WritingResultAnswer {
+  id: number;
+  task_id: number;
+  content: string;
+  word_count: number;
+  penalty: number;
+  raw_score: number;
+  scaled_score: number;
+  ai_feedback: string;
+  scores: WritingCriterionScore[];
 }
 
 export interface WritingResultDetail {
-  id: number
-  userId: number
-  examId: string
-  attemptId: number
-  overallScore: number
-  userResponses: Record<string, string>
-  aiEvaluation: Record<string, {
-    score: number
-    wordCount: number
-    feedback: string
-    criteria: {
-      taskAchievement: number
-      grammar: number
-      vocabulary: number
-      coherence: number
-      mechanics: number
-    }
-    suggestions: string[]
-  }>
-  createdAt: string
+  id: number;
+  exam_id: string;
+  raw_score: number;
+  scaled_score: number;
+  cefr_level: string;
+  is_finalized: boolean;
+  created_at: string;
+  answers: WritingResultAnswer[];
 }

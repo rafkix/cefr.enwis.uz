@@ -1,62 +1,57 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { Camera, BookOpen, PenTool, Loader2, AlertCircle } from 'lucide-react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
-// API va Types
-import { WritingExam } from '@/lib/types/writing'
 import { getWritingExamByIdAPI, submitWritingExamAPI } from '@/lib/api/writing'
 import WritingHeader from '@/components/exam/writing-header'
+
+type Task = {
+  id: number | string
+  part_number: number | string
+  sub_part?: number | string | null
+  topic?: string
+  context_text?: string
+  instruction?: string
+  format?: { min_words: number | string; max_words: number | string }
+}
+
+const wc = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
+
+const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b)
 
 export default function WritingTestPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const examId = searchParams.get('id')
 
-  const taskOrder = ['1.1', '1.2', '2']
-  const taskRefs: Record<string, React.RefObject<HTMLDivElement | null>> = {
-    '1.1': useRef<HTMLDivElement | null>(null),
-    '1.2': useRef<HTMLDivElement | null>(null),
-    '2': useRef<HTMLDivElement | null>(null),
-  }
-
-  // --- States ---
-  const [exam, setExam] = useState<WritingExam | null>(null)
+  const [exam, setExam] = useState<any | null>(null)
   const [loading, setLoading] = useState(true)
-  const [responses, setResponses] = useState<Record<string, string>>({
-    '1.1': '',
-    '1.2': '',
-    '2': '',
-  })
-  const [fontSizes, setFontSizes] = useState<Record<string, number>>({
-    '1.1': 18,
-    '1.2': 18,
-    '2': 18,
-  })
-  const [visibleTask, setVisibleTask] = useState<string>('1.1')
+
+  // responses/ fonts by TASK_ID (stabil)
+  const [responses, setResponses] = useState<Record<string, string>>({})
+  const [fontSizes, setFontSizes] = useState<Record<string, number>>({})
+
+  const [visibleTaskId, setVisibleTaskId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState<'question' | 'answer'>('answer')
   const [isTyping, setIsTyping] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
-
-  // Xatoni keltirib chiqargan state (not implemented xatosi shundan edi)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
 
-  // --- 1. Ma'lumotlarni yuklash ---
+  const containerRef = useRef<HTMLDivElement>(null)
+  const taskRefs = useRef<Record<string, HTMLDivElement | null>>({})
+
+  // ---------- Load exam ----------
   useEffect(() => {
     async function loadExam() {
       if (!examId) return
       try {
         const res = await getWritingExamByIdAPI(examId)
         setExam(res.data)
-        // Boshlang'ich qiymatlarni o'rnatish
-        if (res.data.tasks.length > 0) {
-          setVisibleTask('1.1')
-        }
-      } catch (error) {
-        toast.error("Imtihon ma'lumotlarini yuklashda xatolik!")
+      } catch {
+        toast.error("Ma'lumotlarni yuklashda xatolik!")
       } finally {
         setLoading(false)
       }
@@ -64,42 +59,106 @@ export default function WritingTestPage() {
     loadExam()
   }, [examId])
 
-  // --- 2. Scroll monitoring ---
-  useEffect(() => {
-    const handleScroll = () => {
-      if (window.innerWidth < 1024 || !containerRef.current) return
-      const scrollPos = containerRef.current.scrollTop
-
-      taskOrder.forEach((tid) => {
-        const ref = taskRefs[tid]?.current
-        if (ref && Math.abs(ref.offsetTop - scrollPos - 100) < 200) {
-          setVisibleTask(tid)
-        }
-      })
-    }
-    const container = containerRef.current
-    container?.addEventListener('scroll', handleScroll)
-    return () => container?.removeEventListener('scroll', handleScroll)
+  const tasks: Task[] = useMemo(() => {
+    const t = (exam?.tasks ?? []) as Task[]
+    // sort: Part1 sub_part 1,2 then Part2
+    return [...t].sort((a, b) => {
+      const ap = Number(a.part_number)
+      const bp = Number(b.part_number)
+      if (ap !== bp) return ap - bp
+      const as = a.sub_part == null ? 999 : Number(a.sub_part)
+      const bs = b.sub_part == null ? 999 : Number(b.sub_part)
+      return as - bs
+    })
   }, [exam])
 
-  // --- 3. Yordamchi funksiyalar ---
+  // ---------- LocalStorage key ----------
+  const storageKey = useMemo(() => {
+    if (!examId) return null
+    return `writing_responses_${examId}`
+  }, [examId])
+
+  // ---------- Init responses from storage OR defaults ----------
+  useEffect(() => {
+    if (!storageKey || tasks.length === 0) return
+
+    // default state from tasks
+    const defaults: Record<string, string> = {}
+    const defaultFonts: Record<string, number> = {}
+    for (const t of tasks) {
+      const id = String(t.id)
+      defaults[id] = ''
+      defaultFonts[id] = 18
+    }
+
+    // load from storage
+    const saved = localStorage.getItem(storageKey)
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as Record<string, string>
+        // merge (only known task ids)
+        for (const id of Object.keys(defaults)) {
+          if (typeof parsed?.[id] === 'string') defaults[id] = parsed[id]
+        }
+      } catch (e) {
+        console.error('Localstorage parse error', e)
+      }
+    }
+
+    setResponses(defaults)
+    setFontSizes(defaultFonts)
+
+    // first task visible
+    if (!visibleTaskId && tasks[0]) setVisibleTaskId(String(tasks[0].id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [storageKey, tasks.length])
+
+  // ---------- Persist responses ----------
+  useEffect(() => {
+    if (!storageKey) return
+    // avoid saving empty object before init
+    if (!responses || Object.keys(responses).length === 0) return
+    localStorage.setItem(storageKey, JSON.stringify(responses))
+  }, [responses, storageKey])
+
+  // ---------- Helpers ----------
   const scrollToTask = (taskId: string) => {
     setActiveTab('answer')
     setTimeout(() => {
-      taskRefs[taskId]?.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setVisibleTask(taskId)
+      taskRefs.current[taskId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      setVisibleTaskId(taskId)
     }, 100)
   }
 
   const changeFontSize = (taskId: string, delta: number) => {
     setFontSizes((prev) => ({
       ...prev,
-      [taskId]: Math.min(Math.max(prev[taskId] + delta, 12), 32),
+      [taskId]: clamp((prev[taskId] ?? 18) + delta, 12, 32),
     }))
   }
 
-  const getWordCount = (text: string = '') =>
-    text.trim().split(/\s+/).filter(Boolean).length
+  const getLimits = (task: Task) => {
+    const min = Number(task?.format?.min_words ?? 0)
+    const max = Number(task?.format?.max_words ?? 999999)
+    return { min, max }
+  }
+
+  const validateTask = (task: Task, content: string) => {
+    const text = (content ?? '').trim()
+    if (text.length < 10) {
+      throw new Error(`Task ${Number(task.part_number)}.${task.sub_part ?? ''} to'ldirilmagan (min 10 belgi)!`)
+    }
+
+    const { min, max } = getLimits(task)
+    const words = wc(text)
+
+    if (words < min) {
+      throw new Error(`Task ${Number(task.part_number)}.${task.sub_part ?? ''}: kamida ${min} so‘z yozing (hozir: ${words})`)
+    }
+    if (words > max) {
+      throw new Error(`Task ${Number(task.part_number)}.${task.sub_part ?? ''}: ${max} so‘zdan oshirmang (hozir: ${words})`)
+    }
+  }
 
   const handleFinish = async () => {
     if (!exam || !examId || isSubmitting) return
@@ -108,329 +167,261 @@ export default function WritingTestPage() {
     setShowConfirmModal(false)
 
     try {
-      const finalResponses: Record<string, string> = {}
+      const finalAnswers = tasks.map((task) => {
+        const id = String(task.id)
+        const content = (responses[id] ?? '').trim()
 
-      exam.tasks.forEach((task) => {
-        const dbTaskId = task.id?.toString()
-        if (dbTaskId) {
-          // Front-enddagi 1.1, 1.2, 2 larni DB ID lariga map qilamiz
-          if (task.partNumber === 1) finalResponses[dbTaskId] = responses['1.1'] || ''
-          if (task.partNumber === 2) finalResponses[dbTaskId] = responses['1.2'] || ''
-          if (task.partNumber === 3) finalResponses[dbTaskId] = responses['2'] || ''
+        validateTask(task, content)
+
+        return {
+          task_id: Number(task.id),
+          content,
         }
       })
 
-      // Swagger namunasi asosida Payload (Body)
-      const payload = {
-        examId: examId, // DB dagi string ID (masalan: "writing-test-sample-1")
-        attemptId: 0, // Integer
-        userResponses: finalResponses, // Record<string, string>
-      }
+      const payload = { answers: finalAnswers }
+      console.log('SUBMIT PAYLOAD:', payload)
 
-      // Query parametri uchun foydalanuvchi ID
-      const userId = 1
+      const res = await submitWritingExamAPI(examId, payload)
 
-      console.log("🚀 Swagger bo'yicha Payload:", payload)
-
-      const res = await submitWritingExamAPI(payload, userId)
-
+      // success
+      if (storageKey) localStorage.removeItem(storageKey)
       toast.success('Muvaffaqiyatli topshirildi!')
-
-      // Natija sahifasiga o'tish (Response sample dagi 'id' ni olamiz)
-      const resultId = res.data?.id
-      router.push(`/dashboard/results/writing/view?id=${resultId}`)
+      router.push(`/dashboard/results/writing/view?id=${res.data.id}`)
     } catch (error: any) {
-      console.error('🔴 Backend xatosi:', error.response?.data)
+      const detail =
+        error?.response?.data?.error?.detail ||
+        error?.response?.data?.detail ||
+        error?.response?.data?.message
 
-      const detail = error.response?.data?.detail
-      if (Array.isArray(detail)) {
-        // Qaysi maydon xatoligini aniq ko'rsatish
-        const errorMsg = detail
-          .map((d: any) => `${d.loc.join('.')}: ${d.msg}`)
-          .join(', ')
-        toast.error(`Format xatosi: ${errorMsg}`)
+      const msg = error?.message || (typeof detail === 'string' ? detail : JSON.stringify(detail)) || 'Xatolik yuz berdi'
+
+      // already submitted UX
+      if (String(msg).toLowerCase().includes('already submitted')) {
+        toast.error("Bu imtihon allaqachon topshirilgan!")
+        // agar sizda result list page bo'lsa shu yerga yuboring:
+        router.push(`/dashboard/results/writing`)
       } else {
-        toast.error(error.response?.data?.message || 'Xatolik yuz berdi')
+        toast.error(`Xato: ${msg}`)
       }
+
       setIsSubmitting(false)
     }
   }
 
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-white">
+        <Loader2 className="animate-spin text-cyan-500 w-10 h-10" />
+      </div>
+    )
+  }
+
+  // Question section data
+  const part1 = tasks.filter((t) => Number(t.part_number) === 1)
+  const part2 = tasks.filter((t) => Number(t.part_number) === 2)
+
   return (
     <div className="flex flex-col h-screen bg-[#F3F4F6] overflow-hidden">
-      {/* Headerga setShowConfirmModal o'rniga triggerni yuboramiz */}
       <WritingHeader
-        initialSeconds={exam?.durationMinutes ? exam.durationMinutes * 60 : 3600}
+        initialSeconds={(Number(exam?.duration_minutes ?? 0) || 0) * 60}
         onFinish={() => setShowConfirmModal(true)}
         isSubmitting={isSubmitting}
       />
 
-      {/* Loader Overlay */}
+      {/* Submit Loader */}
       {isSubmitting && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center">
-          <div className="bg-white p-10 rounded-[40px] shadow-2xl border-4 border-[#22D3EE] flex flex-col items-center gap-6 animate-in zoom-in duration-300">
-            <Loader2 className="h-16 w-16 text-[#22D3EE] animate-spin" />
-            <div className="text-center">
-              <p className="text-2xl font-black text-slate-800 uppercase italic italic tracking-tighter">
-                AI natijangizni tekshirmoqda...
-              </p>
-              <p className="text-slate-500 mt-2">Iltimos, sahifani yopmang.</p>
-            </div>
-          </div>
+          <Loader2 className="h-16 w-16 text-cyan-500 animate-spin mb-4" />
+          <p className="text-xl font-black uppercase italic">AI tekshirmoqda...</p>
         </div>
       )}
 
       {/* Confirm Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl border-4 border-white">
-            <h3 className="text-2xl font-black text-slate-800 mb-4 uppercase italic">
-              Imtihonni yakunlaysizmi?
-            </h3>
-            <p className="text-slate-600 mb-8 font-medium">
-              Barcha javoblar qayta ishlanishi uchun yuboriladi. Bu amalni ortga
-              qaytarib bo'lmaydi.
-            </p>
+          <div className="bg-white rounded-[32px] p-8 max-w-md w-full shadow-2xl">
+            <h3 className="text-2xl font-black mb-4 uppercase italic">Yakunlaysizmi?</h3>
             <div className="flex gap-4">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-4 bg-slate-100 text-slate-600 rounded-2xl font-bold hover:bg-slate-200 transition-all"
+                className="flex-1 py-4 bg-gray-100 rounded-2xl font-bold"
               >
-                Bekor qilish
+                Yo'q
               </button>
               <button
                 onClick={handleFinish}
-                className="flex-1 py-4 bg-[#22D3EE] text-white rounded-2xl font-black uppercase italic shadow-lg shadow-cyan-200 hover:scale-105 active:scale-95 transition-all"
+                className="flex-1 py-4 bg-cyan-400 text-white rounded-2xl font-black italic shadow-lg"
               >
-                Ha, yakunlash
+                HA
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* MOBILE TAB BAR */}
-      <div
-        className={`lg:hidden flex bg-white border-b border-gray-200 shrink-0 transition-all duration-300 ${isTyping ? 'h-0 overflow-hidden opacity-0' : 'h-auto opacity-100'}`}
-      >
-        <button
-          onClick={() => setActiveTab('question')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-all ${activeTab === 'question' ? 'text-blue-600 border-b-4 border-blue-600 bg-blue-50' : 'text-gray-400'}`}
-        >
-          <BookOpen size={18} /> Question
-        </button>
-        <button
-          onClick={() => setActiveTab('answer')}
-          className={`flex-1 py-4 flex items-center justify-center gap-2 font-bold transition-all ${activeTab === 'answer' ? 'text-[#22D3EE] border-b-4 border-[#22D3EE] bg-cyan-50' : 'text-gray-400'}`}
-        >
-          <PenTool size={18} /> Javob
-        </button>
-      </div>
-
-      <main className="flex flex-1 overflow-hidden relative">
-        {/* --- JAVOBLAR SECTION --- */}
+      <main className="flex flex-1 overflow-hidden">
+        {/* ANSWER SECTION */}
         <section
           ref={containerRef}
-          className={`
-                        w-full lg:w-1/2 h-full overflow-y-auto p-4 lg:p-10 custom-scrollbar scroll-smooth
-                        ${activeTab === 'answer' ? 'block' : 'hidden lg:block'}
-                    `}
+          className={`w-full lg:w-1/2 h-full overflow-y-auto p-4 lg:p-10 custom-scrollbar ${
+            activeTab === 'answer' ? 'block' : 'hidden lg:block'
+          }`}
         >
           <div className="space-y-12 pb-80">
-            {taskOrder.map((taskId) => (
-              <div
-                key={taskId}
-                id={`task-${taskId}`} // Navigatsiya ishlashi uchun ID muhim
-                ref={taskRefs[taskId]}
-                className="rounded-3xl border-2 border-[#22D3EE] overflow-hidden shadow-lg flex flex-col resize-y min-h-[350px] bg-white group"
-                style={{ height: taskId === '2' ? '550px' : '450px' }}
-              >
-                {/* Task Header */}
-                <div className="bg-[#22D3EE] p-5 flex justify-between items-center text-white shrink-0">
-                  <span className="font-black text-2xl italic uppercase tracking-tighter">
-                    Task {taskId}
-                  </span>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center bg-white/20 rounded-xl p-1 border border-white/30">
-                      <button
-                        onClick={() => changeFontSize(taskId, -2)}
-                        className="px-3 hover:bg-white/20 rounded-lg font-bold transition-colors"
-                      >
+            {tasks.map((task) => {
+              const id = String(task.id)
+              const label =
+                Number(task.part_number) === 1
+                  ? `1.${task.sub_part}`
+                  : '2'
+
+              const text = responses[id] ?? ''
+              const words = wc(text)
+              const { min, max } = getLimits(task)
+              const outOfRange = words > 0 && (words < min || words > max)
+
+              return (
+                <div
+                  key={id}
+                  ref={(el) => {
+                    taskRefs.current[id] = el
+                  }}
+                  className="rounded-3xl border-2 border-cyan-400 overflow-hidden shadow-lg flex flex-col min-h-[400px] bg-white"
+                >
+                  <div className="bg-cyan-400 p-5 flex justify-between items-center text-white">
+                    <span className="font-black text-2xl italic uppercase">Task {label}</span>
+                    <div className="flex items-center bg-white/20 rounded-xl p-1">
+                      <button onClick={() => changeFontSize(id, -2)} className="px-3 hover:bg-white/20 rounded-lg">
                         -a
                       </button>
-                      <div className="w-[1px] h-4 bg-white/40 mx-1" />
-                      <button
-                        onClick={() => changeFontSize(taskId, 2)}
-                        className="px-3 hover:bg-white/20 rounded-lg font-bold transition-colors"
-                      >
+                      <button onClick={() => changeFontSize(id, 2)} className="px-3 hover:bg-white/20 rounded-lg">
                         A+
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Textarea */}
-                <div className="flex-1 min-h-0">
                   <textarea
-                    style={{ fontSize: `${fontSizes[taskId]}px` }}
+                    style={{ fontSize: `${fontSizes[id] ?? 18}px` }}
                     onFocus={() => setIsTyping(true)}
                     onBlur={() => setIsTyping(false)}
-                    className="w-full h-full p-8 outline-none leading-relaxed text-gray-700 font-medium transition-all bg-transparent custom-scrollbar resize-none"
-                    placeholder={`Task ${taskId} uchun javobingizni shu yerga yozing...`}
-                    value={responses[taskId]}
-                    onChange={(e) =>
-                      setResponses({ ...responses, [taskId]: e.target.value })
-                    }
+                    className="flex-1 p-8 outline-none leading-relaxed text-gray-700 resize-none"
+                    placeholder={`Task ${label} uchun javob yozing...`}
+                    value={text}
+                    onChange={(e) => setResponses((prev) => ({ ...prev, [id]: e.target.value }))}
                   />
-                </div>
 
-                {/* Word Counter */}
-                <div
-                  className={`p-4 bg-slate-50 text-right font-black text-sm border-t shrink-0 ${getWordCount(responses[taskId]) === 0 ? 'text-red-400' : 'text-[#22D3EE]'}`}
-                >
-                  {getWordCount(responses[taskId])} TA SO'Z
+                  <div
+                    className={`p-4 text-right font-black text-sm border-t shrink-0 transition-colors duration-300 ${
+                      outOfRange ? 'bg-red-50 text-red-500 border-red-200' : 'bg-gray-50 text-cyan-500 border-gray-200'
+                    }`}
+                  >
+                    {outOfRange ? (
+                      <span className="flex items-center justify-end gap-2 animate-pulse">
+                        <AlertCircle size={14} />
+                        {words < min ? `KAMIDA ${min} SO'Z (${words}/${min})` : `KO'PI ${max} SO'Z (${words}/${max})`}
+                      </span>
+                    ) : (
+                      <span>
+                        {words} TA SO'Z <span className="text-gray-400">({min}-{max})</span>
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </section>
 
-        {/* --- SAVOLLAR SECTION --- */}
+        {/* QUESTION SECTION */}
         <section
-          className={`
-    w-full lg:w-1/2 h-full overflow-y-auto p-6 lg:p-12 bg-[#F3F4F6] border-l border-gray-200 relative custom-scrollbar
-    ${activeTab === 'question' ? 'block' : 'hidden lg:block'}
-  `}
+          className={`w-full lg:w-1/2 h-full overflow-y-auto p-6 lg:p-12 bg-gray-100 border-l custom-scrollbar ${
+            activeTab === 'question' ? 'block' : 'hidden lg:block'
+          }`}
         >
-          <div className="max-w-5xl mx-auto bg-white rounded-[20px] shadow-sm border border-gray-100 p-12 space-y-10 mb-20">
-            {/* --- VIZUAL PART 1 --- */}
-            <div className="text-center space-y-4">
+          <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-sm p-10 space-y-8">
+            <div className="text-center">
               <h3 className="text-3xl font-black uppercase">Part 1</h3>
             </div>
 
-            {/* Part 1 uchun umumiy kontekst (Masalan, partNumber 1 yoki 2 dan olinadi) */}
-            {exam?.tasks.some((t) => t.partNumber === 1 || t.partNumber === 2) && (
-              <>
-                <p className="font-bold leading-tight text-xl text-slate-800">
-                  {exam.tasks.find((t) => t.partNumber === 1)?.topic ||
-                    exam.tasks.find((t) => t.partNumber === 2)?.topic}
-                </p>
-                <div className="text-lg leading-relaxed text-slate-600 whitespace-pre-wrap">
-                  {/* Email matni odatda partNumber 1 yoki 2 ning contextText qismida bo'ladi */}
-                  {exam.tasks.find((t) => t.partNumber === 1)?.contextText ||
-                    exam.tasks.find((t) => t.partNumber === 2)?.contextText}
-                </div>
-              </>
-            )}
-
-            {/* TASK 1.1 va 1.2 SHU YERDA CHIQADI */}
-            <div className="space-y-10">
-              {/* Task 1.1 (Backendda partNumber: 1) */}
-              {exam?.tasks
-                .filter((t) => t.partNumber === 1)
-                .map((task) => (
-                  <div key={task.id} className="space-y-2">
-                    <h4 className="font-black text-xl text-slate-800 uppercase">
-                      Task 1.1
-                    </h4>
-                    <p className="italic text-lg text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {task.instruction}
-                      <br />
-                      <span className="not-italic font-bold text-slate-500 block mt-2">
-                        Write about {task.minWords}-{task.maxWords} words.
-                      </span>
-                    </p>
-                  </div>
-                ))}
-
-              {/* Task 1.2 (Backendda partNumber: 2) */}
-              {exam?.tasks
-                .filter((t) => t.partNumber === 2)
-                .map((task) => (
-                  <div key={task.id} className="space-y-2">
-                    <h4 className="font-black text-xl text-slate-800 uppercase">
-                      Task 1.2
-                    </h4>
-                    <p className="italic text-lg text-slate-700 leading-relaxed whitespace-pre-wrap">
-                      {task.instruction}
-                      <br />
-                      <span className="not-italic font-bold text-slate-500 block mt-2">
-                        Write about {task.minWords}-{task.maxWords} words.
-                      </span>
-                    </p>
-                  </div>
-                ))}
+            <div className="bg-blue-50 p-6 rounded-2xl border-l-4 border-blue-500">
+              <p className="font-bold text-xl mb-2">{part1[0]?.topic}</p>
+              <p className="text-gray-600 italic">{part1[0]?.context_text}</p>
             </div>
 
-            {/* --- VIZUAL PART 2 (Backendda partNumber: 3) --- */}
-            {exam?.tasks
-              .filter((t) => t.partNumber === 3)
-              .map((task) => (
-                <div key={task.id} className="pt-10 border-t space-y-6">
-                  <h3 className="text-3xl font-black uppercase text-center mb-6">
-                    Part 2
-                  </h3>
-                  <p className="text-lg leading-relaxed text-slate-800">
-                    {task.contextText} <br />
-                    <span className="block my-4">
-                      The question is: <b>“{task.contextText}”</b>
-                    </span>
-                    <span className="block italic text-slate-600">
-                      {task.instruction}
-                    </span>
-                    <span className="font-bold block mt-4 text-slate-900 border-l-4 border-blue-500 pl-4">
-                      Write {task.minWords}-{task.maxWords} words.
-                    </span>
-                  </p>
-                </div>
-              ))}
+            <div className="grid gap-8">
+              {part1.map((task) => {
+                const { min, max } = getLimits(task)
+                return (
+                  <div key={String(task.id)} className="p-6 border-2 border-dashed border-gray-200 rounded-2xl">
+                    <h4 className="font-black text-cyan-600 mb-2">Task 1.{task.sub_part}</h4>
+                    <p className="text-lg mb-4">{task.instruction}</p>
+                    <span className="text-sm font-bold text-gray-400">Limit: {min}-{max} words</span>
+                  </div>
+                )
+              })}
+            </div>
 
-            {!exam && (
-              <div className="text-center py-20 italic text-slate-400">
-                Savollar yuklanmoqda...
-              </div>
-            )}
+            {part2.map((task) => {
+              const { min, max } = getLimits(task)
+              return (
+                <div key={String(task.id)} className="pt-10 border-t mt-10">
+                  <h3 className="text-3xl font-black uppercase text-center mb-6">Part 2</h3>
+                  <div className="space-y-4">
+                    <p className="text-xl font-bold text-gray-800">Topic: {task.topic}</p>
+                    <p className="text-lg bg-gray-50 p-6 rounded-2xl italic">"{task.context_text}"</p>
+                    <p className="text-lg">{task.instruction}</p>
+                    <div className="bg-cyan-50 p-4 rounded-xl inline-block font-bold text-cyan-700">
+                      Write {min}-{max} words.
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
           </div>
         </section>
 
-        {/* Yozayotganda (isTyping) navigatsiya tugmalari butunlay yashiriladi */}
-        <section className="w-1/16">
-          <div
-            className={`fixed lg:absolute right-6 top-1/2 -translate-y-1/2 lg:flex flex-col gap-5 z-50 transition-all duration-300
-                    ${isTyping ? 'max-lg:opacity-0 max-lg:pointer-events-none' : 'flex opacity-100'}
-                `}
-          >
-            {taskOrder.map((id) => (
+        {/* NAVIGATION BUTTONS */}
+        <div className={`fixed right-6 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-50 ${isTyping ? 'max-lg:hidden' : 'flex'}`}>
+          {tasks.map((task) => {
+            const id = String(task.id)
+            const label = Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2'
+            const isActive = visibleTaskId === id
+
+            return (
               <button
                 key={id}
                 onClick={() => scrollToTask(id)}
-                className={`w-15 h-15 rounded-[20px] font-black shadow-lg transition-all flex flex-col items-center justify-center text-center leading-[1.1] tracking-tighter border-4 
-                                ${
-                                  visibleTask === id
-                                    ? 'bg-blue-600 text-white scale-110 border-blue-200 shadow-blue-300'
-                                    : 'bg-blue-100 text-blue-400 border-transparent hover:bg-blue-200'
-                                }`}
+                className={`w-14 h-14 rounded-2xl font-black transition-all border-4 ${
+                  isActive ? 'bg-blue-600 text-white border-blue-200' : 'bg-white text-blue-400 border-transparent shadow-md'
+                }`}
               >
-                <span className={visibleTask === id ? 'text-xl' : 'text-lg'}>{id}</span>
-                {visibleTask === id && (
-                  <span className="text-[10px] uppercase font-black mt-1">task</span>
-                )}
+                {label}
               </button>
-            ))}
-          </div>
-
-          {/* CAMERA */}
-          <div className="hidden lg:flex absolute bottom-6 right-8 w-48 h-28 bg-[#22D3EE] rounded-2xl border-4 border-white shadow-2xl items-center justify-center overflow-hidden">
-            <Camera className="text-white opacity-20" size={50} />
-            <div className="absolute bottom-2 left-4 flex items-center gap-2">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-black text-white uppercase italic tracking-tighter">
-                camera
-              </span>
-            </div>
-          </div>
-        </section>
+            )
+          })}
+        </div>
       </main>
+
+      {/* MOBILE TABS */}
+      <div className={`lg:hidden flex bg-white border-t shrink-0 ${isTyping ? 'hidden' : 'flex'}`}>
+        <button
+          onClick={() => setActiveTab('question')}
+          className={`flex-1 py-4 font-bold ${
+            activeTab === 'question' ? 'text-blue-600 bg-blue-50 border-t-4 border-blue-600' : 'text-gray-400'
+          }`}
+        >
+          SAVOL
+        </button>
+        <button
+          onClick={() => setActiveTab('answer')}
+          className={`flex-1 py-4 font-bold ${
+            activeTab === 'answer' ? 'text-cyan-500 bg-cyan-50 border-t-4 border-cyan-50' : 'text-gray-400'
+          }`}
+        >
+          JAVOB
+        </button>
+      </div>
     </div>
   )
 }
