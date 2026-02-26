@@ -49,7 +49,7 @@ export const authService = {
     try { await api.post('/auth/logout') } 
     finally { 
       localStorage.clear()
-      window.location.href = '/auth/login'
+      window.location.href = '/auth'
     }
   },
 
