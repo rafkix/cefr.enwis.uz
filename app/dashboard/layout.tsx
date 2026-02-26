@@ -72,7 +72,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // 2. FAQAT LOGIN TEKSHIRUVI
   useEffect(() => {
     if (!authLoading && !user) {
-      router.replace('/auth/login')
+      router.replace('/auth')
     }
   }, [user, authLoading, router])
 
@@ -89,7 +89,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   // 3. MENYU ELEMENTLARI
   const menuItems = [
-    { name: 'Imtihon', href: '/dashboard/exams', icon: BookCheck, disabled: false },
+    // { name: 'Imtihon', href: '/dashboard/exams', icon: BookCheck, disabled: true },
     { name: 'Amaliyot', href: '/dashboard/test', icon: LayoutGrid, disabled: false },
     { name: 'Natijalar', href: '/dashboard/results', icon: FileText, disabled: false },
     { name: 'Profil', href: '/dashboard/profile', icon: User, disabled: false },

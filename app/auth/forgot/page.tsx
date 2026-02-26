@@ -79,7 +79,7 @@ export default function ForgotPasswordPage() {
                         </button>
 
                         <button 
-                            onClick={() => router.push('/auth/login')}
+                            onClick={() => router.push('/auth')}
                             className="w-full h-15 bg-white border-2 border-slate-50 text-slate-400 rounded-2xl font-bold hover:bg-slate-50 hover:text-slate-600 active:scale-95 transition-all flex items-center justify-center gap-2"
                         >
                             <ArrowLeft size={18} />

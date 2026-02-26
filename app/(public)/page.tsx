@@ -80,7 +80,7 @@ export default function UltimateAIHome() {
 
                         <div className="flex flex-wrap gap-4">
                             <button
-                                onClick={() => router.push("/auth/login")}
+                                onClick={() => router.push("/auth")}
                                 className="h-16 px-10 bg-[#17776A] hover:bg-[#125d53] text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#17776A]/25 transition-all active:scale-95 flex items-center gap-3"
                             >
                                 <Zap size={20} />

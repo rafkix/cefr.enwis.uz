@@ -141,7 +141,7 @@ function LoginForm() {
                     {/* Footer Info */}
                     <p className="mt-16 text-center text-slate-400 text-xs leading-relaxed max-w-[300px] mx-auto">
                         Tizimga kirish orqali siz bizning <br /> 
-                        <span className="text-slate-900 font-bold underline cursor-pointer">Foydalanish shartlari</span>ga rozilik bildirasiz.
+                        <span className="text-slate-900 font-bold underline cursor-pointer"><a href="/terms">Foydalanish shartlari</a></span>ga rozilik bildirasiz.
                     </p>
                 </motion.div>
             </div>

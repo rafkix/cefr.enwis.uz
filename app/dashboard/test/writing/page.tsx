@@ -51,15 +51,17 @@ export default function WritingListPage() {
 
   // --- FILTRLASH MANTIGI ---
   const filteredTests = useMemo(() => {
-    return exams.filter((test) => {
-      const matchesSearch =
-        test.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        test.cefr_level?.toLowerCase().includes(searchTerm.toLowerCase())
+    return exams
+      .filter((test) => !test.is_mock) // ✅ MOCKLARNI YASHIR
+      .filter((test) => {
+        const matchesSearch =
+          test.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          test.cefr_level?.toLowerCase().includes(searchTerm.toLowerCase())
 
-      if (activeTab === 'free') return matchesSearch && test.is_free
-      if (activeTab === 'premium') return matchesSearch && !test.is_free
-      return matchesSearch
-    })
+        if (activeTab === 'free') return matchesSearch && test.is_free
+        if (activeTab === 'premium') return matchesSearch && !test.is_free
+        return matchesSearch
+      })
   }, [exams, searchTerm, activeTab])
 
   const handleTestClick = (test: any) => {

@@ -62,10 +62,10 @@ api.interceptors.response.use(
                 
                 // Agar joriy sahifa auth sahifalaridan biri bo'lmasa, login'ga yuborish
                 const currentPath = window.location.pathname;
-                if (!currentPath.includes('/auth/login') && !currentPath.includes('/auth/register')) {
+                if (!currentPath.includes('/auth') && !currentPath.includes('/auth/register')) {
                     // Muhim: window.location.href sahifani to'liq yangilab yuboradi
                     // Bu Auth holatini reset qilish uchun eng ishonchli yo'l
-                    window.location.href = "/auth/login";
+                    window.location.href = "/auth";
                 }
             }
         }

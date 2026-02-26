@@ -218,7 +218,7 @@ function ExamLogic() {
                         <Play size={40} className="ml-1" />
                     </div>
                     <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">{test.title}</h1>
-                    <p className="text-slate-500 mb-8 font-medium italic">Reading bo&apos;limini boshlashga tayyormisiz?</p>
+                    <p className="text-slate-500 mb-8 font-medium italic">listening bo&apos;limini boshlashga tayyormisiz?</p>
                     <button onClick={() => { setHasStarted(true); setStatus("reading"); setCountdown(10); }} className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all">
                         Bo'limni boshlash
                     </button>

@@ -41,10 +41,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = async (data: any, redirect: boolean = true) => {
         try {
             setLoading(true)
-            const res = await authService.login(data)
+            const res = await authService.loginByPhone(data)
             const userData = await authService.getMe()
             setUser(userData)
-            if (redirect) router.push("/dashboard")
+            if (redirect) router.push("/auth")
         } finally {
             setLoading(false)
         }
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const logout = () => {
         authService.logout()
         setUser(null)
-        router.push("/auth/login")
+        router.push("/auth")
     }
 
     const refreshUser = async () => {

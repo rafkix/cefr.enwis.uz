@@ -136,7 +136,7 @@ function TelegramLoginContent() {
                         </div>
 
                         <div className="mt-10 pt-8 border-t border-slate-50 flex justify-center">
-                            <Link href={`/auth/login${getQueryString()}`} className="flex items-center gap-2 text-[11px] font-black text-slate-400 hover:text-[#17776A] uppercase tracking-widest transition-all group">
+                            <Link href={`/auth${getQueryString()}`} className="flex items-center gap-2 text-[11px] font-black text-slate-400 hover:text-[#17776A] uppercase tracking-widest transition-all group">
                                 <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" /> Parol orqali kirish
                             </Link>
                         </div>

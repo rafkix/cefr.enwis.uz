@@ -274,7 +274,7 @@ export default function TestInfoPage() {
 
                                         {/* Action Button - Padding py-4 ga tushirildi */}
                                         <button
-                                            onClick={() => router.push(`/auth/login`)}
+                                            onClick={() => router.push(`/auth`)}
                                             className="group/btn relative w-full py-4 bg-[#17776A] text-white rounded-[20px] font-black text-xs uppercase tracking-[0.2em] hover:bg-[#136358] transition-all shadow-xl active:scale-95 overflow-hidden"
                                         >
                                             <span className="relative z-10 flex items-center justify-center gap-2">

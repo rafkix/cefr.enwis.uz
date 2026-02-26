@@ -41,16 +41,12 @@ export function Header() {
                     {/* LOGO */}
                     <div className="flex items-center gap-3 cursor-pointer group" onClick={() => router.push("/")}>
                         <div className="relative">
-                            {/* <div className="absolute inset-0 bg-[#17776A] blur-md opacity-30 group-hover:opacity-50 transition-opacity"></div>
-                            <div className="relative w-10 h-10 bg-gradient-to-br from-[#17776A] to-teal-600 rounded-xl flex items-center justify-center text-white shadow-inner">
-                                <BrainCircuit size={20} />
-                            </div> */}
                             <img src="/logo.png" alt="" className="relative w-12 h-12  items-center justify-center"/>
                         </div>
                         <div className="flex flex-col leading-none">
                             <span className="font-black text-xl tracking-tight text-slate-900">ENWIS</span>
                             <span className="text-[10px] font-bold text-[#17776A] uppercase tracking-widest mt-0.5">AI Platform</span>
-                        </div>
+                        </div>  
                     </div>
 
                     {/* DESKTOP MENU */}
@@ -73,16 +69,10 @@ export function Header() {
                     {/* ACTIONS */}
                     <div className="flex items-center gap-4">
                         <button 
-                            onClick={() => router.push("/auth/login")}
+                            onClick={() => router.push("/auth")}
                             className="hidden md:flex group items-center gap-2 bg-[#17776A] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-[#17776A]/20 hover:bg-[#125d53] transition-all active:scale-95"
                         >
-                            Kirish <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-                        </button>
-                        <button 
-                            onClick={() => router.push("/auth/register")}
-                            className="hidden md:flex group items-center gap-2 bg-[#17776A] text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-[#17776A]/20 hover:bg-[#125d53] transition-all active:scale-95"
-                        >
-                            Ro'yxatdan o'tish <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                            Tizimga kirish <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
                         </button>
 
                         {/* Mobile Menu Button */}
@@ -111,7 +101,7 @@ export function Header() {
                             </Link>
                         ))}
                         <button 
-                            onClick={() => router.push("/auth/login")}
+                            onClick={() => router.push("/auth")}
                             className="mt-4 w-full bg-[#17776A] text-white py-4 rounded-xl font-bold text-lg"
                         >
                             Tizimga kirish

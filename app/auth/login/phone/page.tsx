@@ -157,7 +157,7 @@ function PhoneLoginForm() {
       })
 
       if (res.status === 'need_registration') {
-        router.push(`/auth/register-complete?phone=${cleanPhone}&code=${finalCode}`)
+        router.push(`/auth`)
         return
       }
 
