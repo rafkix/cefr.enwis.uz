@@ -149,7 +149,7 @@ export const TelegramSignInWidget = () => {
   // TelegramSignInWidget ichidagi return qismini shunday yangilang:
   return (
     <div className="w-full">
-      <div className="w-full h-[48px] flex items-center justify-center rounded-xl bg-blue-500 border border-transparent transition-all hover:border-blue-200 relative overflow-hidden shadow-sm">
+      <div className="w-full h-[48px] flex items-center justify-center rounded-xl bg-[#0088CC] border border-transparent transition-all hover:border-[#0088CC] relative overflow-hidden shadow-sm">
         <div
           ref={telegramWrapperRef}
           className="telegram-widget-container flex justify-center items-center"
