@@ -98,7 +98,7 @@ export const GoogleSignInButton = () => {
           />
         </svg>
       )}
-      <span>Google orqali kirish</span>
+      <span>Google</span>
     </button>
   )
 }
