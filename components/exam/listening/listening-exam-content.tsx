@@ -154,8 +154,7 @@ export default function ListeningExamContent({
     const isMapLayout = currentPart.taskType === "MAP_DIAGRAM" || !!currentPart.mapImage;
 
     return (
-        <div className="flex flex-col h-full bg-[#F8FAFC]">
-
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 md:p-8 bg-[#F1F5F9]/50 flex flex-col md:flex-row gap-6 relative min-w-0">
             {/* PART TABS */}
             <div className="h-16 bg-white border-b flex items-center shrink-0 z-20 overflow-x-auto no-scrollbar px-4 shadow-sm">
                 <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl mx-auto border border-slate-200/50">
@@ -196,7 +195,7 @@ export default function ListeningExamContent({
 
                 {/* MAP IMAGE - Mobil uchun max-h belgilandi */}
                 {isMapLayout && currentPart.mapImage && (
-                    <div className="w-full md:w-1/2 h-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden md:sticky md:top-0 self-start">
+                    <div className="w-full md:w-1/2 shrink-0 min-w-0 h-auto bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden md:sticky md:top-0 self-start">
                         <div className="p-3 md:p-4 flex flex-col items-center">
                             <span className="self-start text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
                                 <Headphones size={12} /> Reference Image
@@ -212,7 +211,7 @@ export default function ListeningExamContent({
                 )}
 
                 {/* QUESTIONS SECTION */}
-                <div className={`flex-1 w-full max-w-4xl mx-auto pb-32 md:pb-10 ${isMapLayout ? 'md:w-1/2' : 'w-full'}`}>
+                <div className={`flex-1 w-full max-w-4xl mx-auto pb-32 md:pb-10 min-w-0 ${isMapLayout ? 'md:w-1/2' : 'w-full'}`}>
                     <div className="mb-6">
                         <h2 className="text-xl md:text-2xl font-black text-slate-800 uppercase italic">
                             Part {activePartIndex + 1}: {currentPart.title}
