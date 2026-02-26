@@ -154,7 +154,7 @@ export default function ListeningExamContent({
     const isMapLayout = currentPart.taskType === "MAP_DIAGRAM" || !!currentPart.mapImage;
 
     return (
-        <div className="flex flex-col h-full bg-[#F8FAFC] overflow-hidden">
+        <div className="flex flex-col h-full bg-[#F8FAFC]">
 
             {/* PART TABS */}
             <div className="h-16 bg-white border-b flex items-center shrink-0 z-20 overflow-x-auto no-scrollbar px-4 shadow-sm">
