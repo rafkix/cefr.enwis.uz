@@ -211,19 +211,28 @@ export function MatchingDropdown({ q, qId, answer, onAnswer, onSelect, isActive 
 }
 
 // 4. MAP / DIAGRAM LABELING (Part 4 - Xarita)
+// 4. MAP / DIAGRAM LABELING (Part 4 - Xarita) - Mobile responsive
 export function MapLabelingRenderer({ answer, onInputChange, fontSize = 16 }: any) {
     return (
-        <div className="bg-gray-50 p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center">
-            <div className="bg-white p-3 rounded-full shadow-sm mb-4">
-                <Map className="w-8 h-8 text-blue-500" />
+        <div className="w-full max-w-sm mx-auto bg-gray-50 p-4 sm:p-6 rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center">
+            
+            {/* Icon */}
+            <div className="bg-white p-2 sm:p-3 rounded-full shadow-sm mb-2 sm:mb-4">
+                <Map className="w-6 sm:w-8 h-6 sm:h-8 text-blue-500" />
             </div>
-            <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-4">Harf kiritish (A-H)</p>
+
+            {/* Label */}
+            <p className="text-[9px] sm:text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2 sm:mb-4">
+                Harf kiritish (A-H)
+            </p>
+
+            {/* Input */}
             <input
                 type="text"
                 maxLength={1}
                 value={answer}
                 onChange={(e) => onInputChange(e.target.value.toUpperCase())}
-                className="w-20 h-20 text-center text-3xl font-black border-4 border-white shadow-xl rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none text-blue-600 uppercase"
+                className="w-16 sm:w-20 h-16 sm:h-20 text-center text-2xl sm:text-3xl font-black border-4 border-white shadow-xl rounded-2xl focus:ring-4 focus:ring-blue-100 outline-none text-blue-600 uppercase"
             />
         </div>
     )
