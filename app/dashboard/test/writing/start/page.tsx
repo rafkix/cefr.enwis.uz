@@ -541,7 +541,9 @@ export default function WritingTestPage() {
 
         <div className="bg-blue-50 p-5 rounded-2xl border-l-4 border-blue-500">
           <p className="font-bold text-lg mb-2">{part1[0]?.topic}</p>
-          <p className="text-gray-600 italic">{part1[0]?.context_text}</p>
+          <p className="text-gray-600 italic whitespace-pre-line">
+            {part1[0]?.context_text}
+          </p>
         </div>
 
         <div className="grid gap-5">
