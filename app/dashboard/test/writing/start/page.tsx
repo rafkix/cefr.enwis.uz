@@ -2,7 +2,16 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback, memo } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, AlertCircle, CheckCircle2, Play, GripHorizontal } from 'lucide-react'
+import {
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  GripHorizontal,
+  GripVertical,
+  Type,
+  Play,
+  Settings2
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { getWritingExamByIdAPI, submitWritingExamAPI } from '@/lib/api/writing'
@@ -16,63 +25,43 @@ const getLimits = (task: any) => ({
 })
 const taskLabel = (task: any) => Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2'
 
-/**
- * Persist responses: Debounce + Idle helper
- */
-function writeStorageIdle(key: string, value: string) {
-  try {
-    if (typeof window.requestIdleCallback === 'function') {
-      window.requestIdleCallback(() => {
-        localStorage.setItem(key, value)
-      })
-      return
-    }
-    setTimeout(() => { localStorage.setItem(key, value) }, 0)
-  } catch {}
-}
-
-// --- OPTIMALLASHTIRILGAN TEXTAREA KOMPONENTI ---
-const TaskTextArea = memo(function TaskTextArea({
-  task,
-  initialValue,
-  fontSize,
-  onFocusTask,
-  onDraftChange,
-}: any) {
-  const [localValue, setLocalValue] = useState(initialValue)
-  const isFocusedRef = useRef(false)
+// --- OPTIMALLASHTIRILGAN INPUT (QOTISHNI OLDINI OLISH UCHUN) ---
+const TaskBox = memo(({ task, initialValue, fontSize, onUpdate, onFocus }: any) => {
+  const [val, setVal] = useState(initialValue)
+  const isFocused = useRef(false)
 
   useEffect(() => {
-    if (!isFocusedRef.current) setLocalValue(initialValue)
+    if (!isFocused.current) setVal(initialValue)
   }, [initialValue])
 
-  const { min, max } = getLimits(task)
-  const words = wc(localValue)
-  const outOfRange = words > 0 && (words < min || words > max)
-  const isOk = localValue.trim().length >= 10 && words >= min && words <= max
-
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const v = e.target.value
-    setLocalValue(v)
-    onDraftChange(String(task.id), v)
-  }
+  const limits = getLimits(task)
+  const words = wc(val)
+  const isError = words > 0 && (words < limits.min || words > limits.max)
+  const isOk = val.trim().length >= 10 && !isError && words >= limits.min
 
   return (
-    <div className="rounded-3xl border-2 border-orange-400 overflow-hidden shadow-lg flex flex-col min-h-[300px] bg-white transition-all focus-within:ring-4 focus-within:ring-orange-100">
-      <div className="bg-orange-500 p-4 flex justify-between items-center text-white">
-        <span className="text-xl font-black italic uppercase">Task {taskLabel(task)}</span>
-        {isOk && <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black italic"><CheckCircle2 size={12} className="inline mr-1"/>OK</span>}
+    <div className="flex flex-col h-full bg-white rounded-[32px] border-2 border-orange-200 shadow-xl overflow-hidden focus-within:border-orange-500 transition-all">
+      <div className="bg-orange-500 p-4 flex justify-between items-center text-white shrink-0">
+        <span className="font-black italic uppercase tracking-tighter text-lg">Task {taskLabel(task)}</span>
+        <div className="flex items-center gap-3">
+          {isOk && <CheckCircle2 size={20} className="text-white animate-bounce" />}
+          <span className="bg-black/20 px-3 py-1 rounded-full text-xs font-bold">{words} words</span>
+        </div>
       </div>
       <textarea
         style={{ fontSize: `${fontSize}px` }}
-        className="flex-1 p-6 outline-none leading-relaxed text-gray-700 resize-none min-h-[180px]"
-        value={localValue}
-        onFocus={() => { isFocusedRef.current = true; onFocusTask(String(task.id)) }}
-        onBlur={() => { isFocusedRef.current = false }}
-        onChange={handleChange}
+        className="flex-1 p-6 outline-none leading-relaxed text-slate-700 resize-none font-medium"
+        value={val}
+        onFocus={() => { isFocused.current = true; onFocus(String(task.id)) }}
+        onBlur={() => { isFocused.current = false }}
+        onChange={(e) => {
+          setVal(e.target.value)
+          onUpdate(String(task.id), e.target.value)
+        }}
+        placeholder="Sizning javobingiz..."
       />
-      <div className={`p-2 text-right font-black text-xs border-t ${outOfRange ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-600'}`}>
-        {words} SO'Z ({min}-{max})
+      <div className={`p-3 text-center text-[10px] font-black uppercase tracking-widest border-t ${isError ? 'bg-red-50 text-red-500' : 'bg-orange-50 text-orange-600'}`}>
+        Limit: {limits.min} - {limits.max} so'z
       </div>
     </div>
   )
@@ -83,167 +72,180 @@ export default function WritingTestPage() {
   const router = useRouter()
   const examId = searchParams.get('id')
 
+  // --- States ---
   const [exam, setExam] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [responses, setResponses] = useState<Record<string, string>>({})
+  const [fontSize, setFontSize] = useState(18)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [visibleTaskId, setVisibleTaskId] = useState<string | null>(null)
   const [hasStarted, setHasStarted] = useState(false)
-  const [showConfirmModal, setShowConfirmModal] = useState(false)
-
-  // Mobile Splitter State
-  const [qHeight, setQHeight] = useState(40) // Foizda (%)
+  
+  // Layout States
+  const [splitPos, setSplitPos] = useState(50) // Foizda
   const [isDragging, setIsDragging] = useState(false)
+  const [activeTaskId, setActiveTaskId] = useState('')
 
-  const taskRefs = useRef<Record<string, HTMLDivElement | null>>({})
-  const storageKey = useMemo(() => examId ? `writing_responses_${examId}` : null, [examId])
+  const storageKey = `writing_res_${examId}`
 
   useEffect(() => {
-    async function load() {
-      if (!examId) return
-      try {
-        const res = await getWritingExamByIdAPI(examId)
-        setExam(res.data)
-        const saved = localStorage.getItem(storageKey!)
-        if (saved) setResponses(JSON.parse(saved))
-        if (localStorage.getItem(`writing-${examId}-started`) === 'true') setHasStarted(true)
-      } catch { toast.error("Xatolik!") } finally { setLoading(false) }
-    }
-    load()
+    if (!examId) return
+    getWritingExamByIdAPI(examId).then(res => {
+      setExam(res.data)
+      const saved = localStorage.getItem(storageKey)
+      if (saved) setResponses(JSON.parse(saved))
+      if (localStorage.getItem(`started_${examId}`)) setHasStarted(true)
+      setLoading(false)
+    })
   }, [examId, storageKey])
 
-  const onDraftChange = useCallback((id: string, val: string) => {
-    setResponses(prev => ({ ...prev, [id]: val }))
-    if (storageKey) {
-        // Debounce o'rniga oddiyroq persistence (UI bloklamaydi)
-        writeStorageIdle(storageKey, JSON.stringify({ ...responses, [id]: val }))
-    }
+  // Debounced Save to LocalStorage
+  useEffect(() => {
+    const t = setTimeout(() => {
+      if (Object.keys(responses).length > 0) localStorage.setItem(storageKey, JSON.stringify(responses))
+    }, 800)
+    return () => clearTimeout(t)
   }, [responses, storageKey])
+
+  const handleUpdate = useCallback((id: string, val: string) => {
+    setResponses(prev => ({ ...prev, [id]: val }))
+  }, [])
 
   const tasks = useMemo(() => (exam?.tasks ?? []).sort((a: any, b: any) => a.part_number - b.part_number), [exam])
 
-  // Splitter logic (Touch & Mouse)
-  const handleMove = (clientY: number) => {
+  const handleResize = (e: any) => {
     if (!isDragging) return
-    const h = (clientY / window.innerHeight) * 100
-    setQHeight(Math.min(Math.max(h, 20), 80))
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX
+    
+    // Mobil uchun Vertical, Desktop uchun Horizontal splitter
+    if (window.innerWidth < 1024) {
+      const pos = (clientY / window.innerHeight) * 100
+      setSplitPos(Math.min(Math.max(pos, 20), 80))
+    } else {
+      const pos = (clientX / window.innerWidth) * 100
+      setSplitPos(Math.min(Math.max(pos, 30), 70))
+    }
   }
 
-  const QuestionPaper = ({ compact }: { compact?: boolean }) => (
-    <div className={`space-y-6 ${compact ? 'p-4' : 'p-10'} bg-white`}>
-      <h3 className="text-xl font-black uppercase italic text-orange-600 border-b pb-2">Question Paper</h3>
-      {tasks.map((task: any) => (
-        <div key={task.id} className="p-5 border-2 border-orange-100 rounded-3xl bg-orange-50/20">
-          <h4 className="font-black text-orange-500 mb-2 uppercase">Task {taskLabel(task)}</h4>
-          <p className="font-bold text-slate-800 text-sm mb-2">{task.topic}</p>
-          <p className="italic text-gray-500 text-xs mb-3 whitespace-pre-line">{task.context_text}</p>
-          <div className="bg-white p-3 rounded-xl border border-orange-100 text-xs text-slate-700">{task.instruction}</div>
-        </div>
-      ))}
-    </div>
-  )
-
-  if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="animate-spin text-orange-500" size={40} /></div>
+  if (loading) return <div className="h-screen flex items-center justify-center bg-white"><Loader2 className="animate-spin text-orange-500" size={50} /></div>
 
   if (!hasStarted) return (
-    <div className="h-screen flex items-center justify-center bg-orange-50 p-6">
-      <div className="bg-white p-12 rounded-[50px] shadow-2xl text-center max-w-lg border-b-[10px] border-orange-500">
-        <h1 className="text-3xl font-black mb-6 italic text-slate-800 uppercase">{exam?.title}</h1>
-        <button onClick={() => { setHasStarted(true); localStorage.setItem(`writing-${examId}-started`, 'true') }} 
-          className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black text-xl hover:bg-orange-600 shadow-lg">TESTNI BOSHLASH</button>
+    <div className="h-screen flex items-center justify-center bg-slate-50 p-6">
+      <div className="bg-white p-10 rounded-[40px] shadow-2xl text-center max-w-md border-b-8 border-orange-500 animate-in fade-in zoom-in duration-500">
+        <h1 className="text-3xl font-black text-slate-800 mb-2 italic uppercase">{exam?.title}</h1>
+        <p className="text-slate-400 mb-8 font-medium italic">Writing Section Imtihoni</p>
+        <button onClick={() => { setHasStarted(true); localStorage.setItem(`started_${examId}`, 'true') }} 
+          className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black text-xl hover:bg-orange-600 shadow-lg shadow-orange-200 active:scale-95 transition-all uppercase italic">
+          Boshlash
+        </button>
       </div>
     </div>
   )
 
   return (
     <div 
-      className="flex flex-col h-screen bg-[#FDFCFB] overflow-hidden select-none"
-      onMouseMove={(e) => handleMove(e.clientY)}
+      className="h-screen flex flex-col bg-[#F8FAFC] overflow-hidden select-none"
+      onMouseMove={handleResize}
       onMouseUp={() => setIsDragging(false)}
-      onTouchMove={(e) => handleMove(e.touches[0].clientY)}
+      onTouchMove={handleResize}
       onTouchEnd={() => setIsDragging(false)}
     >
-      <WritingHeader initialSeconds={(exam?.duration_minutes || 60) * 60} onFinish={() => setShowConfirmModal(true)} isSubmitting={isSubmitting} />
+      <WritingHeader initialSeconds={(exam?.duration_minutes || 60) * 60} onFinish={() => setIsSubmitting(true)} isSubmitting={isSubmitting} />
 
-      {/* --- DESKTOP LAYOUT --- */}
-      <div className="hidden lg:flex flex-1 overflow-hidden">
-        <section className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-          <div className="max-w-4xl mx-auto space-y-10 pb-20">
+      {/* --- MAIN LAYOUT (SPLITTER) --- */}
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        
+        {/* SAVOLLAR QISMI */}
+        <div 
+          style={{ [window.innerWidth < 1024 ? 'height' : 'width']: `${splitPos}%` }}
+          className="overflow-y-auto bg-slate-100 p-4 lg:p-10 custom-scrollbar"
+        >
+          <div className="max-w-3xl mx-auto space-y-8 pb-10">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-10 h-10 bg-orange-500 rounded-xl flex items-center justify-center text-white font-bold italic shadow-lg shadow-orange-100 italic">Q</div>
+              <h2 className="text-2xl font-black text-slate-800 uppercase italic tracking-tighter">Question Paper</h2>
+            </div>
             {tasks.map((task: any) => (
-              <div key={task.id} ref={el => { taskRefs.current[task.id] = el }}>
-                <TaskTextArea task={task} initialValue={responses[task.id] || ''} fontSize={18} onDraftChange={onDraftChange} onFocusTask={setVisibleTaskId} />
+              <div key={task.id} className="bg-white p-6 rounded-[32px] border border-slate-200 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-2 h-full bg-orange-400"></div>
+                <h4 className="font-black text-orange-500 mb-3 text-sm italic uppercase tracking-widest">TASK {taskLabel(task)}</h4>
+                <p className="font-bold text-slate-800 text-lg mb-4 leading-tight">{task.topic}</p>
+                <div className="text-slate-600 leading-relaxed italic text-sm whitespace-pre-line bg-slate-50 p-4 rounded-2xl mb-4 border border-slate-100">
+                  {task.context_text}
+                </div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Instruction: <span className="text-slate-700 normal-case font-medium italic">{task.instruction}</span></p>
               </div>
             ))}
           </div>
-        </section>
-        <section className="w-[500px] border-l bg-slate-50 overflow-y-auto custom-scrollbar">
-          <QuestionPaper />
-        </section>
-      </div>
-
-      {/* --- MOBILE VERTICAL SPLITTER LAYOUT --- */}
-      <div className="lg:hidden flex flex-1 flex-col overflow-hidden relative">
-        {/* Savollar Qismi (Tepada) */}
-        <div style={{ height: `${qHeight}%` }} className="overflow-y-auto bg-slate-50 border-b-2 border-orange-200">
-          <QuestionPaper compact />
         </div>
 
-        {/* Splitter Handle (Suriladigan chiziq) */}
+        {/* SPLITTER HANDLE */}
         <div 
           onMouseDown={() => setIsDragging(true)}
           onTouchStart={() => setIsDragging(true)}
-          className="h-8 bg-orange-500 flex items-center justify-center cursor-ns-resize shadow-md relative z-10"
+          className={`shrink-0 z-50 flex items-center justify-center transition-colors
+            ${window.innerWidth < 1024 
+              ? 'h-6 w-full cursor-ns-resize bg-slate-200 hover:bg-orange-400' 
+              : 'w-6 h-full cursor-ew-resize bg-slate-200 hover:bg-orange-400'}`}
         >
-          <div className="w-16 h-1.5 bg-white/40 rounded-full mb-1"></div>
-          <GripHorizontal className="text-white absolute right-4" size={20} />
-          <span className="text-[10px] text-white font-black uppercase tracking-widest px-4">Resize</span>
-          <div className="w-16 h-1.5 bg-white/40 rounded-full mb-1"></div>
+          {window.innerWidth < 1024 ? <GripHorizontal className="text-slate-400 group-hover:text-white" /> : <GripVertical className="text-slate-400 group-hover:text-white" />}
         </div>
 
-        {/* Javoblar Qismi (Pastda) */}
-        <div style={{ height: `${100 - qHeight}%` }} className="overflow-y-auto p-4 bg-white custom-scrollbar">
-          <div className="space-y-8 pb-10">
-            {tasks.map((task: any) => (
-              <TaskTextArea key={task.id} task={task} initialValue={responses[task.id] || ''} fontSize={16} onDraftChange={onDraftChange} onFocusTask={setVisibleTaskId} />
-            ))}
+        {/* JAVOBLAR QISMI */}
+        <div 
+          style={{ [window.innerWidth < 1024 ? 'height' : 'width']: `${100 - splitPos}%` }}
+          className="flex-1 overflow-y-auto p-4 lg:p-10 bg-[#F1F5F9] custom-scrollbar"
+        >
+          <div className="max-w-4xl mx-auto space-y-12 pb-24 h-full">
+             {/* Font sozlamalari */}
+             <div className="flex justify-end gap-2 mb-4">
+               <button onClick={() => setFontSize(f => Math.max(14, f - 2))} className="p-2 bg-white rounded-lg shadow-sm hover:bg-orange-50"><Type size={16} className="scale-75"/></button>
+               <button onClick={() => setFontSize(f => Math.min(24, f + 2))} className="p-2 bg-white rounded-lg shadow-sm hover:bg-orange-50"><Type size={16} className="scale-125"/></button>
+             </div>
+
+             {tasks.map((task: any) => (
+               <div key={task.id} className="h-[400px] mb-10">
+                  <TaskBox 
+                    task={task} 
+                    initialValue={responses[task.id] || ''} 
+                    fontSize={fontSize} 
+                    onUpdate={handleUpdate} 
+                    onFocus={setActiveTaskId}
+                  />
+               </div>
+             ))}
+
+             <button 
+               onClick={() => setIsSubmitting(true)}
+               className="w-full py-6 bg-green-500 text-white rounded-[32px] font-black text-xl hover:bg-green-600 shadow-xl shadow-green-100 transition-all uppercase italic tracking-widest"
+             >
+               Imtihonni topshirish
+             </button>
           </div>
         </div>
+
       </div>
 
-      {/* MODALLAR */}
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
-          <div className="bg-white rounded-[40px] p-10 max-w-md w-full text-center">
-            <h3 className="text-2xl font-black mb-4 italic uppercase text-orange-600">Imtihonni yakunlaysizmi?</h3>
-            <div className="flex gap-4">
-              <button onClick={() => setShowConfirmModal(false)} className="flex-1 py-4 bg-slate-100 rounded-2xl font-bold">Yo'q</button>
-              <button onClick={doSubmit} className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black shadow-lg">HA, YUBORISH</button>
-            </div>
+      {/* FOOTER (Faqat navigatsiya uchun) */}
+      <div className="bg-white border-t p-2 flex justify-center gap-2 lg:hidden overflow-x-auto">
+        {tasks.map((t: any) => (
+          <div key={t.id} className={`px-4 py-2 rounded-full text-xs font-black italic uppercase ${activeTaskId === String(t.id) ? 'bg-orange-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
+            Task {taskLabel(t)}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
+      {/* AI SUBMITTING OVERLAY */}
       {isSubmitting && (
         <div className="fixed inset-0 bg-white/95 backdrop-blur-xl z-[200] flex flex-col items-center justify-center">
-          <div className="w-20 h-20 border-8 border-orange-100 border-t-orange-500 rounded-full animate-spin"></div>
-          <h2 className="mt-6 text-xl font-black italic text-orange-600 uppercase tracking-tight">AI natijalarni hisoblamoqda...</h2>
+          <div className="relative mb-8">
+            <div className="w-24 h-24 border-8 border-slate-100 border-t-orange-500 rounded-full animate-spin"></div>
+            <Play className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-orange-500 ml-1" size={30} />
+          </div>
+          <h2 className="text-3xl font-black italic text-slate-800 uppercase tracking-tighter">AI natijalarni hisoblamoqda...</h2>
+          <p className="text-slate-400 mt-2 font-medium animate-pulse">Iltimos, sahifadan chiqib ketmang</p>
         </div>
       )}
     </div>
   )
-
-  async function doSubmit() {
-    if (isSubmitting) return
-    setIsSubmitting(true)
-    try {
-      const answers = tasks.map((t: any) => ({ task_id: t.id, content: (responses[t.id] || '').trim() }))
-      const res = await submitWritingExamAPI(examId!, { answers })
-      localStorage.removeItem(storageKey!)
-      localStorage.removeItem(`writing-${examId}-started`)
-      router.push(`/dashboard/results/writing/view?id=${res.data.id}`)
-    } catch {
-      toast.error("Xatolik!")
-      setIsSubmitting(false)
-    }
-  }
 }
