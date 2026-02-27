@@ -1,14 +1,14 @@
 'use client'
 
-import React, { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
-  Loader2,
   AlertCircle,
   CheckCircle2,
   ChevronsLeftRight,
-  LayoutPanelTop,
   LayoutPanelLeft,
+  LayoutPanelTop,
+  Loader2,
   Maximize2,
   Minimize2,
   Play,
@@ -46,42 +46,20 @@ export default function WritingTestPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [visibleTaskId, setVisibleTaskId] = useState<string | null>(null)
 
-  // start screen (reading-style)
-  const startedKey = useMemo(
-    () => (examId ? `writing-${examId}-started` : null),
-    [examId]
-  )
-  const timeKey = useMemo(() => (examId ? `writing-${examId}-time` : null), [examId])
-  const uiKey = useMemo(() => (examId ? `writing_ui_${examId}` : null), [examId])
-
-  const [hasStarted, setHasStarted] = useState(false)
-
-  useEffect(() => {
-    if (!examId) return
-    const key = `writing-${examId}-started`
-
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === key) setHasStarted(e.newValue === 'true')
-    }
-
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [examId])
-
-  // finish modal
   const [showConfirmModal, setShowConfirmModal] = useState(false)
   const [forceSubmit, setForceSubmit] = useState(false)
   const isExamFinished = useRef(false)
 
   // layout refs
   const layoutRef = useRef<HTMLDivElement>(null)
+  const mobileLayoutRef = useRef<HTMLDivElement>(null)
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
   // ===== MOBILE VIEW =====
   const [mobileView, setMobileView] = useState<'both' | 'question' | 'answer'>('both')
+  const [mExpand, setMExpand] = useState<'normal' | 'question' | 'answer'>('normal')
 
-  // ===== DESKTOP SPLITTER (NO LIMITS) =====
-  // siz “cheklovlarni olib tashla” degansiz — width bo‘yicha max’ni juda katta qildim
+  // ===== SPLITTERS =====
   const NORMAL_Q_W = 860
   const MINI_Q_W = 260
   const MIN_Q_W = 220
@@ -91,28 +69,39 @@ export default function WritingTestPage() {
   const [isMiniQ, setIsMiniQ] = useState(false)
   const [dragging, setDragging] = useState(false)
 
-  // ===== MOBILE VERTICAL SPLITTER =====
-  const mobileLayoutRef = useRef<HTMLDivElement>(null)
-  const [mDragging, setMDragging] = useState(false)
-
   const MOBILE_Q_NORMAL = 320
   const MOBILE_Q_MIN = 120
   const MOBILE_Q_MAX = 900
   const [mQHeight, setMQHeight] = useState<number>(MOBILE_Q_NORMAL)
+  const [mDragging, setMDragging] = useState(false)
 
-  // quick expand state (mobile)
-  const [mExpand, setMExpand] = useState<'normal' | 'question' | 'answer'>('normal')
+  // keys
+  const startedKey = useMemo(() => (examId ? `writing-${examId}-started` : null), [examId])
+  const timeKey = useMemo(() => (examId ? `writing-${examId}-time` : null), [examId])
+  const uiKey = useMemo(() => (examId ? `writing_ui_${examId}` : null), [examId])
+  const storageKey = useMemo(() => (examId ? `writing_responses_${examId}` : null), [examId])
 
-  // ---------- Sync hasStarted from localStorage ----------
+  const [hasStarted, setHasStarted] = useState(false)
+
+  // sync started from localStorage (multi-tab)
+  useEffect(() => {
+    if (!examId) return
+    const key = `writing-${examId}-started`
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === key) setHasStarted(e.newValue === 'true')
+    }
+    window.addEventListener('storage', onStorage)
+    return () => window.removeEventListener('storage', onStorage)
+  }, [examId])
+
   useEffect(() => {
     if (!startedKey) return
-    const started = localStorage.getItem(startedKey) === 'true'
-    setHasStarted(started)
+    setHasStarted(localStorage.getItem(startedKey) === 'true')
   }, [startedKey])
 
-  // ---------- Load exam ----------
+  // Load exam
   useEffect(() => {
-    async function loadExam() {
+    ;(async () => {
       if (!examId) return
       try {
         setLoading(true)
@@ -123,8 +112,7 @@ export default function WritingTestPage() {
       } finally {
         setLoading(false)
       }
-    }
-    loadExam()
+    })()
   }, [examId])
 
   const tasks: Task[] = useMemo(() => {
@@ -139,13 +127,7 @@ export default function WritingTestPage() {
     })
   }, [exam])
 
-  // ---------- LocalStorage key (answers) ----------
-  const storageKey = useMemo(() => {
-    if (!examId) return null
-    return `writing_responses_${examId}`
-  }, [examId])
-
-  // ---------- Init responses ----------
+  // init responses + fonts
   useEffect(() => {
     if (!storageKey || tasks.length === 0) return
 
@@ -173,14 +155,19 @@ export default function WritingTestPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey, tasks.length])
 
-  // ---------- Persist responses ----------
+  // persist responses (DEBOUNCE => no lag)
   useEffect(() => {
     if (!storageKey) return
     if (!responses || Object.keys(responses).length === 0) return
-    localStorage.setItem(storageKey, JSON.stringify(responses))
+
+    const t = window.setTimeout(() => {
+      localStorage.setItem(storageKey, JSON.stringify(responses))
+    }, 400)
+
+    return () => window.clearTimeout(t)
   }, [responses, storageKey])
 
-  // ---------- Init UI state ----------
+  // init UI state
   useEffect(() => {
     if (!uiKey) return
     const saved = localStorage.getItem(uiKey)
@@ -192,9 +179,7 @@ export default function WritingTestPage() {
         mobileView?: 'both' | 'question' | 'answer'
         mExpand?: 'normal' | 'question' | 'answer'
       }
-
-      if (typeof parsed.qWidth === 'number')
-        setQWidth(clamp(parsed.qWidth, MIN_Q_W, MAX_Q_W))
+      if (typeof parsed.qWidth === 'number') setQWidth(clamp(parsed.qWidth, MIN_Q_W, MAX_Q_W))
       if (typeof parsed.mQHeight === 'number')
         setMQHeight(clamp(parsed.mQHeight, MOBILE_Q_MIN, MOBILE_Q_MAX))
       if (parsed.mobileView) setMobileView(parsed.mobileView)
@@ -203,7 +188,7 @@ export default function WritingTestPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uiKey])
 
-  // ---------- Persist UI state ----------
+  // persist UI state
   useEffect(() => {
     if (!uiKey) return
     localStorage.setItem(
@@ -217,15 +202,28 @@ export default function WritingTestPage() {
     )
   }, [uiKey, qWidth, mQHeight, mobileView, mExpand])
 
-  // ---------- Helpers ----------
+  // ====== CRITICAL FIX: stop dragging on global pointer up/cancel ======
+  useEffect(() => {
+    const stop = () => {
+      setDragging(false)
+      setMDragging(false)
+    }
+    window.addEventListener('pointerup', stop)
+    window.addEventListener('pointercancel', stop)
+    return () => {
+      window.removeEventListener('pointerup', stop)
+      window.removeEventListener('pointercancel', stop)
+    }
+  }, [])
+
+  // helpers
   const getLimits = (task: Task) => {
     const min = Number(task?.format?.min_words ?? 0)
     const max = Number(task?.format?.max_words ?? 999999)
     return { min, max }
   }
 
-  const taskLabel = (task: Task) =>
-    Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2'
+  const taskLabel = (task: Task) => (Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2')
 
   const scrollToTask = (taskId: string) => {
     setTimeout(() => {
@@ -241,7 +239,7 @@ export default function WritingTestPage() {
     }))
   }
 
-  // ---------- Unfinished tasks detection ----------
+  // unfinished tasks detection
   const emptyTasks = useMemo(() => {
     const empties: { id: string; label: string; words: number; min: number }[] = []
     for (const t of tasks) {
@@ -258,7 +256,7 @@ export default function WritingTestPage() {
 
   const canSubmitNormally = emptyTasks.length === 0
 
-  // ---------- Submit ----------
+  // submit
   const doSubmit = useCallback(
     async (allowForce: boolean) => {
       if (!examId || isSubmitting || isExamFinished.current) return
@@ -268,28 +266,25 @@ export default function WritingTestPage() {
 
       try {
         const finalAnswers = tasks.map((task) => {
-          const id = String(task.id)
-          const content = (responses[id] ?? '').trim()
-          return { task_id: Number(task.id), content }
+          const content = (responses[String(task.id)] ?? '').trim()
+
+          // SAFETY: if id not numeric => explicit error (avoid NaN)
+          const numId = Number(task.id)
+          if (!Number.isFinite(numId)) throw new Error(`Task id raqam emas: ${task.id}`)
+
+          return { task_id: numId, content }
         })
 
         if (!allowForce) {
           for (const t of tasks) {
             const id = String(t.id)
             const content = (responses[id] ?? '').trim()
-            if (content.length < 10)
-              throw new Error(`Task ${taskLabel(t)} to'ldirilmagan (min 10 belgi)!`)
+            if (content.length < 10) throw new Error(`Task ${taskLabel(t)} to'ldirilmagan (min 10 belgi)!`)
 
             const { min, max } = getLimits(t)
             const words = wc(content)
-            if (words < min)
-              throw new Error(
-                `Task ${taskLabel(t)}: kamida ${min} so‘z (hozir: ${words})`
-              )
-            if (words > max)
-              throw new Error(
-                `Task ${taskLabel(t)}: ${max} so‘zdan oshirmang (hozir: ${words})`
-              )
+            if (words < min) throw new Error(`Task ${taskLabel(t)}: kamida ${min} so‘z (hozir: ${words})`)
+            if (words > max) throw new Error(`Task ${taskLabel(t)}: ${max} so‘zdan oshirmang (hozir: ${words})`)
           }
         }
 
@@ -298,6 +293,7 @@ export default function WritingTestPage() {
         if (storageKey) localStorage.removeItem(storageKey)
         if (startedKey) localStorage.removeItem(startedKey)
         if (timeKey) localStorage.removeItem(timeKey)
+        if (uiKey) localStorage.removeItem(uiKey)
 
         toast.success('Muvaffaqiyatli topshirildi!')
         router.push(`/dashboard/results/writing/view?id=${res.data.id}`)
@@ -322,7 +318,7 @@ export default function WritingTestPage() {
         setIsSubmitting(false)
       }
     },
-    [examId, isSubmitting, storageKey, startedKey, timeKey, tasks, responses, router]
+    [examId, isSubmitting, storageKey, startedKey, timeKey, uiKey, tasks, responses, router]
   )
 
   const handleFinishClick = () => {
@@ -339,9 +335,7 @@ export default function WritingTestPage() {
     }
 
     if (!forceSubmit) {
-      toast.error(
-        "Ba'zi tasklar to'liq yozilmagan. Baribir yakunlash uchun checkboxni belgilang yoki to'ldiring."
-      )
+      toast.error("Ba'zi tasklar to'liq yozilmagan. Baribir yakunlash uchun checkboxni belgilang yoki to'ldiring.")
       setShowConfirmModal(true)
       return
     }
@@ -349,28 +343,28 @@ export default function WritingTestPage() {
     await doSubmit(true)
   }
 
-  // ===== Start screen actions =====
+  // start screen actions
   const startExam = () => {
     if (!examId) return
 
-    const startedKey = `writing-${examId}-started`
-    const timeKey = `writing-${examId}-time`
+    const sKey = `writing-${examId}-started`
+    const tKey = `writing-${examId}-time`
 
     const elem = document.documentElement
     if (elem.requestFullscreen) elem.requestFullscreen().catch(() => {})
 
-    localStorage.setItem(startedKey, 'true')
+    localStorage.setItem(sKey, 'true')
 
-    // timer key hali yo'q bo'lsa set qilamiz
-    if (!localStorage.getItem(timeKey)) {
+    // only set timer if absent
+    if (!localStorage.getItem(tKey)) {
       const totalSeconds = (Number(exam?.duration_minutes ?? 0) || 0) * 60
-      localStorage.setItem(timeKey, String(totalSeconds))
+      localStorage.setItem(tKey, String(totalSeconds))
     }
 
     setHasStarted(true)
   }
 
-  // ===== Browser protection (reload/back) =====
+  // browser protection (reload/back)
   useEffect(() => {
     if (!hasStarted) return
 
@@ -383,8 +377,7 @@ export default function WritingTestPage() {
 
     window.history.pushState(null, '', window.location.href)
     const handlePopState = () => {
-      if (!isExamFinished.current)
-        window.history.pushState(null, '', window.location.href)
+      if (!isExamFinished.current) window.history.pushState(null, '', window.location.href)
     }
 
     window.addEventListener('beforeunload', preventDefault)
@@ -396,7 +389,7 @@ export default function WritingTestPage() {
     }
   }, [hasStarted])
 
-  // ===== DESKTOP SPLITTER LOGIC =====
+  // desktop splitter
   const toggleQuestionSize = () => {
     setIsMiniQ((p) => {
       const next = !p
@@ -419,7 +412,6 @@ export default function WritingTestPage() {
 
     const NAV_W = 96
     const SPLITTER_W = 18
-
     const totalW = rect.width
     const rightSpace = totalW - x
     const desiredQ = rightSpace - NAV_W - SPLITTER_W
@@ -429,15 +421,9 @@ export default function WritingTestPage() {
     setIsMiniQ(nextQ <= MINI_Q_W + 5)
   }
 
-  const onPointerUp = () => setDragging(false)
-
-  // ===== MOBILE VERTICAL SPLITTER LOGIC =====
+  // mobile splitter
   const mobileToggleExpand = () => {
-    setMExpand((prev) => {
-      if (prev === 'normal') return 'question'
-      if (prev === 'question') return 'answer'
-      return 'normal'
-    })
+    setMExpand((prev) => (prev === 'normal' ? 'question' : prev === 'question' ? 'answer' : 'normal'))
   }
 
   const onMobilePointerDown = (e: React.PointerEvent) => {
@@ -457,23 +443,11 @@ export default function WritingTestPage() {
     if (mExpand !== 'normal') setMExpand('normal')
   }
 
-  const onMobilePointerUp = () => setMDragging(false)
-
-  // prevent scroll while dragging splitter (mobile)
-  useEffect(() => {
-    if (!mDragging) return
-    const prevent = (e: TouchEvent) => e.preventDefault()
-    document.addEventListener('touchmove', prevent, { passive: false })
-    return () => document.removeEventListener('touchmove', prevent as any)
-  }, [mDragging])
-
-  // ===== computed (NO hooks) =====
   const mobileQuestionHeight =
     mExpand === 'question' ? '72vh' : mExpand === 'answer' ? '18vh' : `${mQHeight}px`
-  const mobileAnswerMinHeight =
-    mExpand === 'question' ? '18vh' : mExpand === 'answer' ? '72vh' : 'auto'
+  const mobileAnswerMinHeight = mExpand === 'question' ? '18vh' : mExpand === 'answer' ? '72vh' : 'auto'
 
-  // ===== Render guards =====
+  // guards
   if (!examId) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">
@@ -493,7 +467,7 @@ export default function WritingTestPage() {
     )
   }
 
-  // ===== START SCREEN (reading-style) =====
+  // start screen
   if (!hasStarted) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-slate-50 p-6">
@@ -504,9 +478,8 @@ export default function WritingTestPage() {
           <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">
             {exam?.title || 'Writing Test'}
           </h1>
-          <p className="text-slate-500 mb-8 font-medium italic">
-            Writing bo&apos;limini boshlashga tayyormisiz?
-          </p>
+          <p className="text-slate-500 mb-8 font-medium italic">Writing bo&apos;limini boshlashga tayyormisiz?</p>
+
           <button
             onClick={startExam}
             className="w-full py-5 bg-blue-600 text-white rounded-2xl font-black text-lg uppercase shadow-xl hover:bg-blue-700 active:scale-95 transition-all"
@@ -522,18 +495,11 @@ export default function WritingTestPage() {
   const part1 = tasks.filter((t) => Number(t.part_number) === 1)
   const part2 = tasks.filter((t) => Number(t.part_number) === 2)
 
-  // ===== Shared UI blocks =====
   const QuestionPaper = ({ compact }: { compact?: boolean }) => (
-    <div
-      className={`max-w-4xl mx-auto bg-white rounded-3xl shadow-sm ${compact ? 'p-5' : 'p-10'} space-y-8`}
-    >
+    <div className={`max-w-4xl mx-auto bg-white rounded-3xl shadow-sm ${compact ? 'p-5' : 'p-10'} space-y-8`}>
       <div className="text-center">
-        <h3 className={`${compact ? 'text-xl' : 'text-3xl'} font-black uppercase`}>
-          Question paper
-        </h3>
-        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2">
-          Writing
-        </p>
+        <h3 className={`${compact ? 'text-xl' : 'text-3xl'} font-black uppercase`}>Question paper</h3>
+        <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest mt-2">Writing</p>
       </div>
 
       <div className="space-y-6">
@@ -541,19 +507,14 @@ export default function WritingTestPage() {
 
         <div className="bg-blue-50 p-5 rounded-2xl border-l-4 border-blue-500">
           <p className="font-bold text-lg mb-2">{part1[0]?.topic}</p>
-          <p className="text-gray-600 italic whitespace-pre-line">
-            {part1[0]?.context_text}
-          </p>
+          <p className="text-gray-600 italic whitespace-pre-line">{part1[0]?.context_text}</p>
         </div>
 
         <div className="grid gap-5">
           {part1.map((task) => {
             const { min, max } = getLimits(task)
             return (
-              <div
-                key={String(task.id)}
-                className="p-5 border-2 border-dashed border-gray-200 rounded-2xl"
-              >
+              <div key={String(task.id)} className="p-5 border-2 border-dashed border-gray-200 rounded-2xl">
                 <div className="flex items-center justify-between gap-3">
                   <h4 className="font-black text-cyan-600">Task 1.{task.sub_part}</h4>
                   <button
@@ -567,9 +528,7 @@ export default function WritingTestPage() {
                     Answer
                   </button>
                 </div>
-                <p className={`${compact ? 'text-sm' : 'text-lg'} mt-3`}>
-                  {task.instruction}
-                </p>
+                <p className={`${compact ? 'text-sm' : 'text-lg'} mt-3`}>{task.instruction}</p>
                 <span className="text-sm font-bold text-gray-400">
                   Limit: {min}-{max} words
                 </span>
@@ -601,14 +560,10 @@ export default function WritingTestPage() {
                   </button>
                 </div>
 
-                <p
-                  className={`${compact ? 'text-sm' : 'text-lg'} bg-gray-50 p-5 rounded-2xl italic`}
-                >
+                <p className={`${compact ? 'text-sm' : 'text-lg'} bg-gray-50 p-5 rounded-2xl italic`}>
                   "{task.context_text}"
                 </p>
-                <p className={`${compact ? 'text-sm' : 'text-lg'}`}>
-                  {task.instruction}
-                </p>
+                <p className={`${compact ? 'text-sm' : 'text-lg'}`}>{task.instruction}</p>
                 <div className="bg-cyan-50 p-4 rounded-xl inline-block font-bold text-cyan-700">
                   Write {min}-{max} words.
                 </div>
@@ -641,11 +596,7 @@ export default function WritingTestPage() {
             className="rounded-3xl border-2 border-cyan-400 overflow-hidden shadow-lg flex flex-col min-h-[320px] bg-white"
           >
             <div className="bg-cyan-400 p-4 flex justify-between items-center text-white">
-              <span
-                className={`${compact ? 'text-lg' : 'text-2xl'} font-black italic uppercase`}
-              >
-                Task {label}
-              </span>
+              <span className={`${compact ? 'text-lg' : 'text-2xl'} font-black italic uppercase`}>Task {label}</span>
 
               <div className="flex items-center gap-2">
                 {isOk ? (
@@ -675,11 +626,22 @@ export default function WritingTestPage() {
 
             <textarea
               style={{ fontSize: `${fontSizes[id] ?? 18}px` }}
-              onFocus={() => setIsTyping(true)}
-              onBlur={() => setIsTyping(false)}
               className={`flex-1 ${compact ? 'p-5' : 'p-8'} outline-none leading-relaxed text-gray-700 resize-none`}
               placeholder={`Task ${label} uchun javob yozing...`}
               value={text}
+              onFocus={(e) => {
+                e.stopPropagation()
+                setIsTyping(true)
+              }}
+              onBlur={(e) => {
+                e.stopPropagation()
+                setIsTyping(false)
+              }}
+              // IMPORTANT: stop global events stealing focus
+              onKeyDown={(e) => e.stopPropagation()}
+              onKeyUp={(e) => e.stopPropagation()}
+              onKeyPress={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
               onChange={(e) => {
                 setResponses((prev) => ({ ...prev, [id]: e.target.value }))
                 setVisibleTaskId(id)
@@ -688,24 +650,17 @@ export default function WritingTestPage() {
 
             <div
               className={`p-3 text-right font-black ${compact ? 'text-xs' : 'text-sm'} border-t shrink-0 ${
-                outOfRange
-                  ? 'bg-red-50 text-red-500 border-red-200'
-                  : 'bg-gray-50 text-cyan-500 border-gray-200'
+                outOfRange ? 'bg-red-50 text-red-500 border-red-200' : 'bg-gray-50 text-cyan-500 border-gray-200'
               }`}
             >
               {outOfRange ? (
                 <span className="flex items-center justify-end gap-2">
                   <AlertCircle size={14} />
-                  {words < min
-                    ? `KAMIDA ${min} SO'Z (${words}/${min})`
-                    : `KO'PI ${max} SO'Z (${words}/${max})`}
+                  {words < min ? `KAMIDA ${min} SO'Z (${words}/${min})` : `KO'PI ${max} SO'Z (${words}/${max})`}
                 </span>
               ) : (
                 <span>
-                  {words} TA SO'Z{' '}
-                  <span className="text-gray-400">
-                    ({min}-{max})
-                  </span>
+                  {words} TA SO'Z <span className="text-gray-400">({min}-{max})</span>
                 </span>
               )}
             </div>
@@ -719,11 +674,11 @@ export default function WritingTestPage() {
     <div className="flex flex-col h-screen bg-[#F3F4F6] overflow-hidden">
       <WritingHeader
         initialSeconds={(Number(exam?.duration_minutes ?? 0) || 0) * 60}
+        timeKey={timeKey}
         onFinish={handleFinishClick}
         isSubmitting={isSubmitting}
       />
 
-      {/* Submit Loader */}
       {isSubmitting && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center">
           <Loader2 className="h-16 w-16 text-cyan-500 animate-spin mb-4" />
@@ -731,19 +686,14 @@ export default function WritingTestPage() {
         </div>
       )}
 
-      {/* Confirm Modal */}
       {showConfirmModal && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[110] flex items-center justify-center p-4">
           <div className="bg-white rounded-[32px] p-8 max-w-lg w-full shadow-2xl">
-            <h3 className="text-2xl font-black mb-3 uppercase italic">
-              Yakunlaysizmi?
-            </h3>
+            <h3 className="text-2xl font-black mb-3 uppercase italic">Yakunlaysizmi?</h3>
 
             {!canSubmitNormally && (
               <div className="mb-6 p-4 rounded-2xl bg-red-50 border border-red-100">
-                <p className="font-black text-red-600 uppercase text-xs mb-3">
-                  To‘liq yozilmagan tasklar:
-                </p>
+                <p className="font-black text-red-600 uppercase text-xs mb-3">To‘liq yozilmagan tasklar:</p>
 
                 <div className="flex flex-wrap gap-2">
                   {emptyTasks.map((t) => (
@@ -796,18 +746,15 @@ export default function WritingTestPage() {
         </div>
       )}
 
-      {/* ======= MOBILE (NO header nav; free resize) ======= */}
+      {/* MOBILE */}
       <div className="lg:hidden flex-1 overflow-hidden p-3">
-        {/* Only controls: expand cycle + view mode (optional) */}
         <div className="bg-white border border-slate-100 rounded-2xl p-2 flex items-center justify-between">
           <div className="flex gap-2">
             <button
               type="button"
               onClick={() => setMobileView('both')}
               className={`px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition ${
-                mobileView === 'both'
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-slate-50 text-slate-600'
+                mobileView === 'both' ? 'bg-slate-900 text-white' : 'bg-slate-50 text-slate-600'
               }`}
             >
               Ikki bo‘lim
@@ -816,9 +763,7 @@ export default function WritingTestPage() {
               type="button"
               onClick={() => setMobileView('question')}
               className={`px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 transition ${
-                mobileView === 'question'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-slate-50 text-slate-600'
+                mobileView === 'question' ? 'bg-blue-600 text-white' : 'bg-slate-50 text-slate-600'
               }`}
             >
               <LayoutPanelTop size={16} /> Savol
@@ -827,9 +772,7 @@ export default function WritingTestPage() {
               type="button"
               onClick={() => setMobileView('answer')}
               className={`px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest flex items-center gap-2 transition ${
-                mobileView === 'answer'
-                  ? 'bg-cyan-500 text-white'
-                  : 'bg-slate-50 text-slate-600'
+                mobileView === 'answer' ? 'bg-cyan-500 text-white' : 'bg-slate-50 text-slate-600'
               }`}
             >
               <LayoutPanelLeft size={16} /> Javob
@@ -846,39 +789,25 @@ export default function WritingTestPage() {
           </button>
         </div>
 
-        {/* BOTH => vertical splitter */}
         {mobileView === 'both' && (
-          <div
-            ref={mobileLayoutRef}
-            className="mt-3 h-[calc(100%-60px)] flex flex-col overflow-hidden"
-          >
-            {/* QUESTION */}
-            <div
-              className="overflow-hidden rounded-3xl border border-slate-100 bg-white"
-              style={{ height: mobileQuestionHeight }}
-            >
+          <div ref={mobileLayoutRef} className="mt-3 h-[calc(100%-60px)] flex flex-col overflow-hidden">
+            <div className="overflow-hidden rounded-3xl border border-slate-100 bg-white" style={{ height: mobileQuestionHeight }}>
               <div className="h-full overflow-y-auto custom-scrollbar p-2">
                 <QuestionPaper compact />
               </div>
             </div>
 
-            {/* SPLITTER */}
+            {/* MOBILE SPLITTER: touchAction none (IMPORTANT) */}
             <div
+              style={{ touchAction: 'none' }}
               className="relative my-2 h-[14px] rounded-xl bg-gray-100 border border-slate-200 flex items-center justify-center select-none"
               onPointerDown={onMobilePointerDown}
               onPointerMove={onMobilePointerMove}
-              onPointerUp={onMobilePointerUp}
             >
-              <div
-                className={`w-14 h-[6px] rounded-full ${mDragging ? 'bg-blue-500' : 'bg-slate-300'}`}
-              />
+              <div className={`w-14 h-[6px] rounded-full ${mDragging ? 'bg-blue-500' : 'bg-slate-300'}`} />
             </div>
 
-            {/* ANSWER */}
-            <div
-              className="flex-1 overflow-hidden rounded-3xl border border-slate-100 bg-white"
-              style={{ minHeight: mobileAnswerMinHeight }}
-            >
+            <div className="flex-1 overflow-hidden rounded-3xl border border-slate-100 bg-white" style={{ minHeight: mobileAnswerMinHeight }}>
               <div className="h-full overflow-y-auto custom-scrollbar p-3">
                 <div className="text-center py-2">
                   <h3 className="text-xl font-black uppercase">Answer sheet</h3>
@@ -909,20 +838,17 @@ export default function WritingTestPage() {
         )}
       </div>
 
-      {/* ======= DESKTOP (question bigger, no tight caps) ======= */}
+      {/* DESKTOP */}
       <div ref={layoutRef} className="hidden lg:flex flex-1 overflow-hidden relative">
-        {/* ANSWER */}
         <section className="flex-1 h-full overflow-y-auto p-10 custom-scrollbar">
           <AnswerSheet />
         </section>
 
-        {/* SPLITTER */}
         <div
           className="relative h-full bg-gray-100 border-l border-r select-none"
           style={{ width: 18 }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
         >
           <button
             type="button"
@@ -937,17 +863,14 @@ export default function WritingTestPage() {
           </button>
         </div>
 
-        {/* QUESTION (wider allowed) */}
-        <section
-          className="h-full overflow-y-auto p-10 bg-gray-100 custom-scrollbar border-r"
-          style={{ width: qWidth }}
-        >
+        <section className="h-full overflow-y-auto p-10 bg-gray-100 custom-scrollbar border-r" style={{ width: qWidth }}>
           <QuestionPaper />
         </section>
 
-        {/* NAV (desktop only) */}
         <aside
-          className={`h-full bg-[#F3F4F6] w-24 border-l flex items-center justify-center transition ${isTyping ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          className={`h-full bg-[#F3F4F6] w-24 border-l flex items-center justify-center transition ${
+            isTyping ? 'opacity-0 pointer-events-none' : 'opacity-100'
+          }`}
         >
           <div className="flex flex-col gap-3 pr-2">
             {tasks.map((task) => {
@@ -966,9 +889,7 @@ export default function WritingTestPage() {
                   type="button"
                   onClick={() => scrollToTask(id)}
                   className={`w-14 h-14 rounded-2xl font-black transition-all border ${
-                    isActive
-                      ? 'bg-blue-600 text-white border-blue-200'
-                      : 'bg-white text-blue-500 border-slate-200'
+                    isActive ? 'bg-blue-600 text-white border-blue-200' : 'bg-white text-blue-500 border-slate-200'
                   } hover:scale-[1.02] active:scale-95`}
                   title={`Task ${label}`}
                 >
