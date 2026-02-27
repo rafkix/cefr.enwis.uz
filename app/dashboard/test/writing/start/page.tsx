@@ -1,13 +1,6 @@
 'use client'
 
-import React, {
-  memo,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import {
   AlertCircle,
@@ -146,7 +139,10 @@ const TaskTextArea = memo(function TaskTextArea({
           </span>
         ) : (
           <span>
-            {words} so‘z <span className="text-gray-400">({min}-{max})</span>
+            {words} so‘z{' '}
+            <span className="text-gray-400">
+              ({min}-{max})
+            </span>
           </span>
         )}
       </div>
@@ -202,9 +198,7 @@ export default function WritingTestPage() {
   const [dragging, setDragging] = useState(false)
 
   // ========= Mobile controls =========
-  const [mobileView, setMobileView] = useState<'both' | 'question' | 'answer'>(
-    'both'
-  )
+  const [mobileView, setMobileView] = useState<'both' | 'question' | 'answer'>('both')
   const [qHeight, setQHeight] = useState(42) // percent
   const [mDragging, setMDragging] = useState(false)
 
@@ -277,14 +271,8 @@ export default function WritingTestPage() {
     })
   }, [exam])
 
-  const part1 = useMemo(
-    () => tasks.filter((t) => Number(t.part_number) === 1),
-    [tasks]
-  )
-  const part2 = useMemo(
-    () => tasks.filter((t) => Number(t.part_number) === 2),
-    [tasks]
-  )
+  const part1 = useMemo(() => tasks.filter((t) => Number(t.part_number) === 1), [tasks])
+  const part2 = useMemo(() => tasks.filter((t) => Number(t.part_number) === 2), [tasks])
 
   useEffect(() => {
     if (!visibleTaskId && tasks[0]) setVisibleTaskId(String(tasks[0].id))
@@ -342,22 +330,58 @@ export default function WritingTestPage() {
   }
 
   // ========= Submit =========
+  // ========= Submit =========
   const doSubmit = useCallback(async () => {
     if (!examId || isSubmitting) return
+
+    // 1) task_id larni tekshiramiz (NaN bo'lsa to'xtaydi)
+    const answers = tasks.map((t) => {
+      const rawId = t.id
+      const taskIdNum = Number(rawId)
+
+      if (!Number.isFinite(taskIdNum)) {
+        throw new Error(`task_id noto'g'ri (raqam emas): ${String(rawId)}`)
+      }
+
+      return {
+        task_id: taskIdNum,
+        content: (responsesRef.current[String(rawId)] || '').trim(),
+      }
+    })
+
+    // 2) bo'sh kontent bo'lsa ham oldindan ogohlantirish (ixtiyoriy)
+    const hasEmpty = answers.some((a) => a.content.length < 1)
+    if (hasEmpty) {
+      toast.error("Ba'zi javoblar bo'sh. Avval to'ldiring.")
+      return
+    }
+
     setIsSubmitting(true)
     try {
-      const answers = tasks.map((t) => ({
-        task_id: Number(t.id),
-        content: (responsesRef.current[String(t.id)] || '').trim(),
-      }))
-      const res = await submitWritingExamAPI(examId, { answers })
+      // 3) real payload
+      const payload = { answers }
+
+      // DEBUG: console log (kerak bo'lsa vaqtincha qoldir)
+      console.log('[WRITING_SUBMIT]', { examId, payload })
+
+      const res = await submitWritingExamAPI(examId, payload)
 
       if (storageKey) localStorage.removeItem(storageKey)
       if (startedKey) localStorage.removeItem(startedKey)
 
       router.push(`/dashboard/results/writing/view?id=${res.data.id}`)
-    } catch {
-      toast.error("Topshirishda xatolik!")
+    } catch (err: any) {
+      // 4) backend errorni ko'rsatamiz
+      const detail =
+        err?.response?.data?.error?.detail ||
+        err?.response?.data?.detail ||
+        err?.response?.data?.message ||
+        err?.message ||
+        'Topshirishda xatolik'
+
+      console.error('[WRITING_SUBMIT_ERROR]', err?.response?.data || err)
+      toast.error(String(detail))
+
       setIsSubmitting(false)
     }
   }, [examId, isSubmitting, router, startedKey, storageKey, tasks])
@@ -387,9 +411,7 @@ export default function WritingTestPage() {
           <div className="p-5 space-y-4">
             {(p1Topic || p1Context) && (
               <div className="p-4 rounded-2xl bg-orange-50/40 border border-orange-100">
-                {p1Topic && (
-                  <p className="font-black text-slate-800">{p1Topic}</p>
-                )}
+                {p1Topic && <p className="font-black text-slate-800">{p1Topic}</p>}
                 {p1Context && (
                   <p className="mt-2 text-sm italic text-slate-600 whitespace-pre-line leading-relaxed">
                     {p1Context}
@@ -513,9 +535,7 @@ export default function WritingTestPage() {
           <h1 className="text-3xl font-black mb-3 italic text-slate-800 uppercase">
             {exam?.title || 'Writing Test'}
           </h1>
-          <p className="text-slate-500 mb-8 font-medium">
-            Tayyor bo‘lsangiz boshlang.
-          </p>
+          <p className="text-slate-500 mb-8 font-medium">Tayyor bo‘lsangiz boshlang.</p>
           <button
             type="button"
             onClick={() => {
@@ -754,7 +774,6 @@ export default function WritingTestPage() {
       <div ref={layoutRef} className="hidden lg:flex flex-1 overflow-hidden">
         {/* ANSWERS */}
         <section className="flex-1 h-full overflow-y-auto custom-scrollbar p-10">
-
           <div className="max-w-4xl mx-auto space-y-10 pb-24 pt-6">
             {tasks.map((t) => {
               const id = String(t.id)
@@ -842,9 +861,7 @@ export default function WritingTestPage() {
                   <div className="flex flex-col items-center justify-center leading-none">
                     <span className="text-sm">{taskLabel(t)}</span>
                     <span
-                      className={`text-[9px] mt-1 ${
-                        ok ? 'opacity-95' : 'opacity-55'
-                      }`}
+                      className={`text-[9px] mt-1 ${ok ? 'opacity-95' : 'opacity-55'}`}
                     >
                       {ok ? 'OK' : '...'}
                     </span>
