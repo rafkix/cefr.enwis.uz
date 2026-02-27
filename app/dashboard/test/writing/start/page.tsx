@@ -17,6 +17,7 @@ import { toast } from 'sonner'
 
 import { getWritingExamByIdAPI, submitWritingExamAPI } from '@/lib/api/writing'
 import WritingHeader from '@/components/exam/writing-header'
+import EssayInput from '@/components/exam/EssayInput' // ✅ NEW
 
 type Task = {
   id: number | string
@@ -155,7 +156,7 @@ export default function WritingTestPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey, tasks.length])
 
-  // persist responses (DEBOUNCE => no lag)
+  // persist responses (debounce)
   useEffect(() => {
     if (!storageKey) return
     if (!responses || Object.keys(responses).length === 0) return
@@ -202,7 +203,7 @@ export default function WritingTestPage() {
     )
   }, [uiKey, qWidth, mQHeight, mobileView, mExpand])
 
-  // ====== CRITICAL FIX: stop dragging on global pointer up/cancel ======
+  // stop dragging on global pointer up/cancel
   useEffect(() => {
     const stop = () => {
       setDragging(false)
@@ -223,7 +224,8 @@ export default function WritingTestPage() {
     return { min, max }
   }
 
-  const taskLabel = (task: Task) => (Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2')
+  const taskLabel = (task: Task) =>
+    Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2'
 
   const scrollToTask = (taskId: string) => {
     setTimeout(() => {
@@ -247,9 +249,7 @@ export default function WritingTestPage() {
       const content = (responses[id] ?? '').trim()
       const words = wc(content)
       const { min } = getLimits(t)
-      if (content.length < 10 || words < min) {
-        empties.push({ id, label: taskLabel(t), words, min })
-      }
+      if (content.length < 10 || words < min) empties.push({ id, label: taskLabel(t), words, min })
     }
     return empties
   }, [tasks, responses])
@@ -268,7 +268,6 @@ export default function WritingTestPage() {
         const finalAnswers = tasks.map((task) => {
           const content = (responses[String(task.id)] ?? '').trim()
 
-          // SAFETY: if id not numeric => explicit error (avoid NaN)
           const numId = Number(task.id)
           if (!Number.isFinite(numId)) throw new Error(`Task id raqam emas: ${task.id}`)
 
@@ -355,7 +354,6 @@ export default function WritingTestPage() {
 
     localStorage.setItem(sKey, 'true')
 
-    // only set timer if absent
     if (!localStorage.getItem(tKey)) {
       const totalSeconds = (Number(exam?.duration_minutes ?? 0) || 0) * 60
       localStorage.setItem(tKey, String(totalSeconds))
@@ -445,7 +443,8 @@ export default function WritingTestPage() {
 
   const mobileQuestionHeight =
     mExpand === 'question' ? '72vh' : mExpand === 'answer' ? '18vh' : `${mQHeight}px`
-  const mobileAnswerMinHeight = mExpand === 'question' ? '18vh' : mExpand === 'answer' ? '72vh' : 'auto'
+  const mobileAnswerMinHeight =
+    mExpand === 'question' ? '18vh' : mExpand === 'answer' ? '72vh' : 'auto'
 
   // guards
   if (!examId) {
@@ -478,7 +477,9 @@ export default function WritingTestPage() {
           <h1 className="text-2xl md:text-3xl font-black text-slate-800 mb-4 uppercase italic tracking-tight">
             {exam?.title || 'Writing Test'}
           </h1>
-          <p className="text-slate-500 mb-8 font-medium italic">Writing bo&apos;limini boshlashga tayyormisiz?</p>
+          <p className="text-slate-500 mb-8 font-medium italic">
+            Writing bo&apos;limini boshlashga tayyormisiz?
+          </p>
 
           <button
             onClick={startExam}
@@ -624,29 +625,20 @@ export default function WritingTestPage() {
               </div>
             </div>
 
-            <textarea
-              style={{ fontSize: `${fontSizes[id] ?? 18}px` }}
-              className={`flex-1 ${compact ? 'p-5' : 'p-8'} outline-none leading-relaxed text-gray-700 resize-none`}
-              placeholder={`Task ${label} uchun javob yozing...`}
-              value={text}
-              onFocus={(e) => {
-                e.stopPropagation()
-                setIsTyping(true)
-              }}
-              onBlur={(e) => {
-                e.stopPropagation()
-                setIsTyping(false)
-              }}
-              // IMPORTANT: stop global events stealing focus
-              onKeyDown={(e) => e.stopPropagation()}
-              onKeyUp={(e) => e.stopPropagation()}
-              onKeyPress={(e) => e.stopPropagation()}
-              onPointerDown={(e) => e.stopPropagation()}
-              onChange={(e) => {
-                setResponses((prev) => ({ ...prev, [id]: e.target.value }))
-                setVisibleTaskId(id)
-              }}
-            />
+            {/* ✅ textarea o‘rniga EssayInput */}
+            <div className={`flex-1 ${compact ? 'p-5' : 'p-8'} overflow-auto`}>
+              <EssayInput
+                value={text}
+                fontSize={fontSizes[id] ?? 18}
+                placeholder={`Task ${label} uchun javob yozing...`}
+                onFocus={() => setIsTyping(true)}
+                onBlur={() => setIsTyping(false)}
+                onChange={(next) => {
+                  setResponses((prev) => ({ ...prev, [id]: next }))
+                  setVisibleTaskId(id)
+                }}
+              />
+            </div>
 
             <div
               className={`p-3 text-right font-black ${compact ? 'text-xs' : 'text-sm'} border-t shrink-0 ${
@@ -797,7 +789,6 @@ export default function WritingTestPage() {
               </div>
             </div>
 
-            {/* MOBILE SPLITTER: touchAction none (IMPORTANT) */}
             <div
               style={{ touchAction: 'none' }}
               className="relative my-2 h-[14px] rounded-xl bg-gray-100 border border-slate-200 flex items-center justify-center select-none"
@@ -895,11 +886,7 @@ export default function WritingTestPage() {
                 >
                   <div className="flex flex-col items-center justify-center leading-none">
                     <span className="text-sm">{label}</span>
-                    {ok ? (
-                      <span className="text-[9px] mt-1 opacity-90">OK</span>
-                    ) : (
-                      <span className="text-[9px] mt-1 opacity-60">...</span>
-                    )}
+                    {ok ? <span className="text-[9px] mt-1 opacity-90">OK</span> : <span className="text-[9px] mt-1 opacity-60">...</span>}
                   </div>
                 </button>
               )
