@@ -597,13 +597,14 @@ export default function WritingTestPage() {
               </button>
               <button
                 type="button"
-                onClick={() => {
+                disabled={isSubmitting}
+                onClick={async () => {
                   setShowConfirmModal(false)
-                  doSubmit()
+                  await doSubmit()
                 }}
-                className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black shadow-lg hover:bg-orange-600 transition"
+                className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black shadow-lg hover:bg-orange-600 transition disabled:opacity-60"
               >
-                HA, YUBORISH
+                {isSubmitting ? 'Yuborilmoqda...' : 'HA, YUBORISH'}
               </button>
             </div>
           </div>
