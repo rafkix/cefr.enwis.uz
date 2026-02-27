@@ -49,8 +49,73 @@ function useDebouncedCallback<T extends (...args: any[]) => void>(cb: T, delay =
   )
 }
 
+/** TAB ni textarea ichida indent/unindent qilish */
+const TAB_STR = '  ' // 2 space. xohlasang '\t' qil
+
+function applyTabIndent(el: HTMLTextAreaElement, value: string, shiftKey: boolean) {
+  const start = el.selectionStart ?? 0
+  const end = el.selectionEnd ?? 0
+
+  // cursor-only
+  if (start === end) {
+    if (!shiftKey) {
+      const next = value.slice(0, start) + TAB_STR + value.slice(end)
+      const pos = start + TAB_STR.length
+      return { next, nextStart: pos, nextEnd: pos }
+    }
+
+    const before = value.slice(Math.max(0, start - TAB_STR.length), start)
+    if (before === TAB_STR) {
+      const next = value.slice(0, start - TAB_STR.length) + value.slice(end)
+      const pos = start - TAB_STR.length
+      return { next, nextStart: pos, nextEnd: pos }
+    }
+
+    return { next: value, nextStart: start, nextEnd: end }
+  }
+
+  // selection: satrlar bo'yicha indent/unindent
+  const lineStart = value.lastIndexOf('\n', start - 1) + 1
+  const lineEndIdx = value.indexOf('\n', end)
+  const lineEnd = lineEndIdx === -1 ? value.length : lineEndIdx
+
+  const block = value.slice(lineStart, lineEnd)
+  const lines = block.split('\n')
+
+  if (!shiftKey) {
+    const indented = lines.map((ln) => TAB_STR + ln).join('\n')
+    const next = value.slice(0, lineStart) + indented + value.slice(lineEnd)
+
+    const added = TAB_STR.length * lines.length
+    return {
+      next,
+      nextStart: start + TAB_STR.length,
+      nextEnd: end + added,
+    }
+  }
+
+  // shift+tab
+  let removedTotal = 0
+  const unindented = lines
+    .map((ln) => {
+      if (ln.startsWith(TAB_STR)) {
+        removedTotal += TAB_STR.length
+        return ln.slice(TAB_STR.length)
+      }
+      return ln
+    })
+    .join('\n')
+
+  const next = value.slice(0, lineStart) + unindented + value.slice(lineEnd)
+
+  const firstRemoved = lines[0].startsWith(TAB_STR) ? TAB_STR.length : 0
+  const nextStart = Math.max(lineStart, start - firstRemoved)
+  const nextEnd = Math.max(nextStart, end - removedTotal)
+
+  return { next, nextStart, nextEnd }
+}
+
 type TaskCardProps = {
-  task: Task
   compact?: boolean
   label: string
   value: string
@@ -65,7 +130,6 @@ type TaskCardProps = {
 }
 
 const TaskCard = React.memo(function TaskCard({
-  task,
   compact,
   label,
   value,
@@ -80,7 +144,6 @@ const TaskCard = React.memo(function TaskCard({
 }: TaskCardProps) {
   const [local, setLocal] = useState(value)
 
-  // tashqaridan value o'zgarsa (init/load), local’ga sync qilamiz
   useEffect(() => {
     setLocal(value)
   }, [value])
@@ -134,22 +197,44 @@ const TaskCard = React.memo(function TaskCard({
         className={`flex-1 ${compact ? 'p-5' : 'p-8'} outline-none leading-relaxed text-gray-700 resize-none`}
         placeholder={`Task ${label} uchun javob yozing...`}
         value={local}
+        onKeyDown={(e) => {
+          if (e.key !== 'Tab') return
+          e.preventDefault() // ✅ fokus ketmasin
+
+          const el = e.currentTarget
+          setLocal((prev) => {
+            const { next, nextStart, nextEnd } = applyTabIndent(el, prev, e.shiftKey)
+
+            requestAnimationFrame(() => {
+              try {
+                el.setSelectionRange(nextStart, nextEnd)
+              } catch {}
+            })
+
+            debouncedCommit(next)
+            return next
+          })
+        }}
         onChange={(e) => {
           const next = e.target.value
-          setLocal(next) // fokus/kursor stabil
-          debouncedCommit(next) // parent state kechroq yangilanadi
+          setLocal(next)
+          debouncedCommit(next)
         }}
       />
 
       <div
         className={`p-3 text-right font-black ${compact ? 'text-xs' : 'text-sm'} border-t shrink-0 ${
-          outOfRange ? 'bg-red-50 text-red-500 border-red-200' : 'bg-gray-50 text-cyan-500 border-gray-200'
+          outOfRange
+            ? 'bg-red-50 text-red-500 border-red-200'
+            : 'bg-gray-50 text-cyan-500 border-gray-200'
         }`}
       >
         {outOfRange ? (
           <span className="flex items-center justify-end gap-2">
             <AlertCircle size={14} />
-            {words < min ? `KAMIDA ${min} SO'Z (${words}/${min})` : `KO'PI ${max} SO'Z (${words}/${max})`}
+            {words < min
+              ? `KAMIDA ${min} SO'Z (${words}/${min})`
+              : `KO'PI ${max} SO'Z (${words}/${max})`}
           </span>
         ) : (
           <span>
@@ -222,7 +307,6 @@ export default function WritingTestPage() {
 
   const [mExpand, setMExpand] = useState<'normal' | 'question' | 'answer'>('normal')
 
-  // (mobile) dragging stuck bo'lib qolmasin
   useEffect(() => {
     const up = () => setMDragging(false)
     window.addEventListener('pointerup', up)
@@ -277,6 +361,7 @@ export default function WritingTestPage() {
 
     const defaults: Record<string, string> = {}
     const defaultFonts: Record<string, number> = {}
+
     for (const t of tasks) {
       const id = String(t.id)
       defaults[id] = ''
@@ -327,15 +412,7 @@ export default function WritingTestPage() {
 
   useEffect(() => {
     if (!uiKey) return
-    localStorage.setItem(
-      uiKey,
-      JSON.stringify({
-        qWidth,
-        mQHeight,
-        mobileView,
-        mExpand,
-      })
-    )
+    localStorage.setItem(uiKey, JSON.stringify({ qWidth, mQHeight, mobileView, mExpand }))
   }, [uiKey, qWidth, mQHeight, mobileView, mExpand])
 
   const getLimits = (task: Task) => {
@@ -360,7 +437,6 @@ export default function WritingTestPage() {
     }))
   }
 
-  // 🔥 Parent update: minimal diff, avoid extra renders
   const commitAnswer = useCallback((taskId: string, next: string) => {
     setResponses((prev) => (prev[taskId] === next ? prev : { ...prev, [taskId]: next }))
   }, [])
@@ -372,9 +448,7 @@ export default function WritingTestPage() {
       const content = (responses[id] ?? '').trim()
       const words = wc(content)
       const { min } = getLimits(t)
-      if (content.length < 10 || words < min) {
-        empties.push({ id, label: taskLabel(t), words, min })
-      }
+      if (content.length < 10 || words < min) empties.push({ id, label: taskLabel(t), words, min })
     }
     return empties
   }, [tasks, responses])
@@ -444,10 +518,7 @@ export default function WritingTestPage() {
   const handleConfirmFinish = async () => {
     setShowConfirmModal(false)
 
-    if (canSubmitNormally) {
-      await doSubmit(false)
-      return
-    }
+    if (canSubmitNormally) return doSubmit(false)
 
     if (!forceSubmit) {
       toast.error("Ba'zi tasklar to'liq yozilmagan. Baribir yakunlash uchun checkboxni belgilang yoki to'ldiring.")
@@ -455,7 +526,7 @@ export default function WritingTestPage() {
       return
     }
 
-    await doSubmit(true)
+    return doSubmit(true)
   }
 
   const startExam = () => {
@@ -536,11 +607,7 @@ export default function WritingTestPage() {
   const onPointerUp = () => setDragging(false)
 
   const mobileToggleExpand = () => {
-    setMExpand((prev) => {
-      if (prev === 'normal') return 'question'
-      if (prev === 'question') return 'answer'
-      return 'normal'
-    })
+    setMExpand((prev) => (prev === 'normal' ? 'question' : prev === 'question' ? 'answer' : 'normal'))
   }
 
   const onMobilePointerDown = (e: React.PointerEvent) => {
@@ -706,7 +773,6 @@ export default function WritingTestPage() {
         return (
           <TaskCard
             key={id}
-            task={task}
             compact={compact}
             label={label}
             value={responses[id] ?? ''}
@@ -719,7 +785,7 @@ export default function WritingTestPage() {
             onFontDelta={(delta) => changeFontSize(id, delta)}
             onFocusTask={() => {
               setIsTyping(true)
-              setVisibleTaskId(id) // ✅ faqat focusda
+              setVisibleTaskId(id)
             }}
             onBlurTask={() => setIsTyping(false)}
             onCommit={(next) => commitAnswer(id, next)}
@@ -731,7 +797,11 @@ export default function WritingTestPage() {
 
   return (
     <div className="flex flex-col h-screen bg-[#F3F4F6] overflow-hidden">
-      <WritingHeader initialSeconds={(Number(exam?.duration_minutes ?? 0) || 0) * 60} onFinish={handleFinishClick} isSubmitting={isSubmitting} />
+      <WritingHeader
+        initialSeconds={(Number(exam?.duration_minutes ?? 0) || 0) * 60}
+        onFinish={handleFinishClick}
+        isSubmitting={isSubmitting}
+      />
 
       {isSubmitting && (
         <div className="fixed inset-0 bg-white/80 backdrop-blur-md z-[100] flex flex-col items-center justify-center">
@@ -786,7 +856,7 @@ export default function WritingTestPage() {
                 className="flex-1 py-4 bg-gray-100 rounded-2xl font-bold hover:bg-gray-200 transition"
                 type="button"
               >
-                Yo'q
+                Yo&apos;q
               </button>
               <button
                 onClick={handleConfirmFinish}
