@@ -754,37 +754,6 @@ export default function WritingTestPage() {
       <div ref={layoutRef} className="hidden lg:flex flex-1 overflow-hidden">
         {/* ANSWERS */}
         <section className="flex-1 h-full overflow-y-auto custom-scrollbar p-10">
-          {/* TOP NAVBAR (desktop) */}
-          <div className="sticky top-0 z-30 -mx-10 px-10 py-3 bg-[#FDFCFB]/92 backdrop-blur border-b border-orange-100">
-            <div className="max-w-4xl mx-auto flex items-center gap-2">
-              {tasks.map((t) => {
-                const id = String(t.id)
-                const active = visibleTaskId === id
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => scrollToTask(id)}
-                    className={`px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest border transition ${
-                      active
-                        ? 'bg-orange-600 text-white border-orange-200 shadow'
-                        : 'bg-white text-orange-700 border-orange-100 hover:bg-orange-50'
-                    }`}
-                  >
-                    Task {taskLabel(t)}
-                  </button>
-                )
-              })}
-              <div className="flex-1" />
-              <button
-                type="button"
-                onClick={() => setShowConfirmModal(true)}
-                className="px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 transition"
-              >
-                Finish
-              </button>
-            </div>
-          </div>
 
           <div className="max-w-4xl mx-auto space-y-10 pb-24 pt-6">
             {tasks.map((t) => {
