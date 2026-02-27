@@ -1,13 +1,28 @@
 'use client'
 
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Loader2, AlertCircle, CheckCircle2, Play, GripHorizontal } from 'lucide-react'
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronsLeftRight,
+  GripHorizontal,
+  Loader2,
+  Play,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
 import { getWritingExamByIdAPI, submitWritingExamAPI } from '@/lib/api/writing'
 import WritingHeader from '@/components/exam/writing-header'
 
+// ---------- Types ----------
 type Task = {
   id: number | string
   part_number: number | string
@@ -18,13 +33,7 @@ type Task = {
   format?: { min_words: number | string; max_words: number | string }
 }
 
-type WritingExam = {
-  id: string
-  title: string
-  duration_minutes?: number
-  tasks: Task[]
-}
-
+// ---------- Helpers ----------
 const wc = (text: string) => text.trim().split(/\s+/).filter(Boolean).length
 const clamp = (v: number, a: number, b: number) => Math.min(Math.max(v, a), b)
 
@@ -33,14 +42,14 @@ const getLimits = (task: Task) => ({
   max: Number(task?.format?.max_words ?? 9999),
 })
 
-const taskLabel = (task: Task) => (Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2')
+const taskLabel = (task: Task) =>
+  Number(task.part_number) === 1 ? `1.${task.sub_part}` : '2'
 
 function writeStorageIdle(key: string, value: string) {
   try {
-    // @ts-ignore
-    if (typeof window.requestIdleCallback === 'function') {
-      // @ts-ignore
-      window.requestIdleCallback(() => {
+    const w = window as any
+    if (typeof w.requestIdleCallback === 'function') {
+      w.requestIdleCallback(() => {
         try {
           localStorage.setItem(key, value)
         } catch {}
@@ -55,32 +64,28 @@ function writeStorageIdle(key: string, value: string) {
   } catch {}
 }
 
-/**
- * TEXTAREA: local state -> typing smooth
- * parent: receives drafts (throttled/idle persisted)
- */
+// ---------- Optimized TextArea ----------
 const TaskTextArea = memo(function TaskTextArea({
   task,
-  initialValue,
+  value,
   fontSize,
   compact,
   onFocusTask,
   onDraftChange,
 }: {
   task: Task
-  initialValue: string
+  value: string
   fontSize: number
   compact?: boolean
-  onFocusTask: (id: string) => void
-  onDraftChange: (id: string, val: string) => void
+  onFocusTask: (taskId: string) => void
+  onDraftChange: (taskId: string, val: string) => void
 }) {
-  const [localValue, setLocalValue] = useState(initialValue)
+  const [localValue, setLocalValue] = useState(value)
   const focusedRef = useRef(false)
 
-  // parent updates only when not focused (avoid cursor jump)
   useEffect(() => {
-    if (!focusedRef.current) setLocalValue(initialValue)
-  }, [initialValue])
+    if (!focusedRef.current) setLocalValue(value)
+  }, [value])
 
   const { min, max } = getLimits(task)
   const words = wc(localValue)
@@ -89,26 +94,33 @@ const TaskTextArea = memo(function TaskTextArea({
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const v = e.target.value
-    setLocalValue(v)
-    onDraftChange(String(task.id), v)
+    setLocalValue(v) // instant (no lag)
+    onDraftChange(String(task.id), v) // parent store (debounced persist)
   }
 
   return (
-    <div className="rounded-3xl border-2 border-orange-400 overflow-hidden shadow-lg flex flex-col min-h-[300px] bg-white transition-all focus-within:ring-4 focus-within:ring-orange-100">
+    <div className="rounded-3xl border-2 border-orange-400 overflow-hidden shadow-lg flex flex-col min-h-[380px] bg-white transition-all focus-within:ring-4 focus-within:ring-orange-100">
       <div className="bg-orange-500 p-4 flex justify-between items-center text-white">
-        <span className={`${compact ? 'text-lg' : 'text-xl'} font-black italic uppercase`}>
+        <span
+          className={`${compact ? 'text-lg' : 'text-2xl'} font-black italic uppercase`}
+        >
           Task {taskLabel(task)}
         </span>
-        {isOk ? (
-          <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black italic flex items-center gap-1">
-            <CheckCircle2 size={12} /> OK
-          </span>
-        ) : null}
+
+        <div className="flex items-center gap-2">
+          {isOk && (
+            <span className="bg-white/20 px-3 py-1 rounded-full text-[10px] font-black italic uppercase tracking-widest inline-flex items-center gap-1">
+              <CheckCircle2 size={12} /> OK
+            </span>
+          )}
+        </div>
       </div>
 
       <textarea
         style={{ fontSize: `${fontSize}px` }}
-        className={`flex-1 ${compact ? 'p-5' : 'p-6'} outline-none leading-relaxed text-gray-700 resize-none min-h-[180px]`}
+        className={`flex-1 ${
+          compact ? 'p-5' : 'p-7'
+        } outline-none leading-relaxed text-gray-700 resize-none min-h-[260px]`}
         value={localValue}
         placeholder={`Task ${taskLabel(task)} uchun javob yozing...`}
         onFocus={() => {
@@ -123,12 +135,14 @@ const TaskTextArea = memo(function TaskTextArea({
 
       <div
         className={`p-2 text-right font-black text-xs border-t ${
-          outOfRange ? 'bg-red-50 text-red-600 border-red-100' : 'bg-orange-50 text-orange-700 border-orange-100'
+          outOfRange
+            ? 'bg-red-50 text-red-600 border-red-200'
+            : 'bg-orange-50 text-orange-700 border-orange-100'
         }`}
       >
         {outOfRange ? (
           <span>
-            {words} so‘z — {words < min ? `kam (min ${min})` : `ko‘p (max ${max})`}
+            {words} so‘z — {words < min ? `kamida ${min}` : `ko‘pi ${max}`}
           </span>
         ) : (
           <span>
@@ -140,100 +154,120 @@ const TaskTextArea = memo(function TaskTextArea({
   )
 })
 
+// ================= Page =================
 export default function WritingTestPage() {
-  const router = useRouter()
   const searchParams = useSearchParams()
+  const router = useRouter()
   const examId = searchParams.get('id')
 
+  const [exam, setExam] = useState<any>(null)
   const [loading, setLoading] = useState(true)
-  const [exam, setExam] = useState<WritingExam | null>(null)
-
-  // drafts cache (parent)
-  const [responses, setResponses] = useState<Record<string, string>>({})
-  const [fontSizes, setFontSizes] = useState<Record<string, number>>({})
 
   const [hasStarted, setHasStarted] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [showConfirmModal, setShowConfirmModal] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [visibleTaskId, setVisibleTaskId] = useState<string | null>(null)
+  const [isTyping, setIsTyping] = useState(false)
 
-  // ===== MOBILE vertical splitter =====
-  const [qHeightPct, setQHeightPct] = useState(42) // %
-  const [isDraggingY, setIsDraggingY] = useState(false)
+  // answers state
+  const [responses, setResponses] = useState<Record<string, string>>({})
+  const responsesRef = useRef<Record<string, string>>({})
+  useEffect(() => {
+    responsesRef.current = responses
+  }, [responses])
 
-  // ===== DESKTOP horizontal splitter =====
+  // storage keys
+  const startedKey = useMemo(
+    () => (examId ? `writing-${examId}-started` : null),
+    [examId]
+  )
+  const storageKey = useMemo(
+    () => (examId ? `writing_responses_${examId}` : null),
+    [examId]
+  )
+
+  // layout refs
   const layoutRef = useRef<HTMLDivElement>(null)
-  const draggingXRef = useRef(false)
-
-  const NORMAL_Q_W = 520
-  const MIN_Q_W = 260
-  const MAX_Q_W = 980
-  const [qWidth, setQWidth] = useState(NORMAL_Q_W)
-
-  // ===== Refs =====
   const taskRefs = useRef<Record<string, HTMLDivElement | null>>({})
 
-  const startedKey = useMemo(() => (examId ? `writing-${examId}-started` : null), [examId])
-  const storageKey = useMemo(() => (examId ? `writing_responses_${examId}` : null), [examId])
+  // ========= Desktop splitter (Answers bigger by default) =========
+  const NORMAL_Q_W = 420
+  const MINI_Q_W = 240
+  const MIN_Q_W = 220
+  const MAX_Q_W = 800
 
-  // ========= LOAD EXAM + RESTORE DRAFTS =========
+  const [qWidth, setQWidth] = useState<number>(NORMAL_Q_W)
+  const [isMiniQ, setIsMiniQ] = useState(false)
+  const [dragging, setDragging] = useState(false)
+
+  // ========= Mobile controls =========
+  const [mobileView, setMobileView] = useState<'both' | 'question' | 'answer'>(
+    'both'
+  )
+  const [qHeight, setQHeight] = useState(42) // percent
+  const [mDragging, setMDragging] = useState(false)
+
+  // ========= Persist debounce =========
+  const saveTimerRef = useRef<number | null>(null)
+  const schedulePersist = useCallback(() => {
+    if (!storageKey) return
+    if (saveTimerRef.current) window.clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = window.setTimeout(() => {
+      writeStorageIdle(storageKey, JSON.stringify(responsesRef.current))
+    }, 900)
+  }, [storageKey])
+
+  const onDraftChange = useCallback(
+    (id: string, val: string) => {
+      // cheap state update
+      setResponses((prev) => {
+        const next = { ...prev, [id]: val }
+        responsesRef.current = next
+        return next
+      })
+      schedulePersist()
+    },
+    [schedulePersist]
+  )
+
+  // ========= Load exam + saved =========
   useEffect(() => {
-    let mounted = true
-
     async function load() {
-      if (!examId) {
-        setLoading(false)
-        return
-      }
+      if (!examId) return
       try {
         setLoading(true)
         const res = await getWritingExamByIdAPI(examId)
-        if (!mounted) return
-
-        const ex: WritingExam = res.data
-        setExam(ex)
+        setExam(res.data)
 
         // started
-        const started = localStorage.getItem(`writing-${examId}-started`) === 'true'
-        setHasStarted(started)
-
-        // restore drafts
-        const saved = storageKey ? localStorage.getItem(storageKey) : null
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved) as Record<string, string>
-            setResponses(parsed ?? {})
-          } catch {
-            setResponses({})
-          }
-        } else {
-          setResponses({})
+        if (startedKey && localStorage.getItem(startedKey) === 'true') {
+          setHasStarted(true)
         }
 
-        // init fonts default
-        const fs: Record<string, number> = {}
-        for (const t of ex.tasks ?? []) fs[String(t.id)] = 18
-        setFontSizes(fs)
-
-        if (ex.tasks?.[0]) setVisibleTaskId(String(ex.tasks[0].id))
+        // saved answers
+        if (storageKey) {
+          const saved = localStorage.getItem(storageKey)
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved) as Record<string, string>
+              setResponses(parsed || {})
+            } catch {}
+          }
+        }
       } catch {
         toast.error("Ma'lumotlarni yuklashda xatolik!")
       } finally {
-        if (mounted) setLoading(false)
+        setLoading(false)
       }
     }
-
     load()
-    return () => {
-      mounted = false
-    }
-  }, [examId, storageKey])
+  }, [examId, startedKey, storageKey])
 
-  // ========= TASKS SORT =========
-  const tasks = useMemo(() => {
-    const arr = (exam?.tasks ?? []) as Task[]
-    return [...arr].sort((a, b) => {
+  // ========= Tasks =========
+  const tasks: Task[] = useMemo(() => {
+    const t = (exam?.tasks ?? []) as Task[]
+    return [...t].sort((a, b) => {
       const ap = Number(a.part_number)
       const bp = Number(b.part_number)
       if (ap !== bp) return ap - bp
@@ -243,142 +277,79 @@ export default function WritingTestPage() {
     })
   }, [exam])
 
-  const part1 = useMemo(() => tasks.filter((t) => Number(t.part_number) === 1), [tasks])
-  const part2 = useMemo(() => tasks.filter((t) => Number(t.part_number) === 2), [tasks])
-  const part1Common = part1[0] // topic/context_text bitta bo‘lib chiqadi
+  const part1 = useMemo(
+    () => tasks.filter((t) => Number(t.part_number) === 1),
+    [tasks]
+  )
+  const part2 = useMemo(
+    () => tasks.filter((t) => Number(t.part_number) === 2),
+    [tasks]
+  )
 
-  // ========= SCROLL HELPERS =========
+  useEffect(() => {
+    if (!visibleTaskId && tasks[0]) setVisibleTaskId(String(tasks[0].id))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks.length])
+
   const scrollToTask = useCallback((taskId: string) => {
     setTimeout(() => {
-      taskRefs.current[taskId]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      setVisibleTaskId(taskId)
-    }, 60)
-  }, [])
-
-  // ========= DRAFT CHANGE (smooth typing) =========
-  const lastSaveTimerRef = useRef<number | null>(null)
-
-  const onDraftChange = useCallback(
-    (id: string, val: string) => {
-      // update parent cache (lightweight)
-      setResponses((prev) => {
-        if (prev[id] === val) return prev
-        return { ...prev, [id]: val }
+      taskRefs.current[taskId]?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
       })
-
-      if (!storageKey) return
-
-      // debounce + idle storage write
-      if (lastSaveTimerRef.current) window.clearTimeout(lastSaveTimerRef.current)
-      lastSaveTimerRef.current = window.setTimeout(() => {
-        // IMPORTANT: use latest value snapshot
-        // We compute by reading from state via functional update? easiest: store using closure by merging
-        // Here we build minimal object with current cached + this change.
-        // NOTE: It's ok because we write often enough; UI will not block.
-        writeStorageIdle(storageKey, JSON.stringify({ ...responses, [id]: val }))
-      }, 600)
-    },
-    [responses, storageKey]
-  )
-
-  // ========= NAV BUTTONS =========
-  const NavButtons = useMemo(() => {
-    return function Nav() {
-      return (
-        <div className="flex flex-col gap-3 pr-2">
-          {tasks.map((t) => {
-            const id = String(t.id)
-            const active = visibleTaskId === id
-
-            const content = (responses[id] ?? '').trim()
-            const { min, max } = getLimits(t)
-            const words = wc(content)
-            const ok = content.length >= 10 && words >= min && words <= max
-
-            return (
-              <button
-                key={id}
-                type="button"
-                onClick={() => scrollToTask(id)}
-                className={`w-14 h-14 rounded-2xl font-black transition-all border ${
-                  active
-                    ? 'bg-orange-600 text-white border-orange-200 shadow-lg scale-[1.03]'
-                    : 'bg-white text-orange-600 border-slate-200 hover:border-orange-200'
-                } active:scale-95`}
-                title={`Task ${taskLabel(t)}`}
-              >
-                <div className="flex flex-col items-center justify-center leading-none">
-                  <span className="text-sm">{taskLabel(t)}</span>
-                  <span className={`text-[9px] mt-1 ${ok ? 'opacity-90' : 'opacity-50'}`}>
-                    {ok ? 'OK' : '...'}
-                  </span>
-                </div>
-              </button>
-            )
-          })}
-        </div>
-      )
-    }
-  }, [tasks, visibleTaskId, responses, scrollToTask])
-
-  // ========= MOBILE SPLITTER MOVE =========
-  const handleMoveY = useCallback(
-    (clientY: number) => {
-      if (!isDraggingY) return
-      const pct = (clientY / window.innerHeight) * 100
-      setQHeightPct(clamp(pct, 20, 80))
-    },
-    [isDraggingY]
-  )
-
-  // ========= DESKTOP SPLITTER MOVE =========
-  useEffect(() => {
-    const onMove = (e: MouseEvent) => {
-      if (!draggingXRef.current || !layoutRef.current) return
-
-      const rect = layoutRef.current.getBoundingClientRect()
-      const x = e.clientX - rect.left
-
-      // Layout: [Answers flex-1] [Splitter 16px] [Questions qWidth] [Nav 96px]
-      const NAV_W = 96
-      const SPLITTER_W = 16
-      const totalW = rect.width
-
-      const rightSpace = totalW - x
-      const desiredQ = rightSpace - NAV_W - SPLITTER_W
-      const next = clamp(desiredQ, MIN_Q_W, MAX_Q_W)
-      setQWidth(next)
-    }
-
-    const onUp = () => {
-      draggingXRef.current = false
-    }
-
-    window.addEventListener('mousemove', onMove)
-    window.addEventListener('mouseup', onUp)
-    return () => {
-      window.removeEventListener('mousemove', onMove)
-      window.removeEventListener('mouseup', onUp)
-    }
+      setVisibleTaskId(taskId)
+    }, 40)
   }, [])
 
-  // ========= START EXAM =========
-  const startExam = useCallback(() => {
-    if (!examId) return
-    localStorage.setItem(`writing-${examId}-started`, 'true')
-    setHasStarted(true)
-  }, [examId])
+  // ========= Desktop splitter events =========
+  const toggleQuestionSize = () => {
+    setIsMiniQ((p) => {
+      const next = !p
+      setQWidth(next ? MINI_Q_W : NORMAL_Q_W)
+      return next
+    })
+  }
 
-  // ========= SUBMIT =========
+  const onPointerDown = (e: React.PointerEvent) => {
+    if (!layoutRef.current) return
+    setDragging(true)
+    ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+  }
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!dragging || !layoutRef.current) return
+    const rect = layoutRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+
+    const NAV_W = 96
+    const SPLITTER_W = 18
+    const totalW = rect.width
+    const rightSpace = totalW - x
+    const desiredQ = rightSpace - NAV_W - SPLITTER_W
+
+    const nextQ = clamp(desiredQ, MIN_Q_W, MAX_Q_W)
+    setQWidth(nextQ)
+    setIsMiniQ(nextQ <= MINI_Q_W + 4)
+  }
+
+  const onPointerUp = () => setDragging(false)
+
+  // ========= Mobile splitter =========
+  const handleMobileMove = (clientY: number) => {
+    if (!mDragging) return
+    const h = (clientY / window.innerHeight) * 100
+    setQHeight(clamp(h, 20, 80))
+  }
+
+  // ========= Submit =========
   const doSubmit = useCallback(async () => {
     if (!examId || isSubmitting) return
     setIsSubmitting(true)
     try {
       const answers = tasks.map((t) => ({
         task_id: Number(t.id),
-        content: (responses[String(t.id)] ?? '').trim(),
+        content: (responsesRef.current[String(t.id)] || '').trim(),
       }))
-
       const res = await submitWritingExamAPI(examId, { answers })
 
       if (storageKey) localStorage.removeItem(storageKey)
@@ -386,101 +357,138 @@ export default function WritingTestPage() {
 
       router.push(`/dashboard/results/writing/view?id=${res.data.id}`)
     } catch {
-      toast.error("Xatolik! Topshirishda muammo bo'ldi.")
+      toast.error("Topshirishda xatolik!")
       setIsSubmitting(false)
     }
-  }, [examId, isSubmitting, tasks, responses, router, storageKey, startedKey])
+  }, [examId, isSubmitting, router, startedKey, storageKey, tasks])
 
-  // ========= QUESTION PAPER (Part1 common prompt) =========
-  const QuestionPaper = useCallback(
-    ({ compact }: { compact?: boolean }) => (
-      <div className={`space-y-6 ${compact ? 'p-4' : 'p-8'} bg-white`}>
-        <h3 className="text-xl font-black uppercase italic text-orange-700 border-b pb-2">
-          Question Paper
-        </h3>
+  // ========= QuestionPaper (Part 1 shared prompt once) =========
+  const QuestionPaper = ({ compact }: { compact?: boolean }) => {
+    const p1Topic = part1[0]?.topic
+    const p1Context = part1[0]?.context_text
 
-        {/* PART 1 */}
-        {part1.length > 0 && (
-          <div className="p-5 border-2 border-orange-100 rounded-3xl bg-orange-50/30">
-            <div className="flex items-center justify-between gap-3">
-              <h4 className="font-black text-orange-700 uppercase">Part 1</h4>
-              <button
-                type="button"
-                onClick={() => scrollToTask(String(part1[0].id))}
-                className="text-[10px] font-black uppercase text-orange-700 bg-white px-3 py-2 rounded-xl border border-orange-100 hover:bg-orange-50 transition"
-              >
-                Go to answers
-              </button>
-            </div>
+    return (
+      <div className={`${compact ? 'p-4' : 'p-8'} space-y-6`}>
+        <div className="text-center">
+          <h3 className="text-xl font-black uppercase italic text-orange-700">
+            Question Paper
+          </h3>
+          <p className="text-[10px] font-black text-orange-300 tracking-widest uppercase mt-1">
+            Writing
+          </p>
+        </div>
 
-            <p className="font-bold text-slate-800 text-sm mt-3 mb-2">{part1Common?.topic}</p>
-            <p className="italic text-gray-500 text-xs mb-3 whitespace-pre-line">
-              {part1Common?.context_text}
-            </p>
+        {/* Part 1 */}
+        <div className="rounded-3xl border border-orange-100 bg-white overflow-hidden">
+          <div className="px-5 py-4 bg-orange-50 border-b border-orange-100">
+            <h4 className="font-black uppercase text-orange-700">Part 1</h4>
+          </div>
 
-            <div className="space-y-3">
+          <div className="p-5 space-y-4">
+            {(p1Topic || p1Context) && (
+              <div className="p-4 rounded-2xl bg-orange-50/40 border border-orange-100">
+                {p1Topic && (
+                  <p className="font-black text-slate-800">{p1Topic}</p>
+                )}
+                {p1Context && (
+                  <p className="mt-2 text-sm italic text-slate-600 whitespace-pre-line leading-relaxed">
+                    {p1Context}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="grid gap-4">
               {part1.map((t) => {
+                const id = String(t.id)
                 const { min, max } = getLimits(t)
                 return (
-                  <button
-                    key={String(t.id)}
-                    type="button"
-                    onClick={() => scrollToTask(String(t.id))}
-                    className="w-full text-left bg-white p-4 rounded-2xl border border-orange-100 hover:bg-orange-50 transition"
+                  <div
+                    key={id}
+                    className="p-4 rounded-2xl border border-orange-100 bg-white"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="font-black text-orange-600">Task 1.{t.sub_part}</span>
-                      <span className="text-[10px] font-black text-orange-700">
-                        {min}-{max} words
-                      </span>
+                    <div className="flex items-center justify-between gap-3">
+                      <h5 className="font-black text-orange-700">
+                        Task 1.{t.sub_part}
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMobileView('answer')
+                          scrollToTask(id)
+                        }}
+                        className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 transition"
+                      >
+                        Answer
+                      </button>
                     </div>
-                    <p className="text-xs text-slate-700 mt-2">{t.instruction}</p>
-                  </button>
+                    <p className="mt-3 text-sm text-slate-800 leading-relaxed">
+                      {t.instruction}
+                    </p>
+                    <p className="mt-2 text-[11px] font-black text-slate-400">
+                      Limit: {min}-{max} words
+                    </p>
+                  </div>
                 )
               })}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* PART 2 */}
+        {/* Part 2 */}
         {part2.map((t) => {
+          const id = String(t.id)
           const { min, max } = getLimits(t)
           return (
-            <div key={String(t.id)} className="p-5 border-2 border-orange-100 rounded-3xl bg-orange-50/30">
-              <div className="flex items-center justify-between gap-3">
-                <h4 className="font-black text-orange-700 uppercase">Part 2</h4>
+            <div
+              key={id}
+              className="rounded-3xl border border-orange-100 bg-white overflow-hidden"
+            >
+              <div className="px-5 py-4 bg-orange-50 border-b border-orange-100 flex items-center justify-between gap-3">
+                <h4 className="font-black uppercase text-orange-700">Part 2</h4>
                 <button
                   type="button"
-                  onClick={() => scrollToTask(String(t.id))}
-                  className="text-[10px] font-black uppercase text-orange-700 bg-white px-3 py-2 rounded-xl border border-orange-100 hover:bg-orange-50 transition"
+                  onClick={() => {
+                    setMobileView('answer')
+                    scrollToTask(id)
+                  }}
+                  className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 transition"
                 >
-                  Go to answer
+                  Answer
                 </button>
               </div>
 
-              <p className="font-bold text-slate-800 text-sm mt-3 mb-2">{t.topic}</p>
-              <p className="italic text-gray-500 text-xs mb-3 whitespace-pre-line">{t.context_text}</p>
-              <div className="bg-white p-3 rounded-xl border border-orange-100 text-xs text-slate-700">
-                {t.instruction}
-              </div>
-
-              <div className="mt-3 text-[10px] font-black text-orange-700">
-                Limit: {min}-{max} words
+              <div className="p-5 space-y-3">
+                {t.topic && (
+                  <p className="font-black text-slate-800">Topic: {t.topic}</p>
+                )}
+                {t.context_text && (
+                  <p className="text-sm italic text-slate-600 whitespace-pre-line leading-relaxed bg-orange-50/40 border border-orange-100 p-4 rounded-2xl">
+                    {t.context_text}
+                  </p>
+                )}
+                {t.instruction && (
+                  <p className="text-sm text-slate-800 leading-relaxed">
+                    {t.instruction}
+                  </p>
+                )}
+                <p className="inline-flex px-4 py-2 rounded-2xl bg-orange-50 border border-orange-100 font-black text-xs text-orange-700">
+                  Write {min}-{max} words
+                </p>
               </div>
             </div>
           )
         })}
       </div>
-    ),
-    [part1, part1Common, part2, scrollToTask]
-  )
+    )
+  }
 
-  // ========= RENDER GUARDS =========
+  // ========= Guards =========
   if (!examId) {
     return (
-      <div className="h-screen flex items-center justify-center bg-orange-50 p-6">
-        <div className="text-center bg-white p-10 rounded-3xl border border-orange-100 shadow-sm">
-          <AlertCircle className="w-10 h-10 text-orange-600 mx-auto mb-3" />
+      <div className="h-screen flex items-center justify-center bg-slate-50">
+        <div className="text-center">
+          <AlertCircle className="w-10 h-10 text-red-500 mx-auto mb-3" />
           <p className="font-black text-slate-700">ID topilmadi</p>
         </div>
       </div>
@@ -490,7 +498,7 @@ export default function WritingTestPage() {
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
-        <Loader2 className="animate-spin text-orange-500" size={40} />
+        <Loader2 className="animate-spin text-orange-500 w-10 h-10" />
       </div>
     )
   }
@@ -499,18 +507,22 @@ export default function WritingTestPage() {
     return (
       <div className="h-screen flex items-center justify-center bg-orange-50 p-6">
         <div className="bg-white p-12 rounded-[50px] shadow-2xl text-center max-w-lg border-b-[10px] border-orange-500">
-          <div className="w-20 h-20 bg-orange-100 text-orange-700 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-20 h-20 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center mx-auto mb-6">
             <Play size={40} className="ml-1" />
           </div>
           <h1 className="text-3xl font-black mb-3 italic text-slate-800 uppercase">
-            {exam?.title ?? 'Writing Test'}
+            {exam?.title || 'Writing Test'}
           </h1>
-          <p className="text-slate-500 mb-8">Tayyor bo‘lsangiz, boshlash tugmasini bosing.</p>
-
+          <p className="text-slate-500 mb-8 font-medium">
+            Tayyor bo‘lsangiz boshlang.
+          </p>
           <button
-            onClick={startExam}
-            className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black text-xl hover:bg-orange-600 shadow-lg active:scale-95 transition-all"
             type="button"
+            onClick={() => {
+              setHasStarted(true)
+              if (startedKey) localStorage.setItem(startedKey, 'true')
+            }}
+            className="w-full py-5 bg-orange-500 text-white rounded-2xl font-black text-xl hover:bg-orange-600 shadow-lg active:scale-95 transition"
           >
             TESTNI BOSHLASH
           </button>
@@ -519,142 +531,57 @@ export default function WritingTestPage() {
     )
   }
 
-  // ========= MAIN =========
+  // ========= Page =========
   return (
     <div
       className="flex flex-col h-screen bg-[#FDFCFB] overflow-hidden"
-      onMouseMove={(e) => handleMoveY(e.clientY)}
-      onMouseUp={() => setIsDraggingY(false)}
-      onTouchMove={(e) => handleMoveY(e.touches[0].clientY)}
-      onTouchEnd={() => setIsDraggingY(false)}
+      onMouseMove={(e) => handleMobileMove(e.clientY)}
+      onMouseUp={() => setMDragging(false)}
+      onTouchMove={(e) => handleMobileMove(e.touches[0].clientY)}
+      onTouchEnd={() => setMDragging(false)}
     >
       <WritingHeader
-        initialSeconds={(Number(exam?.duration_minutes ?? 60) || 60) * 60}
+        initialSeconds={(Number(exam?.duration_minutes) || 60) * 60}
         onFinish={() => setShowConfirmModal(true)}
         isSubmitting={isSubmitting}
       />
 
-      {/* ===== DESKTOP ===== */}
-      <div ref={layoutRef} className="hidden lg:flex flex-1 overflow-hidden">
-        {/* ANSWERS */}
-        <section className="flex-1 overflow-y-auto p-10 custom-scrollbar">
-          <div className="max-w-4xl mx-auto space-y-10 pb-20">
-            {tasks.map((task) => {
-              const id = String(task.id)
-              return (
-                <div
-                  key={id}
-                  ref={(el) => {
-                    taskRefs.current[id] = el
-                  }}
-                >
-                  <TaskTextArea
-                    task={task}
-                    initialValue={responses[id] ?? ''}
-                    fontSize={fontSizes[id] ?? 18}
-                    onDraftChange={onDraftChange}
-                    onFocusTask={(tid) => setVisibleTaskId(tid)}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        </section>
-
-        {/* SPLITTER (desktop) */}
-        <div
-          className="w-4 bg-orange-100 border-l border-r border-orange-200 cursor-col-resize select-none flex items-center justify-center"
-          onMouseDown={() => (draggingXRef.current = true)}
-          title="Resize"
-        >
-          <div className="h-16 w-1.5 rounded-full bg-orange-400/60" />
+      {/* Submitting overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-white/90 backdrop-blur-xl z-[200] flex flex-col items-center justify-center">
+          <div className="w-20 h-20 border-8 border-orange-100 border-t-orange-500 rounded-full animate-spin" />
+          <h2 className="mt-6 text-xl font-black italic text-orange-700 uppercase tracking-tight">
+            AI tekshirmoqda...
+          </h2>
+          <p className="mt-2 text-sm font-bold text-slate-400">Iltimos, kuting</p>
         </div>
+      )}
 
-        {/* QUESTIONS */}
-        <section
-          className="overflow-y-auto bg-slate-50 custom-scrollbar border-r"
-          style={{ width: qWidth }}
-        >
-          <QuestionPaper />
-        </section>
-
-        {/* NAV */}
-        <aside className="w-24 border-l bg-white flex items-center justify-center">
-          <NavButtons />
-        </aside>
-      </div>
-
-      {/* ===== MOBILE (vertical splitter) ===== */}
-      <div className="lg:hidden flex flex-1 flex-col overflow-hidden relative">
-        {/* QUESTIONS TOP */}
-        <div style={{ height: `${qHeightPct}%` }} className="overflow-y-auto bg-slate-50 border-b-2 border-orange-200">
-          <QuestionPaper compact />
-        </div>
-
-        {/* SPLITTER HANDLE */}
-        <div
-          onMouseDown={() => setIsDraggingY(true)}
-          onTouchStart={() => setIsDraggingY(true)}
-          className="h-8 bg-orange-500 flex items-center justify-center cursor-ns-resize shadow-md relative z-10 select-none"
-        >
-          <div className="w-16 h-1.5 bg-white/40 rounded-full" />
-          <GripHorizontal className="text-white absolute right-4" size={20} />
-          <span className="text-[10px] text-white font-black uppercase tracking-widest px-4">Resize</span>
-          <div className="w-16 h-1.5 bg-white/40 rounded-full" />
-        </div>
-
-        {/* ANSWERS BOTTOM */}
-        <div style={{ height: `${100 - qHeightPct}%` }} className="overflow-y-auto p-4 bg-white custom-scrollbar">
-          <div className="space-y-8 pb-10">
-            {tasks.map((task) => {
-              const id = String(task.id)
-              return (
-                <div
-                  key={id}
-                  ref={(el) => {
-                    taskRefs.current[id] = el
-                  }}
-                >
-                  <TaskTextArea
-                    task={task}
-                    initialValue={responses[id] ?? ''}
-                    fontSize={16}
-                    compact
-                    onDraftChange={onDraftChange}
-                    onFocusTask={(tid) => setVisibleTaskId(tid)}
-                  />
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      </div>
-
-      {/* CONFIRM MODAL */}
+      {/* Confirm modal */}
       {showConfirmModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[120] flex items-center justify-center p-6">
           <div className="bg-white rounded-[40px] p-10 max-w-md w-full text-center shadow-2xl">
             <h3 className="text-2xl font-black mb-3 italic uppercase text-orange-700">
               Imtihonni yakunlaysizmi?
             </h3>
-            <p className="text-slate-500 mb-8 text-sm">
-              Javoblar serverga yuboriladi va natija hisoblanadi.
+            <p className="text-slate-500 font-medium mb-7">
+              Javoblar yuboriladi va tekshiruv boshlanadi.
             </p>
             <div className="flex gap-4">
               <button
-                onClick={() => setShowConfirmModal(false)}
-                className="flex-1 py-4 bg-slate-100 rounded-2xl font-bold hover:bg-slate-200 transition"
                 type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="flex-1 py-4 bg-slate-100 rounded-2xl font-black text-slate-700 hover:bg-slate-200 transition"
               >
                 Yo‘q
               </button>
               <button
+                type="button"
                 onClick={() => {
                   setShowConfirmModal(false)
                   doSubmit()
                 }}
                 className="flex-1 py-4 bg-orange-500 text-white rounded-2xl font-black shadow-lg hover:bg-orange-600 transition"
-                type="button"
               >
                 HA, YUBORISH
               </button>
@@ -663,15 +590,302 @@ export default function WritingTestPage() {
         </div>
       )}
 
-      {/* SUBMIT LOADER */}
-      {isSubmitting && (
-        <div className="fixed inset-0 bg-white/95 backdrop-blur-xl z-[200] flex flex-col items-center justify-center">
-          <div className="w-20 h-20 border-8 border-orange-100 border-t-orange-500 rounded-full animate-spin" />
-          <h2 className="mt-6 text-xl font-black italic text-orange-700 uppercase tracking-tight">
-            AI natijalarni hisoblamoqda...
-          </h2>
+      {/* ===================== MOBILE ===================== */}
+      <div className="lg:hidden flex-1 overflow-hidden p-3">
+        {/* mobile top controls */}
+        <div className="bg-white border border-orange-100 rounded-2xl p-2 flex items-center justify-between">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setMobileView('both')}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
+                mobileView === 'both'
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-orange-50 text-orange-700'
+              }`}
+            >
+              Ikki bo‘lim
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileView('question')}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
+                mobileView === 'question'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-orange-50 text-orange-700'
+              }`}
+            >
+              Savol
+            </button>
+            <button
+              type="button"
+              onClick={() => setMobileView('answer')}
+              className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition ${
+                mobileView === 'answer'
+                  ? 'bg-orange-600 text-white'
+                  : 'bg-orange-50 text-orange-700'
+              }`}
+            >
+              Javob
+            </button>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowConfirmModal(true)}
+            className="px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 transition"
+          >
+            Finish
+          </button>
         </div>
-      )}
+
+        {/* both => splitter */}
+        {mobileView === 'both' && (
+          <div className="mt-3 h-[calc(100%-56px)] flex flex-col overflow-hidden">
+            <div
+              style={{ height: `${qHeight}%` }}
+              className="overflow-hidden rounded-3xl border border-orange-100 bg-white"
+            >
+              <div className="h-full overflow-y-auto custom-scrollbar">
+                <QuestionPaper compact />
+              </div>
+            </div>
+
+            {/* handle */}
+            <div
+              onMouseDown={() => setMDragging(true)}
+              onTouchStart={() => setMDragging(true)}
+              className="my-2 h-9 rounded-2xl bg-orange-500 flex items-center justify-center cursor-ns-resize shadow-md relative select-none"
+            >
+              <div className="w-20 h-1.5 bg-white/40 rounded-full" />
+              <GripHorizontal className="text-white absolute right-4" size={20} />
+              <span className="text-[10px] text-white font-black uppercase tracking-widest px-3">
+                Resize
+              </span>
+              <div className="w-20 h-1.5 bg-white/40 rounded-full" />
+            </div>
+
+            <div
+              style={{ height: `${100 - qHeight}%` }}
+              className="overflow-hidden rounded-3xl border border-orange-100 bg-white"
+            >
+              <div className="h-full overflow-y-auto custom-scrollbar p-4 space-y-7 pb-20">
+                {tasks.map((t) => {
+                  const id = String(t.id)
+                  return (
+                    <TaskTextArea
+                      key={id}
+                      task={t}
+                      value={responses[id] || ''}
+                      fontSize={16}
+                      compact
+                      onFocusTask={(tid) => setVisibleTaskId(tid)}
+                      onDraftChange={onDraftChange}
+                    />
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {mobileView === 'question' && (
+          <div className="mt-3 h-[calc(100%-56px)] overflow-hidden rounded-3xl border border-orange-100 bg-white">
+            <div className="h-full overflow-y-auto custom-scrollbar">
+              <QuestionPaper compact />
+            </div>
+          </div>
+        )}
+
+        {mobileView === 'answer' && (
+          <div className="mt-3 h-[calc(100%-56px)] overflow-hidden rounded-3xl border border-orange-100 bg-white">
+            <div className="h-full overflow-y-auto custom-scrollbar p-4 space-y-7 pb-20">
+              {/* mobile quick nav */}
+              <div className="sticky top-0 z-20 bg-white/90 backdrop-blur border border-orange-100 rounded-2xl p-2">
+                <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                  {tasks.map((t) => {
+                    const id = String(t.id)
+                    const active = visibleTaskId === id
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => scrollToTask(id)}
+                        className={`shrink-0 px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition ${
+                          active
+                            ? 'bg-orange-600 text-white border-orange-200'
+                            : 'bg-orange-50 text-orange-700 border-orange-100'
+                        }`}
+                      >
+                        Task {taskLabel(t)}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              {tasks.map((t) => {
+                const id = String(t.id)
+                return (
+                  <div
+                    key={id}
+                    ref={(el) => {
+                      taskRefs.current[id] = el
+                    }}
+                    onFocusCapture={() => setVisibleTaskId(id)}
+                  >
+                    <TaskTextArea
+                      task={t}
+                      value={responses[id] || ''}
+                      fontSize={16}
+                      compact
+                      onFocusTask={(tid) => setVisibleTaskId(tid)}
+                      onDraftChange={onDraftChange}
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ===================== DESKTOP ===================== */}
+      <div ref={layoutRef} className="hidden lg:flex flex-1 overflow-hidden">
+        {/* ANSWERS */}
+        <section className="flex-1 h-full overflow-y-auto custom-scrollbar p-10">
+          {/* TOP NAVBAR (desktop) */}
+          <div className="sticky top-0 z-30 -mx-10 px-10 py-3 bg-[#FDFCFB]/92 backdrop-blur border-b border-orange-100">
+            <div className="max-w-4xl mx-auto flex items-center gap-2">
+              {tasks.map((t) => {
+                const id = String(t.id)
+                const active = visibleTaskId === id
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => scrollToTask(id)}
+                    className={`px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest border transition ${
+                      active
+                        ? 'bg-orange-600 text-white border-orange-200 shadow'
+                        : 'bg-white text-orange-700 border-orange-100 hover:bg-orange-50'
+                    }`}
+                  >
+                    Task {taskLabel(t)}
+                  </button>
+                )
+              })}
+              <div className="flex-1" />
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(true)}
+                className="px-4 py-2 rounded-2xl font-black text-xs uppercase tracking-widest bg-orange-500 text-white hover:bg-orange-600 transition"
+              >
+                Finish
+              </button>
+            </div>
+          </div>
+
+          <div className="max-w-4xl mx-auto space-y-10 pb-24 pt-6">
+            {tasks.map((t) => {
+              const id = String(t.id)
+              return (
+                <div
+                  key={id}
+                  ref={(el) => {
+                    taskRefs.current[id] = el
+                  }}
+                >
+                  <TaskTextArea
+                    task={t}
+                    value={responses[id] || ''}
+                    fontSize={18}
+                    onFocusTask={(tid) => {
+                      setIsTyping(true)
+                      setVisibleTaskId(tid)
+                    }}
+                    onDraftChange={onDraftChange}
+                  />
+                </div>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* SPLITTER HANDLE */}
+        <div
+          className="relative h-full bg-orange-50 border-l border-r border-orange-100 select-none"
+          style={{ width: 18 }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+        >
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              toggleQuestionSize()
+            }}
+            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-11 h-11 rounded-2xl bg-white border border-orange-100 shadow-md flex items-center justify-center text-orange-700 hover:text-orange-800 hover:border-orange-200 transition"
+            title={isMiniQ ? 'Kattalashtirish' : 'Kichraytirish'}
+          >
+            <ChevronsLeftRight size={18} />
+          </button>
+        </div>
+
+        {/* QUESTIONS */}
+        <section
+          className="h-full overflow-y-auto bg-white custom-scrollbar border-r border-orange-100"
+          style={{ width: qWidth }}
+        >
+          <QuestionPaper />
+        </section>
+
+        {/* RIGHT NAV (desktop) */}
+        <aside
+          className={`h-full w-24 border-l border-orange-100 bg-[#FDFCFB] flex items-center justify-center transition ${
+            isTyping ? 'opacity-40' : 'opacity-100'
+          }`}
+          onMouseMove={() => setIsTyping(false)}
+        >
+          <div className="flex flex-col gap-3 pr-2">
+            {tasks.map((t) => {
+              const id = String(t.id)
+              const active = visibleTaskId === id
+
+              const content = (responses[id] || '').trim()
+              const { min, max } = getLimits(t)
+              const words = wc(content)
+              const ok = content.length >= 10 && words >= min && words <= max
+
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => scrollToTask(id)}
+                  className={`w-14 h-14 rounded-2xl font-black transition-all border ${
+                    active
+                      ? 'bg-orange-600 text-white border-orange-200 shadow'
+                      : 'bg-white text-orange-700 border-orange-100 hover:bg-orange-50'
+                  }`}
+                  title={`Task ${taskLabel(t)}`}
+                >
+                  <div className="flex flex-col items-center justify-center leading-none">
+                    <span className="text-sm">{taskLabel(t)}</span>
+                    <span
+                      className={`text-[9px] mt-1 ${
+                        ok ? 'opacity-95' : 'opacity-55'
+                      }`}
+                    >
+                      {ok ? 'OK' : '...'}
+                    </span>
+                  </div>
+                </button>
+              )
+            })}
+          </div>
+        </aside>
+      </div>
     </div>
   )
 }
