@@ -12,7 +12,6 @@ import {
   BrainCircuit,
   ChevronRight,
   Bell,
-  AlertTriangle,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/lib/AuthContext'
@@ -27,24 +26,29 @@ export default function DashboardLayout({
   const pathname = usePathname()
   const { user, loading: authLoading, logout } = useAuth()
 
-  // ✅ EXAM PAGE DETECT
   const isExamPage =
     pathname.includes('/test/listening') ||
     pathname.includes('/test/reading') ||
     pathname.includes('/test/writing')
 
   // =========================
-  // 🔐 AUTH GUARD (FIXED)
+  // 🔐 AUTH REDIRECT (FIXED)
   // =========================
   useEffect(() => {
     if (authLoading) return
 
     if (!user && pathname.startsWith('/dashboard')) {
-      router.replace('/auth')
-    }
-  }, [user, authLoading, pathname, router])
+      const currentUrl = window.location.href
 
-  // ✅ LOADING STATE
+      // 🔥 AUTH DOMAIN GA REDIRECT
+      window.location.href =
+        `https://auth.enwis.uz?redirect=${encodeURIComponent(currentUrl)}`
+    }
+  }, [authLoading, user, pathname])
+
+  // =========================
+  // ⏳ LOADING
+  // =========================
   if (authLoading) {
     return (
       <div className="h-screen flex items-center justify-center bg-white">
@@ -53,12 +57,14 @@ export default function DashboardLayout({
     )
   }
 
-  // ❗ CRITICAL: prevent flicker + loop
+  // ❗ user yo‘q → redirect ketadi → bu yerda blank ko‘rsatamiz
   if (!user) {
     return null
   }
 
-  // ✅ EXAM PAGE (no layout)
+  // =========================
+  // 🎯 EXAM PAGE (NO LAYOUT)
+  // =========================
   if (isExamPage) {
     return <div className="min-h-screen bg-white">{children}</div>
   }
@@ -89,7 +95,7 @@ export default function DashboardLayout({
   }, [])
 
   // =========================
-  // 📱 USER STATE
+  // 📱 USER CHECK
   // =========================
   const isVerifiedUser = useMemo(() => {
     if (!user?.contacts) return false
@@ -199,11 +205,7 @@ export default function DashboardLayout({
           </AnimatePresence>
 
           <div className="max-w-6xl mx-auto">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            >
+            <motion.div key={pathname} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               {children}
             </motion.div>
           </div>
