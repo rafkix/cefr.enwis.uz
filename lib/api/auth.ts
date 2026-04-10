@@ -1,21 +1,17 @@
 import api from "./axios";
 
 export const authService = {
-  googleLogin: (payload: any) => api.post("/auth/google", payload),
+  getMe: async () => {
+    const res = await api.get("/auth/me");
+    return res.data;
+  },
 
-  telegramLogin: (payload: any) => api.post("/auth/telegram", payload),
-
-  sendOtp: (payload: any) => api.post("/auth/otp/send", payload),
-
-  sendOtpBot: (payload: any) => api.post("/auth/otp/send/bot", payload),
-
-  loginByPhone: (payload: any) => api.post("/auth/phone/login", payload),
-
-  getMe: () => api.get("/auth/me").then((res) => res.data),
+  loginByPhone: async (payload: any) => {
+    return api.post("/auth/phone/login", payload);
+  },
 
   logout: async () => {
     await api.post("/auth/logout");
-
     window.location.href = "https://auth.enwis.uz";
   },
 };
