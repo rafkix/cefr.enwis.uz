@@ -7,42 +7,53 @@ const api = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true, // 🔥 CRITICAL (cookie ishlashi uchun)
+  withCredentials: true,
 });
 
-/**
- * Request Interceptor
- * Cookie-based auth → headerga token qo‘shilmaydi
- */
-api.interceptors.request.use(
-  (config) => {
-    if (process.env.NODE_ENV === "development") {
-      console.log(`🚀 [API] ${config.method?.toUpperCase()} ${config.url}`);
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+let isRefreshing = false;
+let failedQueue: any[] = [];
 
-/**
- * Response Interceptor
- */
+const processQueue = (error: any) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error);
+    else prom.resolve();
+  });
+  failedQueue = [];
+};
+
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    const status = error.response?.status;
+    const originalRequest = error.config;
 
-    // 🔥 401 handling (cookie-based)
-    if (status === 401) {
-      console.error("⛔ [401] Unauthorized");
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({
+            resolve: () => resolve(api(originalRequest)),
+            reject,
+          });
+        });
+      }
 
-      if (typeof window !== "undefined") {
-        const currentPath = window.location.pathname;
+      originalRequest._retry = true;
+      isRefreshing = true;
 
-        // Infinite loopdan qochish
-        if (!currentPath.startsWith("/auth")) {
+      try {
+        await api.post("/auth/refresh"); // 🔥 cookie orqali refresh
+
+        processQueue(null);
+        return api(originalRequest); // 🔁 retry original request
+      } catch (err) {
+        processQueue(err);
+
+        if (typeof window !== "undefined") {
           window.location.href = "https://auth.enwis.uz";
         }
+
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
       }
     }
 

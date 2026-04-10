@@ -1,61 +1,55 @@
-import api from './axios'
+import api from "./axios";
 import {
   GoogleLoginPayload,
   TelegramLoginPayload,
   SendOtpPayload,
   PhoneLoginPayload,
   PhoneLoginResponse,
-  AuthResponse,
   UserMeResponse,
-} from '../types/auth'
+} from "../types/auth";
 
 export const authService = {
-  // Google: { id_token: "..." }
+  // ✅ GOOGLE LOGIN (cookie set qiladi backend)
   googleLogin: async (payload: GoogleLoginPayload) => {
-    const response = await api.post<AuthResponse>('/auth/google', payload)
-    if (response.data.access_token) authService.saveTokens(response.data)
-    return response.data
+    const response = await api.post("/auth/google", payload);
+    return response.data;
   },
 
-  // Telegram: { id, hash, ... }
+  // ✅ TELEGRAM LOGIN
   telegramLogin: async (payload: TelegramLoginPayload) => {
-    const response = await api.post<AuthResponse>('/auth/telegram', payload)
-    if (response.data.access_token) authService.saveTokens(response.data)
-    return response.data
+    const response = await api.post("/auth/telegram", payload);
+    return response.data;
   },
 
-  // OTP yuborish: { phone: "+998..." }
+  // ✅ OTP yuborish
   sendOtp: (payload: SendOtpPayload) => {
-    return api.post<string>('/auth/send-otp', payload)
+    return api.post("/auth/otp/send", payload);
   },
-  
+
   sendOtpBot: (payload: SendOtpPayload) => {
-    return api.post<string>('/auth/bot/send-otp', payload)
+    return api.post("/auth/otp/send/bot", payload);
   },
 
-  // OTP tasdiqlash: { phone, code }
+  // ✅ PHONE LOGIN
   loginByPhone: async (payload: PhoneLoginPayload) => {
-    const response = await api.post<PhoneLoginResponse>('/auth/login/phone', payload)
-    // Swagger structure: response.data.token.access_token
-    if (response.data.token?.access_token) {
-      authService.saveTokens(response.data.token)
-    }
-    return response.data
+    const response = await api.post<PhoneLoginResponse>(
+      "/auth/phone/login",
+      payload,
+    );
+    return response.data;
   },
 
-  getMe: () => api.get<UserMeResponse>('/auth/me').then(res => res.data),
+  // ✅ USER
+  getMe: () => api.get<UserMeResponse>("/auth/me").then((res) => res.data),
 
+  // ✅ LOGOUT (cookie clear qiladi backend)
   logout: async () => {
-    try { await api.post('/auth/logout') } 
-    finally { 
-      localStorage.clear()
-      window.location.href = '/auth'
+    try {
+      await api.post("/auth/logout");
+    } finally {
+      if (typeof window !== "undefined") {
+        window.location.href = "https://auth.enwis.uz";
+      }
     }
   },
-
-  saveTokens: (data: AuthResponse) => {
-    localStorage.setItem('access_token', data.access_token)
-    localStorage.setItem('refresh_token', data.refresh_token)
-    localStorage.setItem('login_at', Date.now().toString())
-  },
-}
+};
