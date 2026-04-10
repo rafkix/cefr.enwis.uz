@@ -330,7 +330,6 @@ export default function WritingTestPage() {
   }
 
   // ========= Submit =========
-  // ========= Submit =========
   const doSubmit = useCallback(async () => {
     if (!examId || isSubmitting) return
 

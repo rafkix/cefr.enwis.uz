@@ -1,534 +1,334 @@
+// import Link from "next/link";
+// import {
+//     ArrowRight,
+//     CheckCircle2,
+//     Globe2,
+//     GraduationCap,
+//     Languages,
+//     LineChart,
+//     PenSquare,
+//     Zap,
+//     Users,
+//     Trophy,
+//     PlayCircle,
+//     Monitor,
+//     Smartphone,
+//     Laptop,
+// } from "lucide-react";
+// import type { Dictionary } from "@/lib/i18n/dictionaries";
+// import type { Locale } from "@/lib/i18n/locales";
+// import { siteConfig } from "@/lib/config/site";
+
+// type LandingPageProps = {
+//     locale: Locale;
+//     dict: Dictionary;
+// };
+
+// /**
+//  * 🛠 GLOBAL RESPONSIVE CONTAINER
+//  * Bu klass kontentni markazda ushlaydi va barcha qurilmalarda 
+//  * o'ng va chapdan xavfsiz masofa (padding) qoldiradi.
+//  */
+// const CONTAINER_CLASS = "max-w-[1440px] mx-auto px-6 sm:px-10 md:px-16 lg:px-20 xl:px-24 2xl:px-0";
+
+// export function LandingPage({ locale, dict }: LandingPageProps) {
+//     return (
+//         <main className="min-h-screen bg-[#f8fafc] text-slate-900 selection:bg-[#109988]/20 overflow-x-hidden">
+//             <HeroSection locale={locale} dict={dict} />
+//             <StatsSection />
+//             <TracksSection locale={locale} dict={dict} />
+//             <ExperienceSection />
+//             <ProcessSection />
+//             <PlatformSection dict={dict} />
+//             <BenefitsSection dict={dict} />
+//             <FAQSection dict={dict} />
+//             <FinalCTASection locale={locale} />
+//         </main>
+//     );
+// }
+
+// // --- 1. HERO SECTION (TV va Monitorlar uchun optimallashgan) ---
+// function HeroSection({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+//     return (
+//         <section className="relative pt-12 pb-16 md:pt-24 md:pb-32 lg:pt-32 lg:pb-40 overflow-hidden">
+//             {/* Soft Background Decor */}
+//             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full bg-[radial-gradient(circle_at_50%_-20%,rgba(16,153,136,0.15),transparent_70%)] -z-10" />
+
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="flex flex-col items-center text-center max-w-5xl mx-auto">
+//                     <div className="inline-flex items-center gap-2 rounded-full border border-teal-200 bg-white/80 backdrop-blur-sm px-5 py-2 text-[11px] sm:text-xs font-black uppercase tracking-[0.2em] text-[#0d7f72] mb-8 shadow-sm">
+//                         <GraduationCap size={16} className="animate-bounce" />
+//                         {dict.hero.badge}
+//                     </div>
+
+//                     <h1 className="text-4xl sm:text-6xl md:text-7xl lg:text-[90px] xl:text-[110px] font-[1000] tracking-[-0.04em] leading-[0.9] text-slate-950">
+//                         {dict.hero.title} <span className="text-[#109988]">.</span>
+//                     </h1>
+
+//                     <p className="mt-8 text-base sm:text-lg md:text-xl lg:text-2xl text-slate-600 leading-relaxed max-w-3xl">
+//                         {dict.hero.description}
+//                     </p>
+
+//                     <div className="mt-12 flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+//                         <a href={`${siteConfig.authUrl}?lang=${locale}`}
+//                             className="h-16 px-12 inline-flex items-center justify-center rounded-full bg-[#109988] text-white font-black text-lg hover:bg-[#0d7f72] transition-all hover:scale-105 shadow-[0_20px_40px_-12px_rgba(16,153,136,0.4)] active:scale-95">
+//                             {dict.hero.primaryCta}
+//                             <ArrowRight className="ml-2 w-5 h-5" />
+//                         </a>
+//                         <Link href="#tracks"
+//                             className="h-16 px-12 inline-flex items-center justify-center rounded-full border-2 border-slate-200 bg-white text-slate-900 font-black text-lg hover:border-[#109988] hover:text-[#109988] transition-all">
+//                             {dict.hero.secondaryCta}
+//                         </Link>
+//                     </div>
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 2. STATS SECTION (Contrast oshirildi) ---
+// function StatsSection() {
+//     return (
+//         <section className="py-12 bg-white border-y border-slate-100 shadow-sm">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 md:gap-12 lg:gap-16">
+//                     {[
+//                         { label: "Mock Tests", value: "500+", icon: <PenSquare /> },
+//                         { label: "Students", value: "12k+", icon: <Users /> },
+//                         { label: "IELTS 8.0+", value: "1.2k", icon: <Trophy /> },
+//                         { label: "AI Response", value: "Instant", icon: <Zap /> },
+//                     ].map((s, i) => (
+//                         <div key={i} className="flex items-center gap-5 group">
+//                             <div className="p-4 rounded-2xl bg-[#ecfffd] text-[#109988] group-hover:scale-110 transition-transform">
+//                                 {s.icon}
+//                             </div>
+//                             <div>
+//                                 <div className="text-2xl sm:text-3xl font-black text-slate-900 leading-none">{s.value}</div>
+//                                 <div className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mt-2">{s.label}</div>
+//                             </div>
+//                         </div>
+//                     ))}
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 3. TRACKS SECTION (Grid optimallashgan) ---
+// function TracksSection({ locale, dict }: { locale: Locale; dict: Dictionary }) {
+//     return (
+//         <section id="tracks" className="py-24 bg-[#f8fafc]">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="flex flex-col lg:flex-row gap-16 items-start">
+//                     <div className="lg:w-1/3 lg:sticky lg:top-24">
+//                         <span className="text-[#109988] font-black text-xs uppercase tracking-[0.3em]">{dict.tracks.eyebrow}</span>
+//                         <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-950 mt-4 leading-tight italic">
+//                             Choose your <br className="hidden lg:block" /> destiny.
+//                         </h2>
+//                         <p className="text-slate-600 mt-6 text-lg leading-relaxed">{dict.tracks.description}</p>
+//                     </div>
+
+//                     <div className="lg:w-2/3 grid sm:grid-cols-2 gap-6 w-full">
+//                         {['ielts', 'cefr', 'dtm', 'writing'].map((track) => (
+//                             <Link key={track} href={`/${locale}/${track}`}
+//                                 className="group p-10 rounded-[40px] bg-white border border-slate-100 hover:border-[#109988]/30 transition-all hover:shadow-[0_30px_60px_-20px_rgba(0,0,0,0.1)] hover:-translate-y-2">
+//                                 <div className="h-14 w-14 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-[#109988] group-hover:text-white transition-all mb-8">
+//                                     <Zap size={24} />
+//                                 </div>
+//                                 <div className="text-4xl font-black text-slate-900 mb-2">{track.toUpperCase()}</div>
+//                                 <p className="text-slate-500 text-sm leading-relaxed mb-8">Professional mock environment with advanced AI scoring system.</p>
+//                                 <div className="flex items-center text-[#109988] font-black text-sm">
+//                                     Open Track <ArrowRight size={18} className="ml-2 group-hover:translate-x-2 transition-transform" />
+//                                 </div>
+//                             </Link>
+//                         ))}
+//                     </div>
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 4. EXPERIENCE (Dark Premium Block) ---
+// function ExperienceSection() {
+//     return (
+//         <section className="py-12 md:py-24">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="bg-slate-950 rounded-[48px] md:rounded-[64px] p-8 md:p-20 text-white relative overflow-hidden">
+//                     <div className="absolute top-0 right-0 w-full h-full bg-[radial-gradient(circle_at_80%_20%,#10998833,transparent_50%)]" />
+//                     <div className="grid lg:grid-cols-2 gap-16 items-center relative z-10">
+//                         <div>
+//                             <h2 className="text-4xl md:text-6xl font-black leading-[1.05] mb-10">Real exam atmosphere. <br /> Anywhere.</h2>
+//                             <div className="grid gap-6">
+//                                 {[
+//                                     { t: "Live Proctoring", d: "Feel the real-time exam pressure." },
+//                                     { t: "AI Speaking Hub", d: "Practice speaking with our advanced AI." },
+//                                     { t: "Writing Analytics", d: "Get instant grammar and coherence scores." }
+//                                 ].map((item, i) => (
+//                                     <div key={i} className="flex gap-5 p-6 rounded-3xl bg-white/5 border border-white/10 hover:bg-white/10 transition-colors">
+//                                         <div className="h-12 w-12 shrink-0 rounded-2xl bg-[#109988] flex items-center justify-center">
+//                                             <CheckCircle2 size={24} />
+//                                         </div>
+//                                         <div>
+//                                             <h4 className="font-black text-xl">{item.t}</h4>
+//                                             <p className="text-slate-400 text-sm mt-1">{item.d}</p>
+//                                         </div>
+//                                     </div>
+//                                 ))}
+//                             </div>
+//                         </div>
+//                         <div className="relative group cursor-pointer">
+//                             <div className="aspect-video bg-gradient-to-br from-[#109988] to-teal-900 rounded-[40px] flex items-center justify-center shadow-2xl overflow-hidden">
+//                                 <PlayCircle size={80} className="text-white opacity-80 group-hover:scale-110 transition-transform" />
+//                             </div>
+//                         </div>
+//                     </div>
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 5. PROCESS SECTION (Qanday ishlaydi) ---
+// function ProcessSection() {
+//     return (
+//         <section className="py-24 bg-white border-y border-slate-100">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="text-center mb-20">
+//                     <h2 className="text-4xl md:text-6xl font-black text-slate-950 tracking-tighter italic">How it works</h2>
+//                 </div>
+//                 <div className="grid md:grid-cols-3 gap-12 lg:gap-20">
+//                     {[
+//                         { title: "Register", desc: "Select your language and create a profile in 30 seconds." },
+//                         { title: "Start Test", desc: "Access the most accurate mock exams on the market." },
+//                         { title: "Improve", desc: "Receive AI-generated feedback and double your score." }
+//                     ].map((step, i) => (
+//                         <div key={i} className="relative group">
+//                             <div className="text-[120px] font-black text-slate-50 absolute -top-20 left-0 -z-10 select-none group-hover:text-teal-50 transition-colors">
+//                                 0{i + 1}
+//                             </div>
+//                             <div className="pt-10">
+//                                 <h3 className="text-2xl font-black text-slate-900 mb-4">{step.title}</h3>
+//                                 <p className="text-slate-600 leading-relaxed text-lg">{step.desc}</p>
+//                             </div>
+//                         </div>
+//                     ))}
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 6. PLATFORM SECTION ---
+// function PlatformSection({ dict }: { dict: Dictionary }) {
+//     const items = [
+//         { icon: <Languages size={24} />, title: dict.features.items[0].title, text: dict.features.items[0].description },
+//         { icon: <LineChart size={24} />, title: dict.features.items[1].title, text: dict.features.items[1].description },
+//         { icon: <PenSquare size={24} />, title: dict.features.items[2].title, text: dict.features.items[2].description },
+//     ];
+
+//     return (
+//         <section id="features" className="py-24 lg:py-32 bg-[#f8fafc]">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="grid md:grid-cols-3 gap-8">
+//                     {items.map((item, i) => (
+//                         <div key={i} className="p-12 rounded-[48px] border border-slate-100 bg-white hover:shadow-2xl hover:shadow-teal-900/5 transition-all">
+//                             <div className="w-16 h-16 bg-[#ecfffd] text-[#109988] rounded-2xl flex items-center justify-center mb-10">
+//                                 {item.icon}
+//                             </div>
+//                             <h3 className="text-2xl font-[1000] text-slate-950 mb-4 tracking-tight">{item.title}</h3>
+//                             <p className="text-slate-600 leading-relaxed text-lg">{item.text}</p>
+//                         </div>
+//                     ))}
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 7. BENEFITS SECTION ---
+// function BenefitsSection({ dict }: { dict: Dictionary }) {
+//     return (
+//         <section className="py-24 lg:py-32">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="grid lg:grid-cols-2 gap-20 items-center">
+//                     <div>
+//                         <span className="text-[#109988] font-black text-xs uppercase tracking-[0.3em]">{dict.benefits.eyebrow}</span>
+//                         <h2 className="text-4xl md:text-5xl lg:text-6xl font-black text-slate-950 mt-6 leading-tight italic">{dict.benefits.title}</h2>
+//                         <p className="mt-8 text-xl text-slate-600 leading-relaxed">{dict.benefits.description}</p>
+//                     </div>
+//                     <div className="grid gap-5">
+//                         {dict.benefits.items.map((item, i) => (
+//                             <div key={i} className="p-8 bg-white border border-slate-100 rounded-[32px] flex items-center gap-8 shadow-sm hover:scale-[1.02] transition-transform group">
+//                                 <span className="text-3xl font-black text-teal-100 group-hover:text-[#109988] transition-colors">0{i + 1}</span>
+//                                 <span className="text-xl font-bold text-slate-800">{item}</span>
+//                             </div>
+//                         ))}
+//                     </div>
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 8. FAQ SECTION ---
+// function FAQSection({ dict }: { dict: Dictionary }) {
+//     return (
+//         <section id="faq" className="py-24 bg-white border-t border-slate-100">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="text-center mb-20">
+//                     <h2 className="text-4xl md:text-6xl font-black text-slate-950 tracking-tighter italic">{dict.faq.title}</h2>
+//                 </div>
+//                 <div className="max-w-4xl mx-auto space-y-6">
+//                     {dict.faq.items.map((item, i) => (
+//                         <div key={i} className="p-10 bg-[#f8fafc] rounded-[40px] border border-slate-50 hover:border-teal-100 transition-colors">
+//                             <h3 className="text-xl md:text-2xl font-black text-slate-900 mb-4 tracking-tight">{item.question}</h3>
+//                             <p className="text-slate-600 leading-relaxed text-lg">{item.answer}</p>
+//                         </div>
+//                     ))}
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
+// // --- 9. FINAL CTA (Super Large) ---
+// function FinalCTASection({ locale }: { locale: string }) {
+//     return (
+//         <section className="py-24 lg:pb-40">
+//             <div className={CONTAINER_CLASS}>
+//                 <div className="bg-[#109988] rounded-[60px] md:rounded-[80px] p-12 md:p-32 text-center text-white relative shadow-2xl shadow-teal-900/30 overflow-hidden">
+//                     {/* Decorative TV Icon for Big Screens */}
+//                     <Monitor size={400} className="absolute -bottom-20 -right-20 opacity-5 -rotate-12 pointer-events-none" />
+
+//                     <div className="relative z-10">
+//                         <h2 className="text-4xl md:text-7xl lg:text-8xl font-[1000] tracking-tighter leading-none mb-10">
+//                             The future of exams <br className="hidden md:block" /> starts now.
+//                         </h2>
+//                         <p className="mt-8 text-teal-50 text-xl md:text-2xl max-w-2xl mx-auto font-medium opacity-90 leading-relaxed">
+//                             Don't study harder, study smarter. Join thousands of successful students today.
+//                         </p>
+//                         <div className="mt-16">
+//                             <a href={`${siteConfig.authUrl}?lang=${locale}`}
+//                                 className="h-20 px-16 inline-flex items-center justify-center rounded-full bg-white text-[#109988] font-black text-xl hover:scale-105 hover:shadow-2xl transition-all active:scale-95">
+//                                 Create Free Account
+//                             </a>
+//                         </div>
+//                     </div>
+//                 </div>
+//             </div>
+//         </section>
+//     );
+// }
+
 "use client"
 
-import React, { useState } from "react"
-import { useRouter } from "next/navigation"
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "framer-motion"
-import {
-    ArrowRight, Zap, Mic, PenTool, Headphones, BookOpen, ShieldCheck,
-    CheckCircle2, AlertTriangle, Sparkles, Heart, HandHeart, GraduationCap, // ❤️ Kerakli iconlar
-    BarChart3,
-    ExternalLink,
-    CreditCard,
-    UserPlus,
-    Coins
-} from "lucide-react"
-import Link from "next/link"
+import { useEffect } from "react"
 
-// --- ANIMATIONS ---
-const fadeInUp = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-}
+export default function DashboardRoot() {
+    useEffect(() => {
+        window.location.href = "https://auth.enwis.uz/auth"
+    }, [])
 
-const stagger = {
-    visible: { transition: { staggerChildren: 0.2 } }
-}
-
-export default function UltimateAIHome() {
-    const router = useRouter()
-
-    // --- STATE MANAGEMENT ---
-    const { scrollY } = useScroll()
-    const [isScrolled, setIsScrolled] = useState(false)
-
-    // Navbar scroll logikasi
-    useMotionValueEvent(scrollY, "change", (latest) => {
-        setIsScrolled(latest > 50)
-    })
-    const [copied, setCopied] = useState(false);
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText('6262570800519183');
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
-    };
-
-    const fadeInUp = {
-        hidden: { opacity: 0, y: 20 },
-        visible: { opacity: 1, y: 0, transition: { duration: 0.6 } }
-    };
-
-    return (
-        <div className="min-h-screen bg-[#F8FAFC] font-sans text-slate-800 selection:bg-[#17776A] selection:text-white overflow-x-hidden">
-
-            {/* ================= 2. HERO SECTION (AI FOCUSED) ================= */}
-            <section className="relative pt-40 pb-24 px-6 md:px-12 lg:px-20 overflow-hidden">
-                {/* Background Tech Mesh */}
-                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#17776A 1px, transparent 1px)', backgroundSize: '30px 30px' }}></div>
-                <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#17776A]/10 rounded-full blur-3xl -z-10 animate-pulse-slow"></div>
-
-                <div className="mx-auto max-w-[1536px] grid lg:grid-cols-2 gap-16 items-center">
-
-                    {/* Content */}
-                    <motion.div initial="hidden" animate="visible" variants={fadeInUp} className="relative z-10">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-teal-50 border border-teal-100 rounded-lg mb-8">
-                            <Sparkles size={14} className="text-[#17776A]" />
-                            <span className="text-xs font-bold text-[#17776A] uppercase tracking-wide">Yangi: Speaking & Writing AI</span>
-                        </div>
-
-                        <h1 className="text-5xl md:text-7xl lg:text-8xl font-black text-slate-900 leading-[1.05] mb-6 tracking-tight">
-                            AI yordamida <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#17776A] to-teal-400">
-                                Mukammal Natija.
-                            </span>
-                        </h1>
-
-                        <p className="text-lg text-slate-500 font-medium mb-10 max-w-xl leading-relaxed">
-                            Markaziy Osiyodagi birinchi sun'iy intellekt platformasi.
-                            Biz nafaqat test olamiz, balki <span className="text-slate-900 font-bold">Speaking</span> va <span className="text-slate-900 font-bold">Writing</span> ko'nikmalaringizni soniyalarda tekshiramiz.
-                        </p>
-
-                        <div className="flex flex-wrap gap-4">
-                            <button
-                                onClick={() => router.push("/auth")}
-                                className="h-16 px-10 bg-[#17776A] hover:bg-[#125d53] text-white rounded-2xl font-bold text-lg shadow-xl shadow-[#17776A]/25 transition-all active:scale-95 flex items-center gap-3"
-                            >
-                                <Zap size={20} />
-                                Testni Boshlash
-                            </button>
-                            <button className="h-16 px-10 bg-white border border-slate-200 text-slate-700 hover:border-[#17776A] hover:text-[#17776A] rounded-2xl font-bold text-lg transition-all flex items-center gap-3">
-                                Namuna Ko'rish
-                            </button>
-                        </div>
-
-                        <p className="mt-6 text-xs text-slate-400 font-medium flex items-center gap-2">
-                            <AlertTriangle size={12} className="text-orange-500" />
-                            Eslatma: Natijalar faqat diagnostika xarakteriga ega.
-                        </p>
-                    </motion.div>
-
-                    {/* Interactive AI Visuals */}
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.8 }}
-                        className="relative h-[550px] hidden lg:block origin-right scale-110 left-30 top-20"
-                    >
-                        {/* Reading Card (Back) */}
-                        <div className="absolute top-0 -left-0.5 bg-white p-6 rounded-[30px] shadow-xl border border-slate-100 w-80 transform -rotate-3 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-[#17776A]/30 rounded-lg text-[#17776A]"><BookOpen size={20} /></div>
-                                <h4 className="font-bold text-slate-800">Full Reading</h4>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="h-2 w-full bg-slate-100 rounded-full"></div>
-                                <div className="h-2 w-[90%] bg-slate-100 rounded-full"></div>
-                                <div className="h-2 w-[40%] bg-green-100 rounded-full relative">
-                                    <div className="absolute -top-1 -right-2 w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
-                                </div>
-                            </div>
-                            <div className="mt-4 p-3 bg-slate-50 rounded-xl text-xs font-mono text-slate-500">
-                                Fast: "Reading Result: C1"
-                            </div>
-                        </div>
-
-                        {/* Writing Card (Back) */}
-                        <div className="absolute top-20 right-40 bg-white p-6 rounded-[30px] shadow-xl border border-slate-100 w-80 transform rotate-6 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-orange-100 rounded-lg text-orange-600"><PenTool size={20} /></div>
-                                <h4 className="font-bold text-slate-800">Writing Task 2</h4>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="h-2 w-full bg-slate-100 rounded-full"></div>
-                                <div className="h-2 w-[90%] bg-slate-100 rounded-full"></div>
-                                <div className="h-2 w-[40%] bg-blue-100 rounded-full relative">
-                                    <div className="absolute -top-1 -right-2 w-2 h-2 bg-blue-500 rounded-full animate-ping"></div>
-                                </div>
-                            </div>
-                            <div className="mt-4 p-3 bg-slate-50 rounded-xl text-xs font-mono text-slate-500">
-                                AI: "Grammar accuracy: C1"
-                            </div>
-                        </div>
-
-                        {/* Listening Card */}
-                        <div className="absolute top-40 -left-0.5 bg-white p-7 rounded-[30px] shadow-xl border border-slate-100 w-80 transform -rotate-3 z-10 opacity-80 hover:rotate-0 transition-transform duration-500">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="p-2 bg-blue-100 rounded-lg text-blue-600"><Headphones size={20} /></div>
-                                <h4 className="font-bold text-slate-800">Full Listening</h4>
-                            </div>
-                            <div className="space-y-2">
-                                <div className="h-2 w-full bg-slate-100 rounded-full"></div>
-                                <div className="h-2 w-[90%] bg-slate-100 rounded-full"></div>
-                                <div className="h-2 w-[40%] bg-orange-100 rounded-full relative">
-                                    <div className="absolute -top-1 -right-2 w-2 h-2 bg-orange-500 rounded-full animate-ping"></div>
-                                </div>
-                            </div>
-                            <div className="mt-4 p-3 bg-slate-50 rounded-xl text-xs font-mono text-slate-500">
-                                Fast: "Listening Result: C1"
-                            </div>
-                        </div>
-
-                        {/* Speaking Card (Front) */}
-                        <div className="absolute top-60 right-40 bg-white/90 backdrop-blur-xl p-8 rounded-[36px] shadow-2xl border border-white/60 w-96 z-20 transform rotate-6 hover:rotate-0 transition-transform duration-500">
-                            <div className="flex justify-between items-start mb-6">
-                                <div>
-                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Speaking AI</p>
-                                    <h3 className="text-2xl font-black text-slate-900">Pronunciation</h3>
-                                </div>
-                                <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center text-white shadow-lg shadow-red-500">
-                                    <Mic size={24} />
-                                </div>
-                            </div>
-
-                            {/* Audio Wave Simulation */}
-                            <div className="flex items-center justify-center gap-1 h-12 mb-6">
-                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(i => (
-                                    <motion.div
-                                        key={i}
-                                        animate={{ height: [10, 30, 10] }}
-                                        transition={{ repeat: Infinity, duration: 1, delay: i * 0.1 }}
-                                        className="w-1.5 bg-gradient-to-t from-red-500 to-red-400 rounded-full"
-                                    />
-                                ))}
-                            </div>
-
-                            <div className="flex justify-between items-center bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                <span className="text-sm font-bold text-slate-600">Band Score</span>
-                                <span className="text-3xl font-black text-red-500">C1</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* ================= 3. SERVICE SECTION ================= */}
-            <section className="relative pt-20 pb-24 px-6 md:px-12 lg:px-20 overflow-hidden">
-                <div className="mx-auto max-w-[1536px]">
-                    <motion.div
-                        variants={stagger}
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true }}
-                        className="grid grid-cols-1 md:grid-cols-3 gap-8"
-                    >
-                        {/* Katta Karta */}
-                        <motion.div
-                            variants={fadeInUp}
-                            className="md:col-span-2 bg-[#17776A] rounded-[32px] p-10 text-white relative overflow-hidden group shadow-xl shadow-[#17776A]/20 cursor-pointer"
-                        >
-                            <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-3xl -mr-20 -mt-20 transition-all duration-700 group-hover:scale-150"></div>
-                            <div className="relative z-10 flex flex-col h-full justify-between">
-                                <div>
-                                    <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center mb-6">
-                                        <Zap size={32} className="text-white" />
-                                    </div>
-                                    <h3 className="text-3xl font-black mb-3">AI Diagnostik Test</h3>
-                                    <p className="text-emerald-100 text-lg max-w-md leading-relaxed">
-                                        Sun'iy intellekt yordamida speaking va writing ko'nikmalaringizni chuqur tahlil qiling.
-                                    </p>
-                                </div>
-                                <div className="mt-10 flex items-center gap-2 font-bold text-emerald-200 group-hover:text-white transition-colors">
-                                    Sinab ko'rish <ArrowRight size={18} className="group-hover:translate-x-2 transition-transform" />
-                                </div>
-                            </div>
-                        </motion.div>
-
-                        {/* Kichik Karta 1 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group">
-                            <div className="w-14 h-14 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-600 mb-6 group-hover:scale-110 transition-transform">
-                                <AlertTriangle size={28} />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 mb-2">Disclaimer</h3>
-                            <p className="text-slate-500 font-medium leading-relaxed">
-                                Ushbu test natijalari rasmiy hujjat hisoblanmaydi. Faqat o'z-o'zini tekshirish uchun.
-                            </p>
-                        </motion.div>
-
-                        {/* Kichik Karta 2 */}
-                        <motion.div variants={fadeInUp} className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all group">
-                            <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mb-6 group-hover:scale-110 transition-transform">
-                                <BarChart3 size={28} />
-                            </div>
-                            <h3 className="text-xl font-black text-slate-900 mb-2">Statistika</h3>
-                            <p className="text-slate-500 font-medium leading-relaxed">
-                                Har bir bo'lim bo'yicha batafsil grafiklar va o'sish dinamikasi.
-                            </p>
-                        </motion.div>
-
-                        {/* O'rta Karta (Horizontal) */}
-                        <motion.div variants={fadeInUp} className="md:col-span-2 bg-slate-900 rounded-[32px] p-10 text-white relative overflow-hidden shadow-xl">
-                            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
-                            <div className="relative z-15 flex flex-col md:flex-row items-center gap-10">
-                                <div className="flex-1">
-                                    <div className="inline-block px-3 py-1 bg-white/10 rounded-lg text-xs font-bold mb-4">NEW</div>
-                                    <h3 className="text-2xl font-black mb-2">Speaking Simulator</h3>
-                                    <p className="text-slate-400">Haqiqiy imtihondagi kabi examiner bilan jonli suhbat simulyatsiyasi.</p>
-                                </div>
-                                <div className="w-full md:w-auto bg-slate-800 p-4 rounded-2xl border border-slate-700 flex items-center gap-4">
-                                    <div className="w-12 h-12 bg-red-500 rounded-full flex items-center justify-center animate-pulse">
-                                        <div className="w-4 h-4 bg-white rounded-sm"></div>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-slate-400 font-mono">REC</p>
-                                        <p className="text-lg font-mono font-bold">00:04:12</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </motion.div>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* ================= 4. CHARITY SECTION (SERVICE STYLE MATCH) ================= */}
-            <section className="py-20 px-6 md:px-12 lg:px-20 bg-white relative overflow-hidden">
-                <div className="mx-auto max-w-[1536px]">
-
-                    {/* Asosiy Konteyner */}
-                    <motion.div
-                        initial="hidden"
-                        whileInView="visible"
-                        viewport={{ once: true }}
-                        variants={fadeInUp}
-                        className="bg-[#FFF5F7] rounded-[40px] p-8 md:p-14 lg:p-16 border border-rose-100 relative overflow-hidden group shadow-2xl shadow-rose-100/30"
-                    >
-                        {/* Hayriya mavzusidagi fon elementlari */}
-                        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-br from-rose-200/30 to-transparent rounded-full blur-3xl -mr-40 -mt-40 transition-all duration-1000 group-hover:scale-110" />
-                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-rose-100/40 rounded-full blur-2xl -ml-20 -mb-20" />
-
-                        <div className="relative z-10">
-                            <div className="flex flex-col lg:flex-row items-center gap-16 lg:gap-24">
-
-                                {/* 1. Matnli Qism */}
-                                <div className="flex-[1.2] space-y-8">
-                                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-white text-rose-600 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] shadow-sm border border-rose-100">
-                                        <HandHeart size={16} className="animate-bounce" /> Ijtimoiy Mas'uliyat
-                                    </div>
-
-                                    <h2 className="text-4xl md:text-6xl font-black text-slate-900 leading-[1.1] tracking-tight">
-                                        Har bir test — <br />
-                                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-red-600">
-                                            yangi imkoniyat.
-                                        </span>
-                                    </h2>
-
-                                    <p className="text-slate-600 text-lg md:text-xl font-medium leading-relaxed max-w-2xl">
-                                        Biz har bir test sotuvidan tushgan foydaning <span className="text-slate-900 font-bold border-b-2 border-rose-300">5% qismini</span> iqtidorli, ammo sharoiti og'ir yoshlarning ta'lim grantlariga yo'naltiramiz.
-                                    </p>
-
-                                    {/* Jarayon Grid (Service Style) */}
-                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                        {[
-                                            { icon: <UserPlus className="text-blue-500" />, title: "Siz test olasiz", desc: "5% fondga o'tadi" },
-                                            { icon: <Coins className="text-amber-500" />, title: "Fond yig'iladi", desc: "Shaffof jamlanadi" },
-                                            { icon: <Sparkles className="text-rose-500" />, title: "Grant beriladi", desc: "Ta'lim qo'llanadi" }
-                                        ].map((step, idx) => (
-                                            <div key={idx} className="bg-white/80 backdrop-blur-sm p-5 rounded-3xl border border-rose-100/50 hover:shadow-lg transition-all">
-                                                <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mb-4">{step.icon}</div>
-                                                <h4 className="text-sm font-black text-slate-900">{step.title}</h4>
-                                                <p className="text-[11px] text-slate-500 font-medium mt-1 leading-tight">{step.desc}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {/* 2. Visual Qism (Hayriya ramzi) */}
-                                <div className="flex-1 flex justify-center relative">
-                                    <div className="relative w-72 h-72 md:w-96 md:h-96">
-                                        {/* Orqa fon animatsiyasi */}
-                                        <div className="absolute inset-0 bg-rose-200 rounded-[4rem] rotate-6 opacity-20 animate-pulse" />
-
-                                        <div className="relative w-full h-full bg-white rounded-[4rem] flex flex-col items-center justify-center shadow-2xl border border-rose-50 group-hover:scale-105 transition-transform duration-500">
-                                            <Heart size={140} className="text-rose-500 fill-rose-500 animate-pulse" />
-                                            <div className="mt-4 text-center">
-                                                <span className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.4em]">Enwis Care</span>
-                                                <span className="text-2xl font-black text-slate-800">Mehr-shafqat</span>
-                                            </div>
-
-                                            {/* Uchar stickerlar */}
-                                            <motion.div animate={{ y: [0, -10, 0] }} transition={{ repeat: Infinity, duration: 3 }} className="absolute -top-6 -right-6 bg-slate-900 text-white px-6 py-3 rounded-2xl shadow-xl text-xs font-bold -rotate-6">
-                                                Savob qiling
-                                            </motion.div>
-                                            <motion.div animate={{ y: [0, 10, 0] }} transition={{ repeat: Infinity, duration: 4 }} className="absolute -bottom-6 -left-6 bg-white text-rose-500 px-6 py-3 rounded-2xl shadow-xl text-xs font-black border border-rose-100 rotate-6">
-                                                Kelajakni quring
-                                            </motion.div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* 3. Donat Bloki (Speaking Simulator uslubida) */}
-                            <div className="mt-24">
-                                <motion.div
-                                    whileHover={{ y: -5 }}
-                                    className="bg-rose-900 rounded-[40px] p-8 md:p-12 text-white relative overflow-hidden shadow-2xl"
-                                >
-                                    {/* Grainy Texture */}
-                                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none" />
-
-                                    <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-10">
-                                        <div className="flex flex-col md:flex-row items-center gap-8">
-                                            <div className="w-20 h-20 bg-rose-600 rounded-[2rem] flex items-center justify-center shadow-xl shadow-rose-600/40 relative group-hover:rotate-12 transition-transform">
-                                                <Heart className="text-white fill-white" size={40} />
-                                                <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-4 border-slate-900 animate-ping" />
-                                            </div>
-                                            <div className="text-center md:text-left">
-                                                <h3 className="text-3xl font-black tracking-tight mb-2 uppercase italic">Loyihani qo'llang</h3>
-                                                <p className="text-slate-400 font-medium max-w-sm">Sizning yordamingiz platforma rivoji va yangi grantlar uchun xizmat qiladi.</p>
-                                            </div>
-                                        </div>
-
-                                        {/* Karta va Tugma */}
-                                        <div className="flex flex-col items-center gap-3 w-full lg:w-auto">
-                                            <div className="flex flex-col sm:flex-row items-center gap-4 w-full">
-                                                {/* Karta */}
-                                                <div
-                                                    onClick={handleCopy}
-                                                    className="w-full sm:w-auto bg-white/10 hover:bg-white/20 border border-white/10 p-5 rounded-[2rem] flex items-center gap-5 transition-all cursor-pointer group/card active:scale-95"
-                                                >
-                                                    <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-slate-900 group-hover/card:rotate-12 transition-transform">
-                                                        <CreditCard size={24} />
-                                                    </div>
-                                                    <div className="pr-4">
-                                                        <p className="text-[10px] font-black text-rose-400 uppercase tracking-widest mb-1">Uzcard / Humo</p>
-                                                        <p className="text-xl font-mono font-bold text-white tracking-widest">6262 5708 0051 9183</p>
-                                                    </div>
-                                                </div>
-
-                                                {/* Donat Button */}
-                                                <Link
-                                                    href="https://idonate.uz/d/rafkix"
-                                                    target="_blank"
-                                                    className="w-full sm:w-auto bg-rose-600 hover:bg-rose-700 text-white px-10 py-6 rounded-[2rem] flex items-center justify-center gap-3 text-sm font-black uppercase tracking-widest transition-all shadow-xl shadow-rose-600/30 active:scale-95"
-                                                >
-                                                    Donat <ExternalLink size={18} />
-                                                </Link>
-                                            </div>
-
-                                            {/* Nusxalandi Bildirishnomasi (Karta ostida) */}
-                                            <div className="h-6 overflow-hidden">
-                                                <AnimatePresence>
-                                                    {copied && (
-                                                        <motion.div
-                                                            initial={{ opacity: 0, y: -20 }}
-                                                            animate={{ opacity: 1, y: 0 }}
-                                                            exit={{ opacity: 0, y: 10 }}
-                                                            className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-widest"
-                                                        >
-                                                            <CheckCircle2 size={14} /> Karta raqami nusxalandi!
-                                                        </motion.div>
-                                                    )}
-                                                </AnimatePresence>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            </div>
-
-                        </div>
-                    </motion.div>
-                </div>
-            </section>
-
-            {/* ================= 6. PRICING SECTION ================= */}
-            <section id="pricing" className="py-20  px-6 md:px-12 lg:px-20 bg-[#FDFDFF] relative overflow-hidden">
-
-                {/* Background Decor */}
-                <div className="absolute top-1/2 right-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[1536px] -z-10 pointer-events-none">
-                    <div className="absolute top-0 right-1/4 w-96 h-96 bg-[#17776A]/10 blur-[120px] rounded-full" />
-                    <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-100 blur-[120px] rounded-full" />
-                    <div className="absolute inset-0 opacity-[0.2] mix-blend-overlay bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" style={{ filter: 'contrast(130%) brightness(110%)' }} />
-                </div>
-
-                <div className="mx-auto max-w-[1536px] relative z-10">
-                    {/* HEADER */}
-                    <div className="text-center mb-24">
-                        <motion.div initial={{ opacity: 0, y: 15 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-white border border-slate-100 shadow-xl shadow-slate-200/50 text-[#17776A] text-[10px] font-black uppercase tracking-[0.3em] mb-8">
-                            <Zap size={14} className="fill-[#17776A]" /> Imtihon tariflari
-                        </motion.div>
-                        <h2 className="text-4xl md:text-6xl font-black text-[#0F172A] mb-6 tracking-tighter leading-tight">
-                            O'z maqsadingizga <br /> <span className="text-[#17776A]">to'g'ri sarmoya</span> qiling.
-                        </h2>
-                        <p className="text-slate-500 text-lg max-w-2xl mx-auto font-medium leading-relaxed">
-                            Bepul testlardan boshlang yoki sun'iy intellekt yordamida chuqur tahlilga ega bo'ling.
-                        </p>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
-                        <PricingCard
-                            title="Standard" price="0" currency="UZS" description="Boshlang'ich darajani aniqlash uchun"
-                            features={["Barcha Listening testlar", "Barcha Reading testlar", "Avtomatik natija hisoblash", "Cheksiz urinishlar"]}
-                            buttonText="Bepul boshlash" type="standard"
-                        />
-                        <PricingCard
-                            title="Writing AI" price="14,900" currency="UZS" description="Insho va grammatika tahlili"
-                            features={["AI orqali inshoni tekshirish", "Band Score (C1/B2) aniqlash", "Grammatik xatolar ro'yxati", "Lug'at boyligini yaxshilash"]}
-                            buttonText="Essay yozish" type="premium-teal" badge="Ommabop" icon={<PenTool size={16} />}
-                        />
-                        <PricingCard
-                            title="Speaking AI" price="25,000" currency="UZS" description="Jonli suhbat simulyatsiyasi"
-                            features={["AI Examiner bilan suhbat", "Talaffuz (Pronunciation) tahlili", "Ravonlik (Fluency) monitoringi", "To'liq feedback report (PDF)"]}
-                            buttonText="Suhbatni boshlash" type="dark" icon={<Mic size={16} />}
-                        />
-                    </div>
-
-                    {/* TRUST FOOTER */}
-                    <div className="mt-20 flex flex-col items-center gap-8 text-center">
-                        <div className="flex items-center gap-3 font-black text-slate-300 uppercase tracking-[0.2em] text-[10px]">
-                            <div className="h-px w-12 bg-slate-200" />
-                            <ShieldCheck size={16} /> Xavfsiz to'lov tizimlari
-                            <div className="h-px w-12 bg-slate-200" />
-                        </div>
-                        <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12 opacity-40 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-700 cursor-pointer">
-                            <img src="banner-payme.png" alt="Payme" className="h-8" />
-                            <img src="banner-uzumbank.png" alt="Uzum" className="h-8" />
-                            <img src="banner-click.png" alt="Clik" className="h-8" />
-                            <img src="banner-humo.png" alt="Humo" className="h-8" />
-                            <img src="banner-uzcard.gif" alt="Uzcard" className="h-8" />
-                        </div>
-                    </div>
-                </div>
-            </section>
-        </div>
-    )
-}
-
-// --- SUB-COMPONENT: PRICING CARD ---
-function PricingCard({ title, price, currency, description, features, buttonText, type, badge, icon }: any) {
-    const isDark = type === 'dark';
-    const isTeal = type === 'premium-teal';
-
-    return (
-        <motion.div
-            whileHover={{ y: -15, scale: 1.02 }}
-            className={`p-10 rounded-[40px] border relative overflow-hidden flex flex-col transition-all duration-500
-                ${isDark ? 'bg-[#0F172A] border-slate-800 shadow-[0_30px_60px_-15px_rgba(15,23,42,0.3)] text-white' :
-                    isTeal ? 'bg-white border-[#17776A]/20 shadow-[0_30px_60px_-15px_rgba(23,119,106,0.15)] shadow-[#17776A]/10' :
-                        'bg-white border-slate-100 shadow-xl shadow-slate-200/50'}`}
-        >
-            <div className={`absolute inset-0 opacity-[0.1] pointer-events-none z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] ${isDark ? 'opacity-[1.2] mix-blend-overlay' : ''}`} />
-
-            {badge && (
-                <div className="absolute top-8 right-8 z-20">
-                    <span className="bg-[#17776A] text-white text-[9px] font-black uppercase px-4 py-2 rounded-full tracking-widest shadow-lg shadow-[#17776A]/30">{badge}</span>
-                </div>
-            )}
-
-            <div className="mb-12 relative z-10">
-                <div className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.25em] mb-5 
-                    ${isDark ? 'text-emerald-400' : isTeal ? 'text-[#17776A]' : 'text-slate-400'}`}>{icon} {title}</div>
-                <div className="flex items-baseline gap-1">
-                    <h3 className={`text-5xl font-black tracking-tighter ${isDark ? 'text-white' : 'text-[#0F172A]'}`}>{price}</h3>
-                    <span className="text-xs font-bold text-slate-400 ml-2 uppercase tracking-widest">{currency}</span>
-                </div>
-                <p className="text-slate-400 text-sm mt-4 font-medium leading-relaxed">{description}</p>
-            </div>
-
-            <ul className="space-y-5 mb-12 relative z-10 flex-1">
-                {features.map((feature: string, i: number) => (
-                    <li key={i} className="flex items-start gap-4 text-[13px] font-bold tracking-tight text-slate-600">
-                        <div className={`p-1 rounded-full shrink-0 mt-0.5 ${isDark ? 'bg-emerald-500/10 text-emerald-400' : 'bg-[#17776A]/10 text-[#17776A]'}`}><CheckCircle2 size={14} /></div>
-                        <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>{feature}</span>
-                    </li>
-                ))}
-            </ul>
-
-            <div className="relative z-10">
-                <button className={`group/btn w-full py-5 rounded-[22px] font-black text-[11px] uppercase tracking-[0.2em] transition-all overflow-hidden relative active:scale-95 shadow-lg
-                    ${isDark ? 'bg-[#17776A] text-white hover:bg-[#136358]' : isTeal ? 'bg-[#0F172A] text-white hover:bg-slate-800' : 'bg-slate-50 text-slate-500 border border-slate-100 hover:bg-slate-100'}`}>
-                    <span className="relative z-10 flex items-center justify-center gap-2">{buttonText} <ArrowRight size={16} className="group-hover/btn:translate-x-1 transition-transform" /></span>
-                    {(isDark || isTeal) && <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:animate-[shimmer_2s_infinite] transition-transform duration-1000" />}
-                </button>
-            </div>
-        </motion.div>
-    )
+    return null
 }
