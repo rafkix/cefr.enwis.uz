@@ -4,56 +4,22 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
 
 const api = axios.create({
   baseURL: `${API_URL}/api/v1`,
+  withCredentials: true, // 🔥 COOKIE UCHUN SHART
   headers: {
     "Content-Type": "application/json",
   },
-  withCredentials: true,
 });
 
-let isRefreshing = false;
-let failedQueue: any[] = [];
-
-const processQueue = (error: any) => {
-  failedQueue.forEach((prom) => {
-    if (error) prom.reject(error);
-    else prom.resolve();
-  });
-  failedQueue = [];
-};
+// ❗ TOKEN HEADER YO‘Q (cookie ishlatyapsan)
 
 api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
+  (res) => res,
+  (error) => {
+    if (error.response?.status === 401) {
+      if (typeof window !== "undefined") {
+        const currentUrl = window.location.href;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      if (isRefreshing) {
-        return new Promise((resolve, reject) => {
-          failedQueue.push({
-            resolve: () => resolve(api(originalRequest)),
-            reject,
-          });
-        });
-      }
-
-      originalRequest._retry = true;
-      isRefreshing = true;
-
-      try {
-        await api.post("/auth/refresh"); // 🔥 cookie orqali refresh
-
-        processQueue(null);
-        return api(originalRequest); // 🔁 retry original request
-      } catch (err) {
-        processQueue(err);
-
-        if (typeof window !== "undefined") {
-          window.location.href = "https://auth.enwis.uz";
-        }
-
-        return Promise.reject(err);
-      } finally {
-        isRefreshing = false;
+        window.location.href = `https://auth.enwis.uz?redirect=${encodeURIComponent(currentUrl)}`;
       }
     }
 
