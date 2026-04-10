@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 import {
   LayoutGrid,
@@ -22,7 +22,6 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const router = useRouter()
   const pathname = usePathname()
   const { user, loading: authLoading, logout } = useAuth()
 
@@ -30,21 +29,6 @@ export default function DashboardLayout({
     pathname.includes('/test/listening') ||
     pathname.includes('/test/reading') ||
     pathname.includes('/test/writing')
-
-  // =========================
-  // 🔐 AUTH REDIRECT (FIXED)
-  // =========================
-  useEffect(() => {
-    if (authLoading) return
-
-    if (!user && pathname.startsWith('/dashboard')) {
-      const currentUrl = window.location.href
-
-      // 🔥 AUTH DOMAIN GA REDIRECT
-      window.location.href =
-        `https://auth.enwis.uz?redirect=${encodeURIComponent(currentUrl)}`
-    }
-  }, [authLoading, user, pathname])
 
   // =========================
   // ⏳ LOADING
@@ -57,48 +41,65 @@ export default function DashboardLayout({
     )
   }
 
-  // ❗ user yo‘q → redirect ketadi → bu yerda blank ko‘rsatamiz
+  // =========================
+  // 🔥 REDIRECT (SAFE)
+  // =========================
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+
+    if (!user && pathname.startsWith('/dashboard')) {
+      const currentUrl = window.location.href
+
+      window.location.href =
+        `https://auth.enwis.uz?redirect=${encodeURIComponent(currentUrl)}`
+    }
+  }, [user, pathname])
+
+  // ❗ user yo‘q → redirect bo‘ladi → lekin UI crash bo‘lmasin
   if (!user) {
-    return null
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    )
   }
 
   // =========================
-  // 🎯 EXAM PAGE (NO LAYOUT)
+  // 🎯 EXAM PAGE
   // =========================
   if (isExamPage) {
     return <div className="min-h-screen bg-white">{children}</div>
   }
 
   // =========================
-  // 📲 TELEGRAM POPUP
+  // 📲 TELEGRAM
   // =========================
   const TELEGRAM_URL = 'https://t.me/cefr_enwis'
   const [tgOpen, setTgOpen] = useState(false)
 
   useEffect(() => {
-    if (!pathname.startsWith('/dashboard')) return
-
     try {
       const dismissed = sessionStorage.getItem('tg_popup_dismissed_session')
       if (dismissed) return
 
       const t = setTimeout(() => setTgOpen(true), 300)
       return () => clearTimeout(t)
-    } catch {}
-  }, [pathname])
+    } catch { }
+  }, [])
 
   const closeTg = useCallback(() => {
     setTgOpen(false)
     try {
       sessionStorage.setItem('tg_popup_dismissed_session', '1')
-    } catch {}
+    } catch { }
   }, [])
 
   // =========================
-  // 📱 USER CHECK
+  // 📱 SAFE USER CHECK
   // =========================
   const isVerifiedUser = useMemo(() => {
-    if (!user?.contacts) return false
+    if (!user || !Array.isArray(user.contacts)) return false
+
     return user.contacts.some(
       (c: any) => c.contact_type === 'phone' && c.is_verified
     )
@@ -142,11 +143,10 @@ export default function DashboardLayout({
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between px-4 py-3 rounded-xl ${
-                  isActive
+                className={`flex items-center justify-between px-4 py-3 rounded-xl ${isActive
                     ? 'bg-[#17776A] text-white'
                     : 'text-slate-500 hover:bg-slate-50'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-3">
                   <item.icon size={20} />
