@@ -1,55 +1,21 @@
 import api from "./axios";
-import {
-  GoogleLoginPayload,
-  TelegramLoginPayload,
-  SendOtpPayload,
-  PhoneLoginPayload,
-  PhoneLoginResponse,
-  UserMeResponse,
-} from "../types/auth";
 
 export const authService = {
-  // ✅ GOOGLE LOGIN (cookie set qiladi backend)
-  googleLogin: async (payload: GoogleLoginPayload) => {
-    const response = await api.post("/auth/google", payload);
-    return response.data;
-  },
+  googleLogin: (payload: any) => api.post("/auth/google", payload),
 
-  // ✅ TELEGRAM LOGIN
-  telegramLogin: async (payload: TelegramLoginPayload) => {
-    const response = await api.post("/auth/telegram", payload);
-    return response.data;
-  },
+  telegramLogin: (payload: any) => api.post("/auth/telegram", payload),
 
-  // ✅ OTP yuborish
-  sendOtp: (payload: SendOtpPayload) => {
-    return api.post("/auth/otp/send", payload);
-  },
+  sendOtp: (payload: any) => api.post("/auth/otp/send", payload),
 
-  sendOtpBot: (payload: SendOtpPayload) => {
-    return api.post("/auth/otp/send/bot", payload);
-  },
+  sendOtpBot: (payload: any) => api.post("/auth/otp/send/bot", payload),
 
-  // ✅ PHONE LOGIN
-  loginByPhone: async (payload: PhoneLoginPayload) => {
-    const response = await api.post<PhoneLoginResponse>(
-      "/auth/phone/login",
-      payload,
-    );
-    return response.data;
-  },
+  loginByPhone: (payload: any) => api.post("/auth/phone/login", payload),
 
-  // ✅ USER
-  getMe: () => api.get<UserMeResponse>("/auth/me").then((res) => res.data),
+  getMe: () => api.get("/auth/me").then((res) => res.data),
 
-  // ✅ LOGOUT (cookie clear qiladi backend)
   logout: async () => {
-    try {
-      await api.post("/auth/logout");
-    } finally {
-      if (typeof window !== "undefined") {
-        window.location.href = "https://auth.enwis.uz";
-      }
-    }
+    await api.post("/auth/logout");
+
+    window.location.href = "https://auth.enwis.uz";
   },
 };
